@@ -19,7 +19,7 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction } from './system.js';
 
-const VERSION = '0.44.1';
+const VERSION = '0.44.2';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 

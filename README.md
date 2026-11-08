@@ -1,4 +1,4 @@
-# Interkom 0.44.1
+# Interkom 0.44.2
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.44.1.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.44.2.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.44.1.zip && cd interkom
+   unzip interkom-0.44.2.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,9 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.44.2
+- Instalator: pierwsza instalacja w czystym folderze (np. świeżo pobranym z GitHuba) przerywała się w linii 238 – brakowało jeszcze plików konfiguracji LiveKit i Caddy, których sumę sprawdzał.
 
 ## 0.44.1 (aplikacja 1.4.1)
 - **Aktualizacje z GitHuba:** `./update.sh` pobiera najnowszą (albo wskazaną) wersję i uruchamia instalator; ustawienia zostają (README → „Aktualizacje z GitHuba”).

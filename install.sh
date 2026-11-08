@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IK_VERSION="0.44.1"
+IK_VERSION="0.44.2"
 c_ok="\033[32m"; c_warn="\033[33m"; c_err="\033[31m"; c_0="\033[0m"
 say()  { echo -e "${c_ok}==>${c_0} $*"; }
 warn() { echo -e "${c_warn}[!]${c_0} $*"; }
@@ -234,7 +234,7 @@ fi
 
 # ---------- LiveKit ----------
 # sumy kontrolne konfiguracji LiveKit i Caddy – po zmianie trzeba te usługi uruchomić ponownie (plik jest tylko podmontowany)
-cfg_sum() { cat livekit/livekit.yaml caddy/Caddyfile 2>/dev/null | sha256sum | cut -c1-16; }
+cfg_sum() { { cat livekit/livekit.yaml caddy/Caddyfile 2>/dev/null || true; } | sha256sum | cut -c1-16; } # przy pierwszej instalacji plików jeszcze nie ma
 CFG_BEFORE=$(cfg_sum)
 cat > livekit/livekit.yaml <<EOF
 port: 7880
