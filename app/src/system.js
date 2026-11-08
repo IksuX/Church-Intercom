@@ -85,3 +85,13 @@ export function requestAction(dataDir, action) {
   fs.writeFileSync(path.join(dir, 'request.tmp'), JSON.stringify({ action, at: new Date().toISOString() }));
   fs.renameSync(path.join(dir, 'request.tmp'), path.join(dir, 'request'));
 }
+
+// Aktualizacje z GitHuba (panel → Serwer): usługa sterowania na serwerze zapisuje wynik sprawdzenia (update.json),
+// stan trwającej aktualizacji (update-state.json) i jej dziennik (update.log).
+export function updateInfo(dataDir) {
+  const dir = controlDir(dataDir);
+  const j = (f) => { try { return JSON.parse(read(path.join(dir, f))); } catch { return null; } };
+  const features = read(path.join(dir, 'features')).split(/\s+/);
+  const log = read(path.join(dir, 'update.log')).split('\n').filter(Boolean);
+  return { supported: features.includes('update'), check: j('update.json'), state: j('update-state.json'), log: log.slice(-40) };
+}

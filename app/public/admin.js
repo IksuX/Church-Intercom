@@ -74,7 +74,7 @@ function showTab(tab) {
   if (tab === 'status') { loadStatus(); loadNicks(); }
   if (tab === 'pco') { loadMeta(); loadPP(); }
   if (tab === 'stt') { loadStt(); loadRecent(); }
-  if (tab === 'server') loadSystem();
+  if (tab === 'server') { loadSystem(); loadUpdate(true); }
   if (tab === 'audio') loadProgram();
   if (tab === 'streams') { renderStreams(); loadStreams(); loadPlatforms(); }
   window.scrollTo(0, 0);
@@ -158,6 +158,7 @@ const gb = (b) => (b >= 1e12 ? `${(b / 1e12).toFixed(1)} TB` : `${(b / 1e9).toFi
 const dur = (s) => (s >= 86400 ? `${Math.floor(s / 86400)} d ${Math.floor((s % 86400) / 3600)} h` : s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : `${Math.floor(s / 60)} min`);
 function sysBar(id, pct, warn, bad) { const el = $(id); el.style.width = `${Math.max(0, Math.min(100, pct || 0))}%`; el.className = pct >= bad ? 'bad' : pct >= warn ? 'warn' : ''; }
 let sysHelper = false, sysWaiting = null;
+const SYS_HINT = $('#sysHint').textContent;
 setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="server"]').hidden) loadSystem(); }, 5000);
 async function loadSystem() {
   let s;
@@ -178,6 +179,7 @@ async function loadSystem() {
   $('#sysSvc').innerHTML = item('Interkom', sv.app) + item('Głos (LiveKit)', sv.livekit) + item('Transkrypcja', sv.stt) + item('Nadajnik dźwięku', sv.audio);
   sysHelper = !!s.helper?.installed;
   $('#sysReboot').disabled = $('#sysOff').disabled = !sysHelper;
+  if (sysHelper && !sysWaiting) $('#sysHint').textContent = SYS_HINT;
   if (!sysHelper) $('#sysHint').textContent = 'Restart i wyłączenie komputera wymagają usługi sterowania na serwerze – uruchom raz instalator ponownie: sudo ./install.sh. „Uruchom ponownie interkom” zrestartuje wtedy tylko aplikację.';
 }
 async function sysAction(action, question, wait) {
@@ -193,6 +195,70 @@ $('#sysOff').onclick = () => {
   if (!confirm('WYŁĄCZYĆ komputer-serwer? Interkom przestanie działać, dopóki ktoś nie włączy komputera przyciskiem na obudowie.')) return;
   sysAction('poweroff', 'Na pewno wyłączyć? Tej operacji nie da się cofnąć z panelu.', 'Komputer się wyłącza. Włączysz go przyciskiem na obudowie.');
 };
+
+// ---------- SERWER: aktualizacje z GitHuba ----------
+let upWait = null; // 'check' | 'run' – czekamy na wynik usługi na serwerze
+let upSince = 0, upFrom = null; // wersja sprzed aktualizacji – po zmianie panel się odświeża
+const upEsc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+async function loadUpdate(auto) {
+  let u;
+  try { u = await api('GET', '/api/admin/update'); } catch {
+    if (upWait === 'run') $('#upStatus').innerHTML = '⏳ Aktualizacja trwa – interkom uruchamia się z nową wersją. Panel połączy się sam…';
+    return;
+  }
+  const st = u.state, ck = u.check;
+  if (upFrom == null) upFrom = u.version;
+  if (upWait === 'run' && st && st.state !== 'running' && Date.parse(st.at) >= upSince - 5000) {
+    upWait = null;
+    if (st.state === 'failed') toast('Aktualizacja nie powiodła się – zobacz dziennik.', 'err');
+    else if (u.version !== upFrom) { toast(`Zaktualizowano do wersji ${u.version}. Odświeżam panel…`); setTimeout(() => location.reload(), 1500); }
+    else toast('Aktualizacja zakończona.');
+  }
+  if (!u.helper || !u.supported) {
+    $('#upStatus').innerHTML = 'Aktualizacja z panelu wymaga nowszej usługi sterowania. Uruchom <b>raz</b> na serwerze: <code>cd ~/interkom && ./update.sh</code>';
+    $('#upCheck').disabled = true; $('#upRun').hidden = true; return;
+  }
+  $('#upCheck').disabled = false;
+  const checkedAt = ck?.at ? Date.parse(ck.at) : 0;
+  if (upWait === 'check' && (checkedAt >= upSince - 5000 || ck?.error)) upWait = null;
+  const running = st?.state === 'running' && Date.now() - Date.parse(st.at) < 20 * 60e3;
+  if (running) upWait = 'run';
+  let html;
+  if (running || upWait === 'run') html = `⏳ Aktualizacja trwa${st?.from ? ` (z wersji ${upEsc(st.from)})` : ''} – zwykle 1–5 minut. Panel połączy się sam.`;
+  else if (upWait === 'check') html = '⏳ Sprawdzam GitHuba…';
+  else if (ck?.git === false) html = 'Folder interkomu na serwerze nie jest połączony z GitHubem – zob. README, rozdział „Aktualizacje z GitHuba”.';
+  else if (ck?.error) html = `<span class="bad-t">✖ ${upEsc(ck.error)}</span>`;
+  else if (!ck) html = `Zainstalowana wersja <b>${upEsc(u.version)}</b>. Kliknij „Sprawdź aktualizacje”.`;
+  else if (ck.behind > 0) html = `<span class="warn-t">Dostępna nowa wersja <b>${upEsc(ck.latest)}</b></span> (zainstalowana ${upEsc(u.version)}) · sprawdzono ${new Date(ck.at).toLocaleString('pl-PL')}`;
+  else html = `<span class="ok-t">✔ Masz najnowszą wersję ${upEsc(u.version)}</span> · sprawdzono ${new Date(ck.at).toLocaleString('pl-PL')}`;
+  if (!running && upWait !== 'run' && st && st.state !== 'running') {
+    html += st.state === 'done' ? `<br><span class="hint">Ostatnia aktualizacja: ${upEsc(st.from)} → ${upEsc(st.to)}, ${new Date(st.at).toLocaleString('pl-PL')}</span>`
+      : `<br><span class="bad-t">✖ Ostatnia aktualizacja nie powiodła się (${new Date(st.at).toLocaleString('pl-PL')}) – zobacz dziennik niżej.</span>`;
+  }
+  $('#upStatus').innerHTML = html;
+  const ch = (!running && ck?.behind > 0 && ck.changes) || [];
+  $('#upChanges').hidden = !ch.length;
+  $('#upChanges').innerHTML = ch.map((c) => `<li>${upEsc(c)}</li>`).join('');
+  $('#upRun').hidden = !(ck?.behind > 0) || running || upWait === 'run';
+  $('#upCheck').disabled = running || !!upWait;
+  $('#upLogBox').hidden = !u.log?.length;
+  $('#upLog').textContent = (u.log || []).join('\n');
+  if (st?.state === 'failed' && !running) $('#upLogBox').open = true;
+  // przy wejściu do zakładki: sprawdź sam, jeśli ostatnio dawno (albo nigdy)
+  if (auto && !upWait && !running && ck?.git !== false && Date.now() - checkedAt > 30 * 60e3) upAction('check', true);
+}
+async function upAction(what, quiet) {
+  if (what === 'run' && !confirm('Zaktualizować interkom teraz? Pod koniec (ok. 30 s) nikt nie będzie się słyszał – telefony połączą się same. Ustawienia zostają.')) return;
+  try {
+    await api('POST', '/api/admin/update', { action: what });
+    upWait = what; upSince = Date.now(); loadUpdate();
+    if (what === 'run') toast('Aktualizacja rozpoczęta.');
+  } catch (e) { if (!quiet) toast(e.message, 'err'); }
+}
+$('#upCheck').onclick = () => upAction('check');
+$('#upRun').onclick = () => upAction('run');
+setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="server"]').hidden && upWait) loadUpdate(); }, 2000);
+setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="server"]').hidden && !upWait) loadUpdate(); }, 15000);
 
 $('#stClear').onclick = async () => {
   if (!confirm('Wyczyścić czat na wszystkich kanałach u wszystkich osób?')) return;

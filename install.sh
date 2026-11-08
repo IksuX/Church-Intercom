@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IK_VERSION="0.44.3"
+IK_VERSION="0.44.4"
 c_ok="\033[32m"; c_warn="\033[33m"; c_err="\033[31m"; c_0="\033[0m"
 say()  { echo -e "${c_ok}==>${c_0} $*"; }
 warn() { echo -e "${c_warn}[!]${c_0} $*"; }
@@ -367,14 +367,45 @@ F="${CTL_DIR}/request"
 A=\$(grep -o '"action": *"[a-z-]*"' "\$F" | head -1 | cut -d'"' -f4)
 rm -f "\$F"
 logger -t interkom "polecenie z panelu: \$A"
+DIR="$(pwd)"
+OWNER=\$(stat -c %U "\$DIR")
 case "\$A" in
-  restart)  cd "$(pwd)" && docker compose restart ;;
+  restart)  cd "\$DIR" && docker compose restart ;;
   reboot)   systemctl reboot ;;
   poweroff) systemctl poweroff ;;
+  update-check)
+    # git jako właściciel folderu (jego klucz do GitHuba; root dostałby „dubious ownership”)
+    runuser -u "\$OWNER" -- "\$DIR/update.sh" --status > "${CTL_DIR}/update.json.tmp" 2>/dev/null \\
+      || printf '{"git":true,"error":"Sprawdzanie nie powiodło się – uruchom na serwerze: ./update.sh --check"}\\n' > "${CTL_DIR}/update.json.tmp"
+    chmod 644 "${CTL_DIR}/update.json.tmp"; mv -f "${CTL_DIR}/update.json.tmp" "${CTL_DIR}/update.json" ;;
+  update)
+    # osobna jednostka systemd z kopii skryptu: instalator podmienia pliki w /usr/local/sbin i restartuje kontenery
+    cp /usr/local/sbin/interkom-update /run/interkom-update.sh
+    systemd-run --unit=interkom-update --collect --quiet /bin/bash /run/interkom-update.sh \\
+      || logger -t interkom "aktualizacja już trwa" ;;
 esac
 EOF
 chmod 755 /usr/local/sbin/interkom-control
-cat > /etc/systemd/system/interkom-control.service <<EOF
+cat > /usr/local/sbin/interkom-update <<EOF
+#!/bin/bash
+# Aktualizacja z GitHuba zlecona w panelu (zakładka Serwer). Dziennik: ${CTL_DIR}/update.log
+CTL="${CTL_DIR}"; DIR="$(pwd)"
+OWNER=\$(stat -c %U "\$DIR")
+ver() { grep -m1 '^IK_VERSION=' "\$DIR/install.sh" | cut -d'"' -f2; }
+st() { printf '{"state":"%s","from":"%s","to":"%s","code":%s,"at":"%s"}\\n' "\$1" "\$FROM" "\$(ver)" "\${2:-null}" "\$(date -Is)" > "\$CTL/update-state.json.tmp"; chmod 644 "\$CTL/update-state.json.tmp"; mv -f "\$CTL/update-state.json.tmp" "\$CTL/update-state.json"; }
+FROM=\$(ver)
+st running
+{
+  echo "=== \$(date '+%Y-%m-%d %H:%M:%S') aktualizacja z panelu (zainstalowana \$FROM)"
+  cd "\$DIR" && runuser -u "\$OWNER" -- ./update.sh --no-install && ./install.sh
+} > "\$CTL/update.log" 2>&1 < /dev/null
+CODE=\$?
+sed -i 's/\\x1b\\[[0-9;]*m//g' "\$CTL/update.log"; chmod 644 "\$CTL/update.log"
+if [ \$CODE -eq 0 ]; then st done 0; else st failed \$CODE; fi
+logger -t interkom "aktualizacja z panelu: \$FROM -> \$(ver), kod \$CODE"
+runuser -u "\$OWNER" -- "\$DIR/update.sh" --status > "\$CTL/update.json.tmp" 2>/dev/null && chmod 644 "\$CTL/update.json.tmp" && mv -f "\$CTL/update.json.tmp" "\$CTL/update.json"
+EOF
+chmod 755 /usr/local/sbin/interkom-updatecat > /etc/systemd/system/interkom-control.service <<EOF
 [Unit]
 Description=Interkom – polecenia z panelu administracyjnego
 [Service]
@@ -391,7 +422,7 @@ WantedBy=multi-user.target
 EOF
 rm -f "${CTL_DIR}/request"
 systemctl daemon-reload
-systemctl enable --now interkom-control.path >/dev/null 2>&1 && echo "${IK_VERSION}" > "${CTL_DIR}/helper" || warn "Nie udało się włączyć sterowania serwerem z panelu."
+systemctl enable --now interkom-control.path >/dev/null 2>&1 && echo "${IK_VERSION}" > "${CTL_DIR}/helper" && echo "update" > "${CTL_DIR}/features" || warn "Nie udało się włączyć sterowania serwerem z panelu."
 
 # ---------- zapora ----------
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then

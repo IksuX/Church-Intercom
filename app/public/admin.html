@@ -489,6 +489,17 @@
           </div>
           <p class="hint" id="sysHint">„Uruchom ponownie interkom” restartuje wszystkie usługi (ok. 30 s przerwy) – pomaga, gdy coś przestało działać. Restart komputera trwa 1–2 minuty. Po wyłączeniu komputer trzeba włączyć przyciskiem na obudowie.</p>
         </div>
+        <div class="a-card" id="upCard">
+          <h2>Aktualizacje</h2>
+          <p id="upStatus" class="a-status">…</p>
+          <ul id="upChanges" class="hint up-changes" hidden></ul>
+          <div class="row-btns">
+            <button type="button" id="upCheck">↻ Sprawdź aktualizacje</button>
+            <button type="button" id="upRun" class="primary" hidden>⬇ Aktualizuj teraz</button>
+          </div>
+          <p class="hint" id="upHint">Program pobiera się z GitHuba, ustawienia zostają bez zmian. Aktualizacja trwa zwykle 1–5 minut; przez ok. 30 s pod koniec interkom jest niedostępny (telefony połączą się same). Najlepiej nie w trakcie nabożeństwa.</p>
+          <details class="hint" id="upLogBox" hidden><summary>Dziennik ostatniej aktualizacji</summary><pre class="a-code" id="upLog"></pre></details>
+        </div>
         <div class="a-card">
           <h2>Kopia ustawień</h2>
           <p class="hint">Jeden plik ze wszystkim, co skonfigurowałeś: PIN-y, kanały, przyciski, klucze Planning Center, YouTube i Facebooka, token mostka, ksywki, uprawnienia i powiadomienia telefonów. Przydaje się przy przenosinach na inny serwer (np. z VPS na mini PC) albo po ponownej instalacji – wczytujesz plik i nic nie trzeba wpisywać od nowa.</p>

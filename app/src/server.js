@@ -17,9 +17,9 @@ import { PlanningCenter } from './pco.js';
 import * as pcoOauth from './pco-oauth.js';
 import { Avatars } from './avatars.js';
 import { Push } from './push.js';
-import { systemInfo, helperInfo, requestAction } from './system.js';
+import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 
-const VERSION = '0.44.3';
+const VERSION = '0.44.4';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -928,6 +928,22 @@ app.post('/api/admin/system/action', requireAdmin, (req, res) => {
     if (action === 'restart-app') process.exit(0); // Docker uruchamia aplikację ponownie (restart: unless-stopped)
     try { requestAction(DATA_DIR, action); } catch (e) { console.error('[admin] nie udało się zlecić polecenia:', e.message); }
   }, 400);
+});
+
+// Aktualizacje z GitHuba – sprawdzenie i aktualizacja wykonuje usługa sterowania na serwerze (git i instalator)
+app.get('/api/admin/update', requireAdmin, (_req, res) => {
+  res.json({ version: VERSION, helper: helperInfo(DATA_DIR).installed, ...updateInfo(DATA_DIR) });
+});
+app.post('/api/admin/update', requireAdmin, (req, res) => {
+  const what = String(req.body?.action || '');
+  if (!['check', 'run'].includes(what)) return res.status(400).json({ error: 'Nieznane polecenie.' });
+  const u = updateInfo(DATA_DIR);
+  if (!helperInfo(DATA_DIR).installed || !u.supported) return res.status(409).json({ error: 'Usługa sterowania na serwerze jest starsza – uruchom raz na serwerze: cd ~/interkom && ./update.sh' });
+  if (u.check && u.check.git === false) return res.status(409).json({ error: 'Folder interkomu nie jest połączony z GitHubem – zob. README, „Aktualizacje z GitHuba”.' });
+  if (what === 'run' && u.state?.state === 'running' && Date.now() - Date.parse(u.state.at) < 20 * 60e3) return res.status(409).json({ error: 'Aktualizacja już trwa.' });
+  console.log(`[admin] aktualizacja: ${what} (${req.ip})`);
+  try { requestAction(DATA_DIR, what === 'run' ? 'update' : 'update-check'); } catch (e) { return res.status(500).json({ error: e.message }); }
+  res.json({ ok: true });
 });
 
 // ProPresenter – stan i ręczna synchronizacja
