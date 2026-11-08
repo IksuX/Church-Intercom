@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IK_VERSION="0.44.5"
+IK_VERSION="0.44.6"
 c_ok="\033[32m"; c_warn="\033[33m"; c_err="\033[31m"; c_0="\033[0m"
 say()  { echo -e "${c_ok}==>${c_0} $*"; }
 warn() { echo -e "${c_warn}[!]${c_0} $*"; }
@@ -405,7 +405,8 @@ if [ \$CODE -eq 0 ]; then st done 0; else st failed \$CODE; fi
 logger -t interkom "aktualizacja z panelu: \$FROM -> \$(ver), kod \$CODE"
 runuser -u "\$OWNER" -- "\$DIR/update.sh" --status > "\$CTL/update.json.tmp" 2>/dev/null && chmod 644 "\$CTL/update.json.tmp" && mv -f "\$CTL/update.json.tmp" "\$CTL/update.json"
 EOF
-chmod 755 /usr/local/sbin/interkom-updatecat > /etc/systemd/system/interkom-control.service <<EOF
+chmod 755 /usr/local/sbin/interkom-update
+cat > /etc/systemd/system/interkom-control.service <<EOF
 [Unit]
 Description=Interkom – polecenia z panelu administracyjnego
 [Service]
