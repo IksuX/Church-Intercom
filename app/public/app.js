@@ -619,6 +619,15 @@ async function renderDevices() {
   const spk = $('#optSpk');
   spk.innerHTML = '<option value="">Domyślny systemowy</option>' + outs.filter((d) => d.deviceId !== 'default').map((d, i) => opt(d, i, 'Wyjście')).join('');
   spk.value = outs.some((d) => d.deviceId === S.opt.spkId) ? S.opt.spkId : '';
+  // bez zgody na mikrofon (albo ze zgodą „tylko tym razem” i zamkniętym mikrofonem) przeglądarka zwraca okrojoną listę:
+  // po jednym urządzeniu bez nazwy – wtedy proponujemy chwilowe otwarcie mikrofonu, które odsłania wszystkie urządzenia
+  const limited = devs.some((d) => (d.kind === 'audiooutput' || d.kind === 'audioinput') && !d.label);
+  const pickable = !!navigator.mediaDevices?.selectAudioOutput; // Firefox: wyjścia tylko przez systemowe okno wyboru
+  $('#devMoreRow').hidden = !(limited || pickable);
+  $('#devMore').hidden = !limited;
+  $('#devMoreHint').hidden = !limited;
+  $('#spkPick').hidden = !pickable;
+  if (pickable && !showOut && canPickOutput()) $('#spkRow').hidden = false;
   for (const [id, k] of [['#optEc', 'ec'], ['#optNs', 'ns'], ['#optAgc', 'agc']]) $(id).checked = k === 'ec' ? ecOn() : S.opt[k] !== false;
   renderMixer();
 }
@@ -675,6 +684,22 @@ async function resolveDevices() {
 $('#optMicRel').onchange = (e) => { S.opt.micRelease = e.target.checked; store.set('opt', S.opt); applyMicRelease(); if (!$('#sheet').hidden) micPreview(); };
 const devLabel = (sel) => sel.selectedOptions?.[0]?.textContent || '';
 $('#optMic').onchange = (e) => { S.opt.micId = e.target.value; S.opt.micLabel = e.target.value ? devLabel(e.target) : ''; applyMic(); };
+$('#devMore').onclick = async () => {
+  const b = $('#devMore'); b.disabled = true;
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    await renderDevices(); // lista z nazwami – póki mikrofon jest otwarty
+    st.getTracks().forEach((t) => t.stop());
+  } catch (err) { sysMsg('Bez zgody na mikrofon przeglądarka nie pokaże listy urządzeń (' + (err?.message || err) + ').'); }
+  b.disabled = false;
+};
+$('#spkPick').onclick = async () => {
+  try {
+    const d = await navigator.mediaDevices.selectAudioOutput();
+    S.opt.spkId = d.deviceId; S.opt.spkLabel = d.label || '';
+    await renderDevices(); $('#optSpk').value = d.deviceId; applySpeaker();
+  } catch {}
+};
 $('#optSpk').onchange = (e) => { S.opt.spkId = e.target.value; S.opt.spkLabel = e.target.value ? devLabel(e.target) : ''; applySpeaker(); };
 for (const [id, k] of [['#optEc', 'ec'], ['#optNs', 'ns'], ['#optAgc', 'agc']]) $(id).onchange = (e) => { S.opt[k] = e.target.checked; applyMic(); };
 // ================= MIKSER (głośności na tym urządzeniu) =================
@@ -1780,7 +1805,8 @@ function renderSettings() {
   const myNicks = S.users.get(S.me?.id)?.nicks || [];
   if (document.activeElement !== $('#optNicks')) $('#optNicks').value = myNicks.join(', ');
   renderDevices();
-  if (canTalk() && S.micPub) { unlockAudio(); micPreview(); } // wskaźnik poziomu
+  // wskaźnik poziomu; gdy mikrofon był zamknięty (komputer), po jego otwarciu przeglądarka odsłania pełną listę urządzeń
+  if (canTalk() && S.micPub) { unlockAudio(); micPreview().then(() => { if (!$('#sheet').hidden && !$('#sheetSettings').hidden) renderDevices(); }); }
   renderNoteCats();
   const list = $('#listenList');
   list.innerHTML = '';
