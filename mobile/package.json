@@ -1,0 +1,21 @@
+{
+  "name": "interkom-mobile",
+  "version": "1.4.1",
+  "private": true,
+  "description": "Interkom – aplikacja na iPhone i Android (Capacitor + natywny dźwięk LiveKit)",
+  "scripts": {
+    "ios": "npx cap sync ios && bash scripts/ios-setup.sh && npx cap open ios",
+    "android": "npx cap sync android && bash scripts/android-setup.sh && npx cap open android",
+    "sync": "npx cap sync && (bash scripts/ios-setup.sh || true) && (bash scripts/android-setup.sh || true)"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "ik-audio": "file:plugins/ik-audio"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Interkom – wybór serwera</title>
+<style>
+:root { --bg:#0b0d12; --panel:#141821; --panel2:#1c2130; --line:#2a3142; --fg:#e8ebf2; --muted:#8b93a7; --accent:#3b82f6; --ok:#22c55e; --urgent:#ef4444; }
+* { box-sizing: border-box; }
+html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui,-apple-system,sans-serif; -webkit-text-size-adjust:100%; }
+body { padding: calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 24px); display:flex; justify-content:center; }
+main { width:100%; max-width:420px; display:grid; gap:18px; }
+.logo { font-size:44px; text-align:center; }
+h1 { margin:0; text-align:center; font-size:24px; }
+.sub { margin:-10px 0 0; text-align:center; color:var(--muted); }
+section { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; display:grid; gap:10px; }
+h2 { margin:0; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:8px; }
+h2 .sp { flex:1; }
+button { font:inherit; color:inherit; cursor:pointer; border:1px solid var(--line); background:var(--panel2); border-radius:12px; padding:10px 14px; }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+button.link { background:none; border:none; padding:2px 4px; color:var(--accent); font-size:13px; text-transform:none; letter-spacing:0; }
+.srv { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px; }
+.srv .t { flex:1; min-width:0; }
+.srv b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.srv small { display:block; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.srv .go { color:var(--accent); font-size:20px; }
+.row { display:flex; gap:8px; align-items:center; }
+.row input { flex:1; min-width:0; width:auto; }
+.row button { flex:none; }
+main, section { min-width:0; }
+main, section { grid-template-columns: minmax(0, 1fr); }
+h2 .link { white-space: nowrap; }
+.row .srv { flex:1; }
+.del { padding:12px 14px; color:var(--muted); }
+input { width:100%; font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px; outline:none; }
+input:focus { border-color:var(--accent); }
+.hint { margin:0; color:var(--muted); font-size:13px; }
+.err { margin:0; color:var(--urgent); font-size:14px; min-height:0; }
+.err:empty { display:none; }
+.spin { width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:r .8s linear infinite; display:inline-block; }
+[hidden] { display:none !important; }
+@keyframes r { to { transform:rotate(360deg); } }
+.busy { position:fixed; inset:0; background:rgba(11,13,18,.92); display:grid; place-items:center; text-align:center; padding:24px; }
+.busy[hidden] { display:none; }
+.busy .spin { width:32px; height:32px; border-width:3px; margin-bottom:14px; }
+.dot { width:8px; height:8px; border-radius:50%; background:var(--ok); flex:none; }
+</style></head>
+<body>
+<main>
+  <div class="logo">🎧</div>
+  <h1>Interkom</h1>
+  <p class="sub">Wybierz serwer interkomu</p>
+
+  <section id="lanBox">
+    <h2>W tej sieci <span id="lanSpin" class="spin" hidden></span><span class="sp"></span><button class="link" id="btnScan" type="button">Szukaj ponownie</button></h2>
+    <div id="lanList"></div>
+    <p class="hint" id="lanHint">Szukam serwerów w sieci Wi-Fi…</p>
+  </section>
+
+  <section id="recentBox" hidden>
+    <h2>Ostatnio używane</h2>
+    <div id="recentList" style="display:grid;gap:8px"></div>
+  </section>
+
+  <section>
+    <h2>Wpisz adres</h2>
+    <form id="manual" class="row" autocomplete="off">
+      <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="np. 192.168.1.10">
+      <button class="primary" type="submit">Połącz</button>
+    </form>
+    <p class="err" id="err"></p>
+    <p class="hint">Adres znajdziesz u administratora – ten sam, który otwierasz w przeglądarce.</p>
+  </section>
+</main>
+<div class="busy" id="busy" hidden><div><div class="spin"></div><div id="busyMsg">Łączenie z<br><b id="busyName"></b></div>
+  <button type="button" id="busyCancel" style="margin-top:22px">Anuluj – wybierz inny serwer</button></div></div>
+
+<script>
+const P = window.Capacitor?.Plugins?.IkAudio;
+const $ = (s) => document.querySelector(s);
+const KEY = 'ik.servers';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
+function loadRecent() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } }
+function saveRecent(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, 8))); } catch {} }
+function remember(url, name) {
+  const list = loadRecent().filter((x) => x.url !== url);
+  list.unshift({ url, name: name || hostOf(url), at: Date.now() });
+  saveRecent(list);
+}
+
+// czy serwer odpowiada (krótki test, zanim aplikacja przejdzie na jego stronę – inaczej przy niedostępnym
+// adresie, np. lokalnym poza kościołem, telefon czekałby minutę na błąd)
+async function reachable(url, ms = 4000) {
+  try { await fetch(url.replace(/\/+$/, '') + '/api/health', { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(ms) }); return true; }
+  catch { return false; }
+}
+let cancelled = false, forceUrl = null;
+$('#busyCancel').onclick = () => { cancelled = true; $('#busy').hidden = true; renderRecent(window.__defUrl); scan(); };
+function busy(name, msg) { cancelled = false; $('#busyMsg').innerHTML = `${esc(msg || 'Łączenie z')}<br><b>${esc(name)}</b>`; $('#busy').hidden = false; }
+
+async function connect(url, name) {
+  $('#err').textContent = '';
+  if (!P) { $('#err').textContent = 'Ta strona działa tylko w aplikacji Interkom.'; return; }
+  busy(name || hostOf(url));
+  const full = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  if (forceUrl !== full && !(await reachable(full))) {
+    if (cancelled) return;
+    $('#busy').hidden = true; forceUrl = full;
+    $('#err').textContent = `Serwer ${hostOf(full)} nie odpowiada. Sprawdź Wi-Fi / internet albo wybierz inny adres (w kościele – lokalny, poza kościołem – zdalny). Dotknij go ponownie, żeby łączyć mimo to.`;
+    return;
+  }
+  if (cancelled) return;
+  try {
+    const r = await P.setServer({ url });
+    remember(r.url, name);
+    // dalej aplikacja sama otwiera serwer (iPhone: od razu, Android: uruchamia się ponownie)
+  } catch (e) { $('#busy').hidden = true; $('#err').textContent = e?.message || 'Nieprawidłowy adres.'; }
+}
+
+function srvButton(s, extra = '') {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'srv';
+  b.innerHTML = `${extra}<span class="t"><b>${esc(s.name)}</b><small>${esc(hostOf(s.url))}${s.v ? ' · wersja ' + esc(s.v) : ''}</small></span><span class="go">›</span>`;
+  b.onclick = () => connect(s.url, s.name);
+  return b;
+}
+
+function renderRecent(defaultUrl) {
+  const list = loadRecent();
+  if (defaultUrl && !list.some((x) => x.url === defaultUrl)) list.push({ url: defaultUrl, name: 'Serwer domyślny', fixed: true });
+  $('#recentBox').hidden = !list.length;
+  const box = $('#recentList'); box.innerHTML = '';
+  for (const s of list) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.append(srvButton(s));
+    if (!s.fixed) {
+      const d = document.createElement('button'); d.type = 'button'; d.className = 'del'; d.textContent = '✕'; d.title = 'Usuń z listy';
+      d.onclick = () => { saveRecent(loadRecent().filter((x) => x.url !== s.url)); renderRecent(defaultUrl); };
+      row.append(d);
+    }
+    box.append(row);
+  }
+}
+
+let scanning = false;
+async function scan() {
+  if (!P || scanning) return;
+  scanning = true; $('#lanSpin').hidden = false; $('#lanHint').textContent = 'Szukam serwerów w sieci Wi-Fi…';
+  let servers = [];
+  try { servers = (await P.discover({ timeoutMs: 3500 }))?.servers || []; } catch {}
+  scanning = false; $('#lanSpin').hidden = true;
+  const box = $('#lanList'); box.innerHTML = '';
+  const seen = new Set();
+  for (const s of servers) {
+    if (!s.url || seen.has(s.url)) continue; seen.add(s.url);
+    const dot = '<span class="dot"></span>';
+    box.append(srvButton({ url: s.url, name: s.org || s.name, v: s.v }, dot));
+  }
+  $('#lanHint').textContent = seen.size ? '' :
+    'Nie znaleziono serwera w tej sieci. Sprawdź, czy telefon jest w Wi-Fi kościoła, albo wpisz adres poniżej. Serwer w internecie (VPS) nie pojawi się tutaj – wpisz jego adres.';
+  $('#lanHint').hidden = !!seen.size;
+}
+
+$('#btnScan').onclick = scan;
+$('#manual').onsubmit = (e) => { e.preventDefault(); const v = $('#addr').value.trim(); if (v) connect(v); };
+
+(async () => {
+  if (!P) { $('#lanHint').textContent = 'Ta strona działa tylko w aplikacji Interkom.'; renderRecent(); return; }
+  let info = {};
+  try { info = await P.getServer(); } catch {}
+  const pick = new URLSearchParams(location.search).has('pick');
+  window.__defUrl = info.defaultUrl;
+  if (info.url && !pick) {
+    // zapamiętany serwer – a gdy nie odpowiada (np. adres lokalny poza kościołem), pierwszy działający z ostatnich
+    const recent = loadRecent();
+    const cands = [info.url, ...recent.map((x) => x.url), info.defaultUrl].filter((u, i, a) => u && a.indexOf(u) === i);
+    busy(recent.find((x) => x.url === info.url)?.name || hostOf(info.url));
+    const ok = await Promise.all(cands.map((u) => reachable(u)));
+    if (cancelled) return;
+    const pickUrl = cands.find((u, i) => ok[i]);
+    if (pickUrl) { forceUrl = pickUrl; connect(pickUrl, recent.find((x) => x.url === pickUrl)?.name); return; }
+    $('#busy').hidden = true;
+    $('#err').textContent = 'Żaden zapamiętany serwer nie odpowiada. Sprawdź połączenie z Wi-Fi albo internetem i wybierz serwer.';
+  }
+  renderRecent(info.defaultUrl);
+  scan();
+})();
+</script>
+</body></html>

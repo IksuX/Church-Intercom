@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="pl" class="app">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Interkom</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/branding.css">
+</head>
+<body>
+  <!-- LOGOWANIE -->
+  <section id="login" class="view">
+    <form id="loginForm" class="card" autocomplete="on">
+      <div class="logo" id="loginLogo">🎧</div>
+      <h1 id="loginTitle">Interkom</h1>
+      <div id="pcoLoginBox" hidden>
+        <a href="/auth/pco/start" class="pcologin">Zaloguj przez Planning Center</a>
+        <p class="or"><span>albo jako gość – PIN ekipy</span></p>
+      </div>
+      <div id="stepPin">
+        <label>PIN ekipy
+          <input name="pin" id="fPin" required inputmode="numeric" autocomplete="off">
+        </label>
+      </div>
+      <div id="stepManual" hidden>
+        <label>Imię (widoczne dla innych)
+          <input name="name" id="fName" maxlength="30" autocomplete="nickname" placeholder="np. Kamera 2">
+        </label>
+      </div>
+      <details id="speakerBox" hidden>
+        <summary>Mam PIN mówiącego / administratora</summary>
+        <label>PIN mówiącego
+          <input name="rolePin" id="fRolePin" inputmode="numeric" autocomplete="off">
+        </label>
+      </details>
+      <p id="remoteNote" class="hint remote-note" hidden></p>
+      <p id="loginErr" class="err" role="alert"></p>
+      <button type="submit" id="loginBtn" class="primary big">Dalej</button>
+      <button type="button" id="btnSrvLogin" class="srvbtn" hidden>🔁 Zmień serwer</button>
+      <p class="hint">Najlepiej działa ze słuchawkami przewodowymi. Bluetooth dodaje opóźnienie.</p>
+      <p class="hint"><a href="/pomoc" target="_blank" rel="noopener">📖 Instrukcja obsługi</a></p>
+      <div class="app-links" id="appLinks" hidden></div>
+    </form>
+  </section>
+
+  <!-- APLIKACJA -->
+  <section id="main" class="view" hidden>
+    <header class="top">
+      <span id="conn" class="dot" title="Połączenie"></span>
+      <span id="orgLogo" class="org-logo" hidden></span>
+      <strong id="orgName">Interkom</strong>
+      <span id="liveBadge" class="live-badge" hidden></span>
+      <div id="talkBar" class="talkbar" hidden aria-live="polite"></div>
+      <span class="top-spacer"></span>
+      <button id="btnProg" class="icon prog-btn" aria-label="Dźwięk transmisji" title="Dźwięk transmisji" aria-expanded="false" hidden>🎵</button>
+      <button id="btnMix" class="icon" aria-label="Mikser – głośności" title="Mikser – głośności" aria-expanded="false">🎚</button>
+      <button id="btnPeople" class="icon" aria-label="Kto jest online" title="Kto jest online">👥 <span id="onlineCount">0</span></button>
+      <button id="btnSettings" class="icon" aria-label="Ustawienia">⚙️</button>
+      <div id="mixBox" class="progbox mixbox" hidden role="dialog" aria-label="Mikser">
+        <div class="pb-h"><b>🎚 Mikser</b><span class="pb-st">tylko na tym urządzeniu</span></div>
+        <div class="mixer" id="mixer"></div>
+        <label class="pb-ck" id="mixDuckRow"><input type="checkbox" id="mixDuck"> Ściszaj transmisję, gdy ktoś mówi przez interkom</label>
+      </div>
+      <div id="progBox" class="progbox" hidden role="dialog" aria-label="Dźwięk transmisji">
+        <div class="pb-h"><b id="progName">Dźwięk transmisji</b><span id="progState" class="pb-st"></span></div>
+        <label class="pb-sw"><input type="checkbox" id="progOn"> <span>Słucham</span></label>
+        <div class="pb-vol"><span aria-hidden="true">🔈</span><input type="range" id="progVol" min="0" max="100" step="1" aria-label="Głośność dźwięku transmisji"><span id="progVolVal">50%</span></div>
+        <label class="pb-ck"><input type="checkbox" id="progDuck"> Ściszaj, gdy ktoś mówi przez interkom</label>
+        <div class="pb-ultra" id="progNatRow" hidden>
+          <label class="pb-ck" id="progStereoRow"><input type="checkbox" id="progStereo"> Stereo (zalecane)</label>
+          <label class="pb-ck"><input type="checkbox" id="progHiFi"> 🎧 Jakość muzyczna (gdy słuchasz w słuchawkach)</label>
+        </div>
+        <div class="pb-ultra" id="progUltraRow" hidden>
+          <label class="pb-ck"><input type="checkbox" id="progFast"> ⚡ Tryb ultra (w sieci kościoła)</label>
+          <label class="pb-buf">Bufor <select id="progBuf"><option value="min">Minimalny – ryzyko trzasków</option><option value="auto">Automatyczny</option><option value="stable">Stabilny – słabe Wi-Fi</option></select></label>
+        </div>
+        <div class="pb-lat" id="progLat" hidden><div class="pb-lat-h">⏱ Opóźnienie <b id="progLatVal">–</b></div><div class="pb-lat-d" id="progLatDet"></div><div class="pb-lat-w" id="progLatWarn"></div></div>
+        <p class="pb-hint" id="progHint"></p>
+      </div>
+    </header>
+
+    <div class="split" id="split">
+    <aside id="planPane" class="planpane" hidden aria-label="Plan nabożeństwa">
+      <div class="pp-head">📋 Plan nabożeństwa</div>
+    </aside>
+    <div class="comm">
+    <div id="planBar" class="planbar" hidden></div>
+    <div id="audioBlocked" class="banner warn" hidden>🔇 Dotknij tutaj, aby włączyć dźwięk</div>
+    <div id="toast" class="toast" hidden></div>
+
+    <nav id="tabs" class="tabs" role="tablist"></nav>
+
+    <div id="feeds" class="feeds">
+      <section class="fcol main"><div class="colhead" id="mainHead" hidden></div><main id="feed" class="feed" aria-live="polite"></main></section>
+    </div>
+
+    <footer class="bottom">
+      <div id="quickBar" class="quick"></div>
+      <div id="mentionBox" class="mentionbox" hidden role="listbox" aria-label="Oznacz osobę"></div>
+      <form id="composer" class="composer">
+        <button type="button" id="btnToPtt" class="modebtn" aria-label="Wróć do mówienia" title="Wróć do mówienia">🎙</button>
+        <input id="msgInput" maxlength="500" placeholder="Napisz do kanału…" autocomplete="off" enterkeyhint="send">
+        <button type="submit" class="primary" aria-label="Wyślij">➤</button>
+      </form>
+      <div id="pttRow" class="pttrow" hidden>
+        <button type="button" id="btnToText" class="modebtn" aria-label="Napisz wiadomość" title="Napisz wiadomość">⌨️</button>
+        <button id="ptt" class="ptt" type="button">
+          <span class="ptt-l1">Przytrzymaj i mów</span>
+          <span class="ptt-l2" id="pttTarget"></span>
+        </button>
+        <button id="pttLock" class="pttlock" type="button" aria-pressed="false" title="Mikrofon na stałe">🔒</button>
+      </div>
+    </footer>
+    </div>
+    </div>
+  </section>
+
+  <!-- WEZWANIE (pełny ekran) -->
+  <div id="callBox" class="callbox" hidden role="alertdialog" aria-live="assertive">
+    <div class="call-inner">
+      <div id="callAv" class="call-av"></div>
+      <div class="call-lbl">WEZWANIE</div>
+      <div id="callFrom" class="call-from"></div>
+      <div id="callText" class="call-text"></div>
+      <div class="call-btns">
+        <button id="callNo" type="button">Nie teraz</button>
+        <button id="callYes" type="button" class="primary">✓ Idę</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: ustawienia / osoby -->
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <h2 id="sheetTitle">Ustawienia</h2>
+        <button id="sheetClose" class="icon" aria-label="Zamknij">✕</button>
+      </div>
+      <div id="sheetSettings">
+        <p class="me" id="meLine"></p>
+        <p class="helplink"><a href="/pomoc" target="_blank" rel="noopener">📖 Instrukcja obsługi</a></p>
+        <div class="app-links web-only" id="appLinksSet" hidden></div>
+        <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
+          <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
+        <h3>Słucham kanałów</h3>
+        <div id="listenList" class="checklist"></div>
+        <h3>Dźwięk</h3>
+        <div id="audioBox">
+          <div id="natBox" class="natbox" hidden>
+            <p class="hint">📱 Aplikacja: rozmowy działają też przy zablokowanym ekranie i w kieszeni.</p>
+            <label class="switch"><input type="checkbox" id="nbMedia"> Mów przyciskiem na słuchawkach / Bluetooth (play/pauza)</label>
+            <label class="switch"><input type="checkbox" id="nbVol"> Mów przyciskiem głośności telefonu</label>
+            <label class="field">Sposób mówienia przyciskiem
+              <select id="nbMode"><option value="hold">Przytrzymaj i mów</option><option value="toggle">Naciśnij – mów, naciśnij – koniec</option></select></label>
+            <div class="row"><button id="nbLearn" type="button">🎛 Naucz przycisk PTT</button><span class="hint" id="nbKey"></span></div>
+            <p class="hint" id="nbHint"></p>
+          </div>
+          <div id="micBox">
+            <label class="field">Mikrofon
+              <select id="optMic"></select></label>
+            <div class="meter" title="Poziom mikrofonu"><div id="micMeter"></div></div>
+            <p class="hint" id="micHint">Mów – pasek powinien się ruszać. Mikrofon nie nadaje, dopóki nie wciśniesz przycisku.</p>
+            <label class="switch" id="micRelRow"><input type="checkbox" id="optMicRel"> Otwieraj mikrofon dopiero przy mówieniu</label>
+            <p class="hint" id="micRelHint">Otwarty mikrofon przełącza komputer w tryb rozmowy, który ścisza muzykę i filmy w innych programach. Z tą opcją mikrofon włącza się tylko na czas mówienia (start ok. 0,3 s później). Zalecane na komputerze.</p>
+            <div class="boom" id="boomBox">
+              <label class="switch"><input type="checkbox" id="optBoom"> 🎧 Mów, gdy pałąk słuchawek jest opuszczony</label>
+              <p class="hint" id="boomState"></p>
+              <div class="row"><button type="button" id="boomCal">📏 Kalibruj słuchawki</button></div>
+              <p class="hint" id="boomHint">Dla słuchawek, które wyciszają mikrofon po podniesieniu pałąka: apka rozpoznaje to po zaniku sygnału i sama włącza i wyłącza mówienie. Najpierw skalibruj (opuść / podnieś pałąk). Działa najlepiej z wyłączoną redukcją szumów i automatycznym wzmocnieniem.</p>
+            </div>
+            <details class="adv"><summary>Przetwarzanie mikrofonu</summary>
+              <label class="switch"><input type="checkbox" id="optEc"> Redukcja echa</label>
+              <p class="hint">Redukcja echa włącza systemowy „tryb rozmowy”, który na czas mówienia ścisza muzykę i filmy w innych programach. Na komputerze ze słuchawkami zostaw wyłączoną; włącz, gdy mówisz przy głośnikach (inaczej inni usłyszą echo).</p>
+              <label class="switch"><input type="checkbox" id="optNs"> Redukcja szumów</label>
+              <label class="switch"><input type="checkbox" id="optAgc"> Automatyczne wzmocnienie</label>
+              <p class="hint">Wyłącz wszystkie trzy, gdy podłączasz sygnał z miksera albo dobry mikrofon zewnętrzny – brzmi naturalniej.</p>
+            </details>
+          </div>
+          <label class="field" id="spkRow">Głośnik / słuchawki
+            <select id="optSpk"></select></label>
+          <p class="hint" id="spkHint" hidden>Na iPhonie i iPadzie wyjście dźwięku wybierasz w Centrum sterowania (ikona AirPlay) – przeglądarka nie może go zmienić.</p>
+          <div class="row"><button id="btnSpkTest" type="button">🔊 Test głośnika</button><button id="btnDevRefresh" type="button">↻ Odśwież listę urządzeń</button></div>
+          <p class="hint">🎚 <b>Mikser</b> u góry ekranu: głośność rozmów, dźwięku transmisji, komunikatów czytanych na głos i sygnałów – osobno, z wyciszaniem. 🎵 <b>Dźwięk transmisji</b> włączasz przyciskiem 🎵 – pojawia się, gdy realizator go nadaje.</p>
+        </div>
+        <h3>Opcje</h3>
+        <label class="switch"><input type="checkbox" id="optVoice"> Odtwarzaj głos</label>
+        <label class="switch"><input type="checkbox" id="optTts"> Czytaj wiadomości tekstowe na głos</label>
+        <label class="field" id="optSttRow">Transkrypcja mowy (tekst pod wypowiedziami)
+          <select id="optSttShow">
+            <option value="always">Pokazuj zawsze</option>
+            <option value="novoice">Tylko gdy mam wyłączony głos</option>
+            <option value="never">Nie pokazuj</option>
+          </select></label>
+        <label class="field" id="optColsRow">Kolumny kanałów (tablet, komputer)
+          <select id="optCols">
+            <option value="1">Jedna – tylko wybrany kanał</option>
+            <option value="2">Dwie kolumny</option>
+            <option value="3">Trzy kolumny</option>
+            <option value="4">Cztery kolumny</option>
+          </select></label>
+        <p class="hint" id="optColsHint">Pierwsza kolumna to kanał, na który mówisz (wybierany zakładką). W pozostałych wybierasz kanał do podglądu.</p>
+        <label class="field" id="optLayoutRow" hidden>Układ ekranu (tablet, komputer)
+          <select id="optLayout">
+            <option value="auto">Automatycznie</option>
+            <option value="left">Plan po lewej</option>
+            <option value="right">Plan po prawej</option>
+            <option value="single">Jeden panel</option>
+          </select></label>
+        <label class="switch"><input type="checkbox" id="optVibrate"> Wibracje przy nowych wiadomościach</label>
+        <label class="switch"><input type="checkbox" id="optWake"> Nie wygaszaj ekranu</label>
+        <label class="switch" id="optPlanRow" hidden><input type="checkbox" id="optPlan"> Czytaj na głos zmianę punktu planu</label>
+        <label class="switch" id="optStreamRow" hidden><input type="checkbox" id="optStream"> Czytaj na głos komunikaty o transmisji live</label>
+        <div id="optNotesRow" hidden>
+          <h3>Kolumny z Planning Center</h3>
+          <p class="hint">Które notatki z planu pokazywać (i czytać) przy zmianie punktu. Automatycznie = kolumny o nazwie Twoich zespołów.</p>
+          <label class="switch"><input type="checkbox" id="optNotesAuto"> Automatycznie (moje zespoły)</label>
+          <div id="optNoteCats" class="checklist"></div>
+        </div>
+        <div id="elevateBox">
+          <h3>Uprawnienia</h3>
+          <p class="hint">Masz PIN mówiącego albo administratora? Wpisz go – zachowasz swoje logowanie i kanały.</p>
+          <div class="row"><input id="elevPin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"><button id="btnElevate" type="button">Zatwierdź</button></div>
+        </div>
+        <h3 class="web-only">Powiadomienia na zablokowanym ekranie</h3>
+        <p class="hint web-only" id="pushInfo"></p>
+        <div class="row"><button id="btnPush" type="button" class="primary">🔔 Włącz powiadomienia</button><button id="btnPushTest" type="button" hidden>Wyślij test</button></div>
+        <div id="pushPrefs" class="checklist pushprefs">
+          <p class="hint">Wezwania i PILNE! przychodzą zawsze. Dodatkowo powiadamiaj mnie o:</p>
+          <label><input type="checkbox" data-pp="mentions"> @ oznaczeniu mnie w wiadomości</label>
+          <label><input type="checkbox" data-pp="dm"> 💬 wiadomościach prywatnych</label>
+          <label><input type="checkbox" data-pp="channels"> 📢 wiadomościach i wypowiedziach na kanałach, których słucham</label>
+          <label><input type="checkbox" data-pp="plan"> ▶ zmianie punktu planu</label>
+          <label><input type="checkbox" data-pp="timer"> ⏳ końcu czasu punktu (ostatnia minuta, przekroczenie)</label>
+          <label><input type="checkbox" data-pp="stream"> 🔴 transmisji live (start, koniec, problemy)</label>
+          <p class="hint" id="vibHint"></p>
+        </div>
+        <div class="row">
+          <button id="btnTestTts" type="button">Test mowy</button>
+          <button id="btnLogout" type="button" class="danger">Wyloguj</button>
+        </div>
+        <button id="btnSrv" type="button" class="srvbtn" hidden>🔁 Zmień serwer</button>
+        <div id="adminBox" hidden>
+          <h3>Administrator</h3>
+          <p id="adminLink"><a href="/admin" target="_blank" class="adminlink">⚙️ Otwórz panel administracyjny</a></p>
+          <button id="btnClear" type="button" class="danger">Wyczyść czat (nowe nabożeństwo)</button>
+          <div id="pcoAdmin" hidden>
+            <h3>Planning Center</h3>
+            <p class="hint" id="pcoStatus"></p>
+            <div id="pcoPlans" class="checklist"></div>
+            <div class="row"><button id="btnPcoRefresh" type="button">Odśwież dane z Planning Center</button></div>
+          </div>
+        </div>
+        <p class="hint">Instalacja certyfikatu (tylko tryb bez domeny): <a href="/ca.crt">pobierz certyfikat</a>. <span id="ver"></span></p>
+      </div>
+      <div id="sheetPlan" hidden>
+        <!-- przypięte: bieżący i następny punkt, odliczanie, sterowanie -->
+        <div class="plan-pin">
+          <p class="hint" id="planMeta"></p>
+          <div id="planNow"></div>
+          <div id="planCtl" class="planctl" hidden>
+            <button type="button" data-dir="-1">◀ Poprzedni</button>
+            <button type="button" data-dir="1" class="primary">Następny ▶</button>
+          </div>
+        </div>
+        <!-- przewijany: cały program w zwartej formie -->
+        <div class="plan-scroll" id="planScroll">
+          <h3>Cały program</h3>
+          <ol id="planList" class="planlist compact"></ol>
+        </div>
+      </div>
+      <div id="sheetPeople" hidden>
+        <div id="peopleList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

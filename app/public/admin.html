@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d12">
+  <title>Interkom – panel administracyjny</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/branding.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body class="admin">
+  <!-- logowanie -->
+  <section id="aLogin" class="view">
+    <form id="aLoginForm" class="card">
+      <div class="logo">⚙️</div>
+      <h1>Panel administracyjny</h1>
+      <label>PIN administratora
+        <input id="aPin" type="password" inputmode="numeric" autocomplete="current-password" required>
+      </label>
+      <p id="aLoginErr" class="err" role="alert"></p>
+      <button class="primary big" type="submit">Zaloguj</button>
+      <p class="hint"><a href="/">← Wróć do interkomu</a></p>
+    </form>
+  </section>
+
+  <!-- panel -->
+  <section id="aMain" hidden>
+    <header class="a-top">
+      <strong id="aOrg">Interkom</strong><span class="a-sub">panel administracyjny</span>
+      <span class="a-spacer"></span>
+      <a href="/pomoc#admin" class="a-link" target="_blank">📖 Pomoc</a>
+      <a href="/" class="a-link">Interkom</a>
+      <button id="aLogout" type="button">Wyloguj</button>
+    </header>
+    <nav class="a-tabs" id="aTabs">
+      <button data-tab="status" aria-selected="true"><i>📊</i>Stan</button>
+      <button data-tab="general"><i>⚙️</i>Ogólne</button>
+      <button data-tab="access"><i>🔑</i>Dostęp i PIN-y</button>
+      <button data-tab="channels"><i>📢</i>Kanały i przyciski</button>
+      <button data-tab="audio"><i>🎵</i>Dźwięk transmisji</button>
+      <button data-tab="stt"><i>📝</i>Transkrypcja</button>
+      <button data-tab="pco"><i>📅</i>Planning Center</button>
+      <button data-tab="streams"><i>📡</i>Transmisja live</button>
+      <button data-tab="server"><i>🖥</i>Serwer</button>
+    </nav>
+
+    <main class="a-body">
+      <!-- STAN -->
+      <section data-panel="status">
+        <div class="a-grid" id="stCards"></div>
+        <div class="a-card">
+          <h2>Osoby online <span class="a-count" id="stOnlineN"></span></h2>
+          <p class="hint">Uprawnienia: <b>Auto</b> = według grafiku Planning Center / PIN-u. Zmiana działa od razu. Dla osób z Planning Center zapisuje się na stałe, dla zalogowanych PIN-em – do wylogowania.</p>
+          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th></tr></thead><tbody id="stUsers"></tbody></table></div>
+        </div>
+        <div class="a-card" id="stGrantsCard" hidden>
+          <h2>Zapisane uprawnienia (osoby z Planning Center)</h2>
+          <table class="a-table"><thead><tr><th>Osoba</th><th>Admin</th><th>Mówienie</th><th>Sterowanie planem</th><th></th></tr></thead><tbody id="stGrants"></tbody></table>
+        </div>
+        <div class="a-card">
+          <h2>Ksywki <span class="a-count" id="nkN"></span></h2>
+          <p class="hint">Po ksywce można oznaczyć osobę w wiadomości (@ksywka). Każdy może też ustawić swoje ksywki sam w aplikacji. Osobom z Planning Center ksywki zostają na stałe, zalogowanym PIN-em – do wylogowania.</p>
+          <input id="nkFilter" placeholder="Szukaj osoby…" autocomplete="off">
+          <div id="nkList" class="a-rows nk-rows"></div>
+        </div>
+        <div class="a-card">
+          <h2>Czat</h2>
+          <p class="hint">Przed nowym nabożeństwem możesz wyczyścić historię wiadomości na wszystkich kanałach. Dziennik na dysku zostaje.</p>
+          <button id="stClear" type="button" class="danger">Wyczyść czat</button>
+        </div>
+      </section>
+
+      <!-- OGÓLNE -->
+      <section data-panel="general" hidden>
+        <div class="a-card">
+          <h2>Nazwa</h2>
+          <label class="a-field">Nazwa wyświetlana w aplikacji<input id="gOrg" maxlength="60"></label>
+        </div>
+        <div class="a-card">
+          <h2>Wygląd</h2>
+          <p class="hint">Takie same dla wszystkich – w przeglądarce i w aplikacji na telefon (bez jej przebudowy).</p>
+          <div class="a-field">Kolor przewodni (przyciski, zaznaczenia, własne wiadomości)
+            <div class="br-colors" id="gAccentPresets"></div>
+            <div class="row"><input type="color" id="gAccent"><span class="hint" id="gAccentHex"></span><button type="button" id="gAccentReset">Domyślny</button></div>
+          </div>
+          <div class="a-field">Logo (ekran logowania i nagłówek; PNG z przezroczystym tłem lub SVG, najlepiej poziome, do 2 MB)
+            <div class="br-logo"><span id="gLogoPrev" class="br-prev">brak logo</span></div>
+            <div id="gLogoColorRow" class="row" hidden>
+              <label class="a-field" style="flex:1">Kolor logo
+                <select id="gLogoColor" class="a-select"><option value="">Oryginalne kolory</option><option value="#ffffff">Białe</option><option value="#000000">Czarne</option><option value="accent">Jak kolor przewodni</option><option value="custom">Własny kolor…</option></select></label>
+              <input type="color" id="gLogoCustom" hidden>
+            </div>
+            <p class="hint" id="gLogoTintHint" hidden>Całe logo dostaje jeden kolor – najlepiej działa z logo jednobarwnym. Elementy „wycięte” białym kolorem zleją się z resztą; w pliku powinny być przezroczyste.</p>
+            <p class="hint" id="gLogoColorHint" hidden></p>
+            <div class="row"><label class="btn-file"><input id="gLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden><span>⬆ Wgraj logo…</span></label><button type="button" id="gLogoDel" class="danger" hidden>Usuń logo</button></div>
+          </div>
+          <div class="br-sample"><button type="button" class="primary" tabindex="-1">Przycisk</button><span class="br-mine">Moja wiadomość</span></div>
+        </div>
+        <div class="a-card">
+          <h2>Aplikacja na telefon</h2>
+          <p class="hint">Gdy aplikacje będą gotowe, wklej linki – na ekranie logowania (i w ustawieniach w przeglądarce) pojawią się przyciski do pobrania. Puste pole = bez przycisku.</p>
+          <label class="a-field">iPhone – link do App Store albo publiczny link TestFlight<input id="apIos" placeholder="https://apps.apple.com/… lub https://testflight.apple.com/join/…" autocomplete="off"></label>
+          <label class="a-field">Android – link do Google Play albo do pliku APK<input id="apAndroid" placeholder="https://play.google.com/store/apps/details?id=… lub https://…/interkom.apk" autocomplete="off"></label>
+          <div class="a-field">Android – plik APK na tym serwerze
+            <p class="hint" id="apkState">…</p>
+            <div class="row-btns"><label class="btn-file"><input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden><span role="button" tabindex="0">⬆ Wgraj plik APK…</span></label><button type="button" id="apkDel" class="danger" hidden>Usuń plik</button></div>
+            <details class="hint"><summary>Jak to działa</summary>
+              <p>Bez Google Play: zbuduj APK w Android Studio (Build → Build APK(s)) i wgraj go tutaj. Gdy pole „Android” powyżej jest puste, ekran logowania pokaże przycisk „Pobierz na Androida (APK)” z tego serwera. Przy instalacji Android zapyta o zgodę na „instalowanie nieznanych aplikacji” z przeglądarki.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOSTĘP -->
+      <section data-panel="access" hidden>
+        <div class="a-card">
+          <h2>PIN-y</h2>
+          <p class="hint">Zmiana PIN-u nie wylogowuje osób, które już są połączone.</p>
+          <label class="a-field">PIN ekipy – logowanie dla wszystkich<span class="a-pin"><input id="gAccess" data-pin><button type="button" class="a-eye">👁</button></span></label>
+          <label class="a-field">PIN mówiącego – prawo mówienia dla osób spoza grafiku<span class="a-pin"><input id="gSpeaker" data-pin><button type="button" class="a-eye">👁</button></span></label>
+          <label class="a-field">PIN administratora – panel i czyszczenie czatu<span class="a-pin"><input id="gAdmin" data-pin><button type="button" class="a-eye">👁</button></span></label>
+        </div>
+        <div class="a-card" id="rmCard">
+          <h2>Dostęp spoza sieci kościoła</h2>
+          <p class="hint" id="rmAddr"></p>
+          <label class="switch"><input type="checkbox" id="rmEnabled"> Wpuszczaj osoby łączące się z internetu</label>
+          <label class="switch"><input type="checkbox" id="rmPin"> Pozwól logować się PIN-em ekipy spoza sieci</label>
+          <p class="hint">Domyślnie spoza sieci tylko kontem Planning Center – PIN jest wspólny i krótki, a z internetu każdy mógłby próbować go zgadnąć.</p>
+          <label class="switch"><input type="checkbox" id="rmAdmin"> Pozwól otwierać panel administracyjny spoza sieci</label>
+          <details class="adv"><summary>Jak to działa i co ustawić w routerze</summary>
+            <ol class="hint a-steps">
+              <li>Instalator: <code>sudo ./install.sh --remote</code> – druga nazwa DuckDNS wskazuje <b>publiczny</b> adres kościoła i sama się aktualizuje, gdy dostawca internetu go zmieni.</li>
+              <li>W routerze przekieruj na ten serwer porty: <b>443/TCP</b>, <b>7881/TCP</b> i <b>7882/UDP</b>.</li>
+              <li>W Planning Center dopisz adres powrotu dla nazwy zdalnej (zakładka Planning Center → Logowanie).</li>
+              <li>Operatorzy zdalni otwierają adres zdalny (w przeglądarce albo w aplikacji: 🔁 Zmień serwer → Wpisz adres) i logują się kontem Planning Center.</li>
+            </ol>
+          </details>
+        </div>
+        <p class="hint a-lead">Logowanie kontem Planning Center (i kto może mówić według grafiku) ustawisz w zakładce <b>Planning Center</b>. Uprawnienia poszczególnych osób zmienisz w zakładce <b>Stan</b>.</p>
+      </section>
+
+      <!-- KANAŁY I PRZYCISKI -->
+      <section data-panel="channels" hidden>
+        <div class="a-card">
+          <h2>Kanały</h2>
+          <p class="hint">Kanał ogólny słyszą domyślnie wszyscy. Kanały z zespołów Planning Center dodają się automatycznie – ustawisz je w zakładce Planning Center.</p>
+          <div id="chList" class="a-rows"></div>
+          <button id="chAdd" type="button">+ Dodaj kanał</button>
+        </div>
+        <div class="a-card">
+          <h2>Szybkie przyciski</h2>
+          <p class="hint">Maks. 12. „Alarm” = sygnał dźwiękowy, wibracja i czerwone powiadomienie u odbiorców.</p>
+          <div id="qList" class="a-rows"></div>
+          <button id="qAdd" type="button">+ Dodaj przycisk</button>
+          <h3>Podgląd</h3>
+          <div id="qPreview" class="quick"></div>
+        </div>
+      </section>
+
+      <!-- DŹWIĘK TRANSMISJI -->
+      <section data-panel="audio" hidden>
+        <div class="a-card" id="pgCard">
+          <h2>Dźwięk transmisji dla ekipy</h2>
+          <p class="hint">Miks z konsoli (ten sam, co idzie na transmisję) może słyszeć każdy w aplikacji: włącza go przyciskiem <b>🎵</b> u góry ekranu i sam ustawia głośność. Dźwięk nadaje dowolny komputer w kościele z wejściem audio (np. interfejs USB podłączony do wyjścia konsolety) – wystarczy otworzyć na nim link poniżej w Chrome lub Edge.</p>
+          <label class="switch"><input type="checkbox" id="pgEnabled"> Włącz dźwięk transmisji</label>
+          <label class="a-field">Nazwa widoczna dla ekipy<input id="pgName" maxlength="30" placeholder="Dźwięk transmisji"></label>
+          <label class="a-field">Jakość dźwięku (stereo)
+            <select id="pgBitrate" class="a-select">
+              <option value="96">96 kb/s – słabe łącza</option>
+              <option value="128">128 kb/s</option>
+              <option value="160">160 kb/s – zalecane</option>
+              <option value="192">192 kb/s</option>
+              <option value="256">256 kb/s – wysoka</option>
+              <option value="320">320 kb/s – najwyższa</option>
+            </select></label>
+          <p class="hint">Wyższa jakość = więcej danych u każdego słuchacza (160 kb/s to ok. 70 MB na godzinę, 320 kb/s – ok. 140 MB). Słuchacze na komórkowym internecie mogą wtedy częściej słyszeć przerwy. Zmiana działa od razu.</p>
+          <label class="a-field">Gdy ktoś mówi przez interkom, ścisz transmisję do: <b id="pgDuckVal"></b>
+            <input type="range" id="pgDuck" min="0" max="100" step="5"></label>
+          <p class="hint">100% = bez ściszania. Każdy może też wyłączyć ściszanie u siebie.</p>
+          <label class="switch"><input type="checkbox" id="pgLocal"> Lokalny odsłuch – telefony w sieci kościoła słuchają prosto z nadajnika</label>
+          <details class="hint"><summary>Kiedy to włączyć</summary>
+            <p>Gdy serwer jest w chmurze (VPS), dźwięk nie musi lecieć do serwerowni i z powrotem: komputer z nadajnikiem sam wysyła go telefonom w tej samej sieci (mniejsze opóźnienie, mniejszy transfer). Kto jest poza siecią kościoła, słucha przez serwer – aplikacja wybiera to sama. Gdy serwer stoi w kościele, zostaw wyłączone.</p></details>
+          <label class="a-field">Skąd brać dźwięk?
+            <select id="pgSource" class="a-select">
+              <option value="browser">Komputer w kościele z przeglądarką (strona nadajnika, link poniżej)</option>
+              <option value="server">Wejście audio tego serwera (line-in, interfejs USB, Qu-SB przez USB) – tylko panel</option>
+            </select></label>
+          <p class="hint">„Wejście audio serwera”: dźwięk czyta, przetwarza i wysyła sam serwer (usługa <i>audio</i>) – przeglądarka ani drugi komputer nie biorą w tym udziału, tutaj tylko zmieniasz ustawienia. Zmianę źródła zapisz przyciskiem „Zapisz” na dole.</p>
+          <h3 id="pgSrcH">Komputer z dźwiękiem (nadajnik)</h3>
+          <p id="pgState" class="a-status"></p>
+          <div id="pgSrv" class="pg-srv" hidden>
+            <label class="switch big-switch"><input type="checkbox" id="psOn"> Nadawaj dźwięk z wejścia serwera</label>
+            <label class="a-field">Wejście audio
+              <div class="a-inline"><select id="psDev" class="a-select" style="flex:1"></select><button id="psScan" type="button" title="Szukaj wejść">↻</button></div></label>
+            <div class="ps-ch">
+              <label class="a-field">Tryb<select id="psMode" class="a-select"><option value="stereo">Stereo</option><option value="mono">Mono (suma)</option></select></label>
+              <label class="a-field">L (lewy)<select id="psL" class="a-select"></select></label>
+              <label class="a-field"><span id="psRLab">P (prawy)</span><select id="psR" class="a-select"></select></label>
+            </div>
+            <p class="hint" id="psChInfo"></p>
+            <div class="ps-gain"><span>Poziom wejścia</span><button id="psDn" type="button">−</button><input type="range" id="psGain" min="-24" max="24" step="0.5"><button id="psUp" type="button">+</button><b id="psGainVal">0 dB</b><button id="psG0" type="button">0</button></div>
+            <label class="switch"><input type="checkbox" id="psLim"> Ogranicznik (chroni przed przesterowaniem)</label>
+            <div class="ps-meters">
+              <div class="m"><span>L</span><div class="bar"><i id="psmL"></i></div><span id="psdL">–∞</span></div>
+              <div class="m"><span>P</span><div class="bar"><i id="psmR"></i></div><span id="psdR">–∞</span></div>
+            </div>
+            <div class="row-btns"><button id="psMute" type="button">🔇 Wycisz u wszystkich</button></div>
+            <details class="hint"><summary>Podłączenie do serwera (line-in, Qu-SB, Dante)</summary>
+              <ul>
+                <li><b>Line-in płyty głównej</b> (np. Dell OptiPlex Micro: przełączane gniazdo z przodu): ściszone wyjście konsolety (−10 dBV albo tłumik), najlepiej przez DI / transformator z odcięciem masy – bez brumu. Gniazdo może wymagać przestawienia na wejście (zob. README).</li>
+                <li><b>Qu-SB przez USB-B</b> albo interfejs USB: widać wszystkie kanały (np. 18) – wybierz L/P, np. 17 i 18 (Main LR). Bez ograniczenia przeglądarek do kanałów 1–2.</li>
+                <li><b>Dante:</b> Dante Virtual Soundcard nie działa na Linuksie – użyj adaptera Dante → USB albo wyjścia analogowego.</li>
+              </ul></details>
+          </div>
+          <div id="pgBrowser">
+          <div id="pgRemote" class="pg-remote" hidden>
+            <label class="a-field">Poziom wejścia nadajnika (zdalnie): <b id="pgGainVal"></b>
+              <input type="range" id="pgGain" min="-24" max="24" step="0.5"></label>
+            <div class="row-btns"><button id="pgGain0" type="button">0 dB</button><button id="pgMute" type="button">🔇 Wycisz u wszystkich</button></div>
+            <p class="hint">Zmiana dociera do nadajnika w ciągu ok. 2 s. Kanały wejścia wybiera się na komputerze z nadajnikiem.</p>
+          </div>
+          <div id="pgLinkBox" hidden>
+            <pre class="a-code" id="pgLink"></pre>
+            <div class="row-btns"><button id="pgCopy" type="button">📋 Kopiuj link</button><a id="pgOpen" class="a-btnlink" target="_blank" rel="noopener">Otwórz tutaj</a></div>
+            <p class="hint">Link zawiera klucz – kto go ma, może nadawać dźwięk. Otwórz go na komputerze z dźwiękiem; zapamięta się tam na stałe.</p>
+          </div>
+          <div class="row-btns"><button id="pgKey" type="button">Wygeneruj link nadajnika</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRANSKRYPCJA -->
+      <section data-panel="stt" hidden>
+        <div class="a-card">
+          <h2>Model i dokładność</h2>
+          <p id="sttStatus" class="a-status"></p>
+          <label class="a-field">Model (zmiana działa od razu – nowy model ładuje się w tle, pierwszy raz pobiera się z internetu)
+            <select id="sttModel" class="a-select">
+              <option value="tiny">tiny – najszybszy, słaby po polsku</option>
+              <option value="base">base – szybki, przyzwoity (słabe serwery, 2 rdzenie)</option>
+              <option value="small">small – średnia jakość, szybki</option>
+              <option value="medium">medium – dobra jakość, wolny (ok. 2,5 GB RAM)</option>
+              <option value="large-v3-turbo">large-v3-turbo – najlepszy polski, szybkość podobna do medium (ok. 2 GB RAM, od 4 rdzeni)</option>
+            </select></label>
+          <label class="a-field">Dokładność rozpoznawania
+            <select id="sttQuality" class="a-select">
+              <option value="fast">Szybko – jeden wariant (najmniejsze opóźnienie)</option>
+              <option value="balanced">Zrównoważona – 3 warianty (zalecane)</option>
+              <option value="accurate">Dokładnie – 5 wariantów i ponawianie przy niepewności (ok. 2× wolniej)</option>
+            </select></label>
+          <div class="row"><button id="sttBench" type="button">Test szybkości na ostatniej wypowiedzi</button></div>
+          <p id="sttBenchOut" class="hint"></p>
+        </div>
+        <div class="a-card">
+          <h2>Gdzie działa transkrypcja</h2>
+          <h3>Kanały</h3>
+          <div id="sttChans" class="a-checks"></div>
+          <label class="switch"><input type="checkbox" id="sttDm"> W rozmowach prywatnych (szept)</label>
+          <h3>Osoby – czyje wypowiedzi zapisywać</h3>
+          <p class="hint">Odznacz osoby, których wypowiedzi nie mają być zapisywane tekstem (np. gość, który nie chce transkrypcji). Lista: osoby online i z grafiku Planning Center. Szybciej: w aplikacji 👥 → stuknij osobę → 📝.</p>
+          <div id="sttUsers" class="a-checks"></div>
+          <p class="hint">Każdy użytkownik może dodatkowo ukryć transkrypcję u siebie (⚙️ w aplikacji).</p>
+        </div>
+        <div class="a-card">
+          <h2>Słownik – imiona, nazwy, tytuły pieśni</h2>
+          <label class="a-field">Słowa, które model ma znać (oddzielone przecinkami, maks. 600 znaków)
+            <textarea id="gDict" rows="3" maxlength="600" placeholder="nazwy miejscowości, imiona, tytuły pieśni, nazwy sprzętu – oddzielone przecinkami"></textarea></label>
+          <label class="switch"><input type="checkbox" id="hintPlan"> Podpowiadaj tytuły z bieżącego planu Planning Center (najpierw bieżący i najbliższe punkty)</label>
+          <label class="switch"><input type="checkbox" id="hintNames"> Podpowiadaj imiona osób z grafiku</label>
+          <p class="hint">Teraz podpowiadane: <span id="hotPreview">—</span></p>
+          <details><summary class="hint">Zaawansowane: zdanie-podpowiedź</summary>
+          <label class="a-field">Zdanie-podpowiedź (maks. 160 znaków)
+            <textarea id="gStt" rows="2" maxlength="160" placeholder="Zwykle zostaw puste – lepiej działa słownik powyżej."></textarea></label>
+          <p class="hint">Zdanie mocniej „ciągnie” model niż słownik i potrafi zmienić sens wypowiedzi.</p></details>
+        </div>
+        <div class="a-card">
+          <h2>Ostatnie nagrania</h2>
+          <p class="hint">20 ostatnich wypowiedzi (tylko w pamięci serwera, znikają po restarcie). Odsłuchaj i porównaj: po zmianie modelu, dokładności albo słownika kliknij „Ponów”, żeby zobaczyć, czy jest lepiej.</p>
+          <div class="row"><button id="sttRecentLoad" type="button">Odśwież listę</button></div>
+          <div id="sttRecent" class="stt-recent"></div>
+        </div>
+      </section>
+
+      <!-- PLANNING CENTER -->
+      <section data-panel="pco" hidden>
+        <div class="a-card">
+          <h2>Połączenie</h2>
+          <p id="pStatus" class="a-status"></p>
+          <details id="pCredBox">
+            <summary id="pCredSummary">Podłącz konto Planning Center</summary>
+            <p class="hint">Utwórz token na <a href="https://api.planningcenteronline.com/oauth/applications" target="_blank" rel="noopener">api.planningcenteronline.com/oauth/applications</a> → <b>Personal Access Tokens</b> → <b>Create one now</b> (z dostępem do Services). Najlepiej z konta z uprawnieniami administratora Services.</p>
+            <label class="a-field">Application ID<input id="pAppId" autocomplete="off"></label>
+            <label class="a-field">Secret<input id="pSecret" type="password" autocomplete="off"></label>
+            <div class="row"><button id="pConnect" type="button" class="primary">Połącz i sprawdź</button>
+              <button id="pDisconnect" type="button" class="danger" hidden>Odłącz</button></div>
+          </details>
+          <label class="switch"><input type="checkbox" id="pEnabled"> Korzystaj z Planning Center</label>
+        </div>
+
+        <div id="pConfigured">
+          <div class="a-card">
+            <h2>Plan nabożeństwa</h2>
+            <p id="pPlan" class="a-status"></p>
+            <div id="pPlans" class="checklist"></div>
+            <label class="switch"><input type="checkbox" id="pAnnounce"> Ogłaszaj zmianę punktu na kanale ogólnym (wpis na czacie, czytany przez syntezator)</label>
+            <div class="row"><button id="pRefresh" type="button">Odśwież dane z Planning Center</button></div>
+          </div>
+
+          <div class="a-card">
+            <h2>Typy wydarzeń</h2>
+            <p class="hint">Z których typów brać plany. Nic nie zaznaczone = wszystkie.</p>
+            <div id="pTypes" class="a-checks"></div>
+          </div>
+
+          <div class="a-card">
+            <h2>Kto może mówić</h2>
+            <label class="switch"><input type="checkbox" id="pLeaders"> Liderzy zespołów <span class="hint" id="pLeadersN"></span></label>
+            <h3>Całe zespoły</h3>
+            <div id="pSpeakTeams" class="a-checks"></div>
+            <h3>Stanowiska</h3>
+            <p class="hint">Wystarczy fragment nazwy, wielkość liter nie ma znaczenia.</p>
+            <div id="pPositions" class="a-checks"></div>
+            <div class="a-inline"><input id="pPosNew" placeholder="Dodaj stanowisko…"><button id="pPosAdd" type="button">Dodaj</button></div>
+            <p class="hint">Pozostałe osoby mogą mówić po wpisaniu PIN-u mówiącego.</p>
+          </div>
+
+          <div class="a-card">
+            <h2>Logowanie przez Planning Center</h2>
+            <p class="hint">Osoby logują się swoim kontem Planning Center – interkom sam rozpozna, kim są, dobierze kanały i prawo mówienia z grafiku. Logowanie PIN-em ekipy działa nadal (dla gości i zastępstw).</p>
+            <label class="switch"><input type="checkbox" id="oaEnabled"> Pokaż przycisk „Zaloguj przez Planning Center”</label>
+            <label class="switch"><input type="checkbox" id="oaRoster"> Wpuszczaj tylko osoby z obsady bieżącego planu</label>
+            <p id="oaStatus" class="a-status"></p>
+            <details id="oaBox">
+              <summary id="oaSummary">Skonfiguruj aplikację OAuth</summary>
+              <ol class="hint a-steps">
+                <li>Otwórz <a href="https://api.planningcenteronline.com/oauth/applications" target="_blank" rel="noopener">api.planningcenteronline.com/oauth/applications</a> i w sekcji <b>OAuth Applications</b> kliknij <b>New Application</b>.</li>
+                <li>Nazwa: np. „Interkom”. W polu <b>Callback URL / Redirect URI</b> wklej adres poniżej.</li>
+                <li>Po zapisaniu skopiuj <b>Client ID</b> i <b>Secret</b> tutaj.</li>
+              </ol>
+              <div class="a-inline"><textarea id="oaRedirect" rows="2" readonly class="a-code" style="flex:1;resize:none"></textarea><button id="oaCopy" type="button">Kopiuj</button></div>
+              <label class="a-field">Client ID<input id="oaId" autocomplete="off"></label>
+              <label class="a-field">Secret<input id="oaSecret" type="password" autocomplete="off"></label>
+              <div class="row"><button id="oaSave" type="button" class="primary">Zapisz</button><button id="oaRemove" type="button" class="danger" hidden>Usuń</button></div>
+            </details>
+          </div>
+
+          <div class="a-card">
+            <h2>Sterowanie Planning Center Live</h2>
+            <label class="switch"><input type="checkbox" id="lcEnabled"> Pozwól przełączać punkty planu z interkomu</label>
+            <p class="hint">Przełączenie w interkomie zmienia bieżący punkt w Services LIVE. Sterować może tylko jedna osoba naraz – interkom przejmie sterowanie od osoby prowadzącej Live na komputerze. Właściciel tokenu musi być Editorem lub Administratorem w Services. Administrator interkomu może sterować zawsze.</p>
+            <div id="lcBox">
+              <h3>Stanowiska, które mogą przełączać</h3>
+              <div id="lcPositions" class="a-checks"></div>
+              <h3>Całe zespoły, które mogą przełączać</h3>
+              <div id="lcTeams" class="a-checks"></div>
+            </div>
+          </div>
+
+          <div class="a-card">
+            <h2>Zespoły → kanały</h2>
+            <label class="switch"><input type="checkbox" id="pTeamCh"> Twórz kanały z zespołów</label>
+            <p class="hint">Każda osoba z obsady od razu słucha kanałów swoich zespołów. Kilka zespołów możesz połączyć we wspólny kanał.</p>
+            <table class="a-table"><thead><tr><th>Zespół</th><th>Kanał</th></tr></thead><tbody id="pMap"></tbody></table>
+          </div>
+
+          <div class="a-card">
+            <h2>Obsada bieżącego planu</h2>
+            <p class="hint">Stan po ostatnim zapisie. 🎙 = może mówić.</p>
+            <table class="a-table"><thead><tr><th>Imię (🎙 = mówi)</th><th>Zespoły</th><th>Stanowiska</th></tr></thead><tbody id="pRoster"></tbody></table>
+          </div>
+        </div>
+        <div class="a-card">
+          <h2>ProPresenter – zegar punktu</h2>
+          <p class="hint">Interkom ustawia wskazany zegar (timer) w ProPresenter 7 na czas pozostały do końca bieżącego punktu – według Planning Center Live – i pilnuje, żeby się nie rozjechał. Zegar wstawisz na ekran sceny jak każdy inny. Wymaga ProPresenter 7.9+ z włączoną siecią: <b>Ustawienia → Sieć → Włącz sieć</b> (stamtąd adres IP i port).</p>
+          <label class="switch"><input type="checkbox" id="ppEnabled"> Synchronizuj zegar ProPresenter</label>
+          <label class="a-field">Gdzie stoi serwer Interkomu?
+            <select id="ppMode" class="a-select">
+              <option value="direct">W sieci kościoła (mini PC) – łączy się z ProPresenterem sam</option>
+              <option value="bridge">W chmurze (VPS) – przez mostek z zakładki Transmisja live</option>
+            </select></label>
+          <div class="a-inline"><label class="a-field" style="flex:2">Adres IP komputera z ProPresenterem<input id="ppHost" placeholder="np. 192.168.1.20" autocomplete="off"></label>
+            <label class="a-field" style="flex:1">Port<input id="ppPort" type="number" min="1" max="65535"></label></div>
+          <label class="a-field">Nazwa zegara bieżącego punktu (utworzy się sam, jeśli go nie ma)<input id="ppTimer" maxlength="40"></label>
+          <label class="a-field">Opcjonalnie: zegar do końca nabożeństwa<input id="ppEnd" maxlength="40" placeholder="np. Interkom – koniec (puste = bez)"></label>
+          <p id="ppState" class="a-status"></p>
+          <div class="row-btns"><button id="ppSync" type="button">↻ Synchronizuj teraz</button></div>
+        </div>
+      </section>
+      <!-- TRANSMISJA -->
+      <section data-panel="streams" hidden>
+        <div class="a-card">
+          <h2>Powiadomienia o transmisji live</h2>
+          <p class="hint">Web Presenter (protokół Ethernet, port 9977) mówi, czy <b>sygnał</b> dociera do platformy i czy łącze nadąża. To, czy transmisja jest już <b>publiczna</b> (kliknięte „Rozpocznij transmisję” na YouTube / „Transmituj na żywo” na Facebooku), Interkom sprawdza w samej platformie – połącz konta niżej. Komunikaty są czytane na głos (każdy może to wyłączyć u siebie).</p>
+          <label class="switch"><input type="checkbox" id="smEnabled"> Włącz obserwowanie transmisji</label>
+          <label class="a-field">Gdzie stoi serwer Interkomu?
+            <select id="smMode" class="a-select">
+              <option value="direct">W sieci kościoła (np. mini PC) – łączy się z urządzeniami sam</option>
+              <option value="bridge">W chmurze (VPS) – stan przysyła mostek z sieci kościoła</option>
+            </select></label>
+          <label class="a-field">Kanał komunikatów<select id="smChannel" class="a-select"></select></label>
+          <div class="a-checks">
+            <label><input type="checkbox" id="smEvSignal"> Sygnał z Web Presentera (podgląd)</label>
+            <label><input type="checkbox" id="smEvStart"> Start transmisji (publicznie)</label>
+            <label><input type="checkbox" id="smEvStop"> Koniec transmisji</label>
+            <label><input type="checkbox" id="smEvProblem"> Problemy (zerwanie, słabe łącze, brak kontaktu)</label>
+          </div>
+          <label class="a-field">Ostrzegaj o słabym łączu, gdy bufor urządzenia przekroczy (%)<input id="smCache" type="number" min="10" max="95" step="5"></label>
+        </div>
+        <div class="a-card">
+          <h2>Urządzenia</h2>
+          <p class="hint">Adres IP sprawdzisz w Blackmagic Streaming Setup → Network (najlepiej ustaw stały adres). Nazwa trafia do komunikatów, np. „YouTube”, „Facebook”. Wybierz też, na którą platformę nadaje urządzenie.</p>
+          <div id="smList" class="a-rows"></div>
+          <button id="smAdd" type="button">+ Dodaj urządzenie</button>
+          <h3>Stan teraz</h3>
+          <div id="smStatus" class="a-status"></div>
+        </div>
+        <div class="a-card">
+          <h2>YouTube – czy transmisja jest publiczna</h2>
+          <p id="ytState" class="a-status"></p>
+          <details id="ytSetup">
+            <summary>Jak połączyć (jednorazowo, ok. 10 min)</summary>
+            <ol class="hint">
+              <li>Wejdź na <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a>, utwórz projekt (np. „Interkom”).</li>
+              <li><b>APIs &amp; Services → Library</b> → włącz <b>YouTube Data API v3</b>.</li>
+              <li><b>OAuth consent screen</b>: typ <b>External</b>, dodaj swój adres jako użytkownika testowego, potem opublikuj aplikację (<b>Publish app</b>) – inaczej połączenie wygasa po 7 dniach.</li>
+              <li><b>Credentials → Create credentials → OAuth client ID</b> → typ <b>TVs and Limited Input devices</b>. Skopiuj Client ID i Client secret tutaj.</li>
+              <li>Kliknij „Połącz” – pojawi się kod. Wpisz go na podanej stronie, logując się kontem, które zarządza kanałem.</li>
+            </ol>
+            <label class="a-field">Client ID<input id="ytId" autocomplete="off"></label>
+            <label class="a-field">Client secret<input id="ytSecret" type="password" autocomplete="off"></label>
+          </details>
+          <div class="row-btns"><button id="ytConnect" type="button" class="primary">Połącz z YouTube</button><button id="ytCheck" type="button">Sprawdź teraz</button><button id="ytOff" type="button" class="danger">Odłącz</button></div>
+          <p id="ytCode" class="a-code" hidden></p>
+        </div>
+        <div class="a-card">
+          <h2>Facebook – czy transmisja jest publiczna</h2>
+          <p id="fbState" class="a-status"></p>
+          <details id="fbSetup">
+            <summary>Jak połączyć (jednorazowo)</summary>
+            <ol class="hint">
+              <li>Na <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a> utwórz aplikację (typ „Inne” → „Firma”). Wystarczy tryb deweloperski – musisz być jej administratorem i administratorem strony.</li>
+              <li>W <b>Ustawienia → Podstawowe</b> skopiuj <b>App ID</b> i <b>App Secret</b>.</li>
+              <li>Otwórz <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a>, wybierz swoją aplikację, dodaj uprawnienia <b>pages_show_list</b> i <b>pages_read_engagement</b>, kliknij <b>Generate Access Token</b> i skopiuj token.</li>
+              <li>Wklej wszystko tutaj i wybierz stronę kościoła. Interkom zamieni token na stały token strony (nie wygasa).</li>
+            </ol>
+            <p class="hint" id="fbSavedHint" hidden>✔ App ID i App Secret są zapisane – wystarczy wkleić nowy token (pola poniżej możesz zostawić puste).</p>
+            <div id="fbAppFields">
+            <label class="a-field">App ID<input id="fbAppId" autocomplete="off"></label>
+            <label class="a-field">App Secret<input id="fbAppSecret" type="password" autocomplete="off"></label>
+            </div>
+            <label class="a-field">Token użytkownika (z Graph API Explorer)<input id="fbToken" type="password" autocomplete="off"></label>
+            <button id="fbPages" type="button" class="primary">Pobierz moje strony</button>
+          </details>
+          <div id="fbPageList" class="a-checks"></div>
+          <div class="row-btns"><button id="fbSwitch" type="button">Zmień stronę</button><button id="fbCheck" type="button">Sprawdź teraz</button><button id="fbOff" type="button" class="danger">Odłącz</button></div>
+        </div>
+        <div class="a-card" id="smBridgeCard" hidden>
+          <h2>Mostek (serwer w chmurze)</h2>
+          <p class="hint">Uruchom mostek na dowolnym komputerze w sieci kościoła, który jest włączony podczas nabożeństw (np. komputer realizatora). Łączy się tylko wychodząco – na routerze nic nie trzeba otwierać. Po zapisaniu urządzeń mostek sam pobierze ich listę.</p>
+          <p id="smBridgeState" class="a-status"></p>
+          <button id="smToken" type="button">Wygeneruj token mostka</button>
+          <div id="smCmds" hidden>
+            <h3>Docker (Linux / mini PC / Raspberry Pi) – uruchamia się sam po restarcie</h3>
+            <pre class="a-code" id="smCmdDocker"></pre>
+            <h3>Windows / Mac z Node.js 18+</h3>
+            <pre class="a-code" id="smCmdNode"></pre>
+            <p class="hint">Nowy token unieważnia poprzedni – wtedy trzeba zaktualizować polecenie na komputerze z mostkiem.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERWER -->
+      <section data-panel="server" hidden>
+        <div class="a-card" id="sysCard">
+          <h2>Serwer <span class="a-count" id="sysHost"></span></h2>
+          <div class="sys-grid">
+            <div class="sys-t"><div class="sys-l">Procesor</div><div class="sys-v" id="sysCpu">–</div><div class="sys-bar"><i id="sysCpuBar"></i></div><div class="sys-s" id="sysCpuS"></div></div>
+            <div class="sys-t"><div class="sys-l">Pamięć</div><div class="sys-v" id="sysMem">–</div><div class="sys-bar"><i id="sysMemBar"></i></div><div class="sys-s" id="sysMemS"></div></div>
+            <div class="sys-t"><div class="sys-l">Dysk</div><div class="sys-v" id="sysDisk">–</div><div class="sys-bar"><i id="sysDiskBar"></i></div><div class="sys-s" id="sysDiskS"></div></div>
+            <div class="sys-t"><div class="sys-l">Temperatura</div><div class="sys-v" id="sysTemp">–</div><div class="sys-bar"><i id="sysTempBar"></i></div><div class="sys-s" id="sysUp"></div></div>
+          </div>
+          <div class="sys-svc" id="sysSvc"></div>
+          <h3>Ponowne uruchomienie</h3>
+          <div class="row-btns">
+            <button type="button" id="sysRestart">↻ Uruchom ponownie interkom</button>
+            <button type="button" id="sysReboot">⟳ Uruchom ponownie komputer</button>
+            <button type="button" id="sysOff" class="danger">⏻ Wyłącz komputer</button>
+          </div>
+          <p class="hint" id="sysHint">„Uruchom ponownie interkom” restartuje wszystkie usługi (ok. 30 s przerwy) – pomaga, gdy coś przestało działać. Restart komputera trwa 1–2 minuty. Po wyłączeniu komputer trzeba włączyć przyciskiem na obudowie.</p>
+        </div>
+        <div class="a-card">
+          <h2>Kopia ustawień</h2>
+          <p class="hint">Jeden plik ze wszystkim, co skonfigurowałeś: PIN-y, kanały, przyciski, klucze Planning Center, YouTube i Facebooka, token mostka, ksywki, uprawnienia i powiadomienia telefonów. Przydaje się przy przenosinach na inny serwer (np. z VPS na mini PC) albo po ponownej instalacji – wczytujesz plik i nic nie trzeba wpisywać od nowa.</p>
+          <p class="hint"><b>Plik zawiera hasła i klucze</b> – przechowuj go jak hasło, nie wysyłaj nikomu.</p>
+          <div class="row">
+            <button id="bkDownload" type="button" class="primary">⬇ Pobierz kopię</button>
+            <label class="btn-file"><input id="bkFile" type="file" accept=".json,application/json" hidden><span>⬆ Wczytaj kopię…</span></label>
+          </div>
+          <p class="hint" id="bkState"></p>
+        </div>
+      </section>
+    </main>
+    </main>
+
+    <div id="aSave" class="a-save" hidden>
+      <span>Masz niezapisane zmiany.</span>
+      <button id="aRevert" type="button">Cofnij</button>
+      <button id="aSaveBtn" type="button" class="primary">Zapisz zmiany</button>
+    </div>
+    <div id="aToast" class="a-toast" hidden></div>
+  </section>
+
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>

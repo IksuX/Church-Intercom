@@ -1,0 +1,89 @@
+{
+  "orgName": "Interkom",
+  "accessPin": "1234",
+  "speakerPin": "5678",
+  "adminPin": "9999",
+  "channels": [
+    {
+      "id": "ogolny",
+      "name": "Ogólny",
+      "color": "#e5e7eb",
+      "broadcast": true
+    },
+    {
+      "id": "technika",
+      "name": "Technika",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "uwielbienie",
+      "name": "Uwielbienie",
+      "color": "#f472b6"
+    },
+    {
+      "id": "kamery",
+      "name": "Kamery",
+      "color": "#fbbf24"
+    },
+    {
+      "id": "powitanie",
+      "name": "Powitanie",
+      "color": "#34d399"
+    },
+    {
+      "id": "dzieci",
+      "name": "Dzieci",
+      "color": "#a78bfa"
+    }
+  ],
+  "quick": [
+    {
+      "key": "ok",
+      "label": "OK",
+      "tone": "ok"
+    },
+    {
+      "key": "gotowe",
+      "label": "Gotowe",
+      "tone": "ok"
+    },
+    {
+      "key": "czekam",
+      "label": "Czekam",
+      "tone": "wait"
+    },
+    {
+      "key": "nastepny",
+      "label": "Następny punkt",
+      "tone": "info"
+    },
+    {
+      "key": "pomoc",
+      "label": "Potrzebuję pomocy",
+      "tone": "warn"
+    },
+    {
+      "key": "pilne",
+      "label": "PILNE!",
+      "tone": "urgent",
+      "urgent": true
+    }
+  ],
+  "historyPerChannel": 300,
+  "planningCenter": {
+    "serviceTypeIds": [],
+    "teamChannels": true,
+    "teamChannelMap": {},
+    "speakerPositions": [
+      "Reżyser",
+      "Realizator",
+      "Prowadzący",
+      "Producent"
+    ],
+    "speakerTeams": [],
+    "teamLeadersCanSpeak": true,
+    "livePollSeconds": 5,
+    "refreshSeconds": 120
+  },
+  "sttPrompt": ""
+}

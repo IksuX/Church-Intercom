@@ -1,0 +1,19 @@
+# ustawienia i dane serwera (dowiązania do /var/lib/interkom) – nigdy do repozytorium
+/.env
+/.env.*
+/config
+/data
+*.stare-*
+# pliki generowane przez install.sh
+livekit/livekit.yaml
+caddy/Caddyfile
+caddy/sites/*
+!caddy/sites/00-przyklad.caddy
+# zależności i budowanie
+node_modules/
+__pycache__/
+*.pyc
+mobile/ios/
+mobile/android/
+.DS_Store
+zmiany-lokalne-*.patch

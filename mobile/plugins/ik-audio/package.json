@@ -1,0 +1,14 @@
+{
+  "name": "ik-audio",
+  "version": "1.0.0",
+  "description": "Interkom – natywny dźwięk (LiveKit), praca w tle, przyciski Bluetooth / słuchawek / głośności",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "files": ["android/src/main/", "android/build.gradle", "ios/Sources", "Package.swift", "IkAudio.podspec", "index.js"],
+  "capacitor": {
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
+  },
+  "peerDependencies": { "@capacitor/core": ">=8.0.0" }
+}

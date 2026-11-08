@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Interkom – instrukcja obsługi</title>
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="/icon-192.png">
+<style>
+:root {
+  --bg: #0b0d12; --panel: #141821; --panel2: #1c2130; --line: #2a3142;
+  --fg: #e8ebf2; --muted: #8b93a7; --accent: #3b82f6; --ok: #22c55e; --warn: #f59e0b; --urgent: #ef4444;
+  --tip-bg: #10233f; --tip-line: #1e3a66; --warn-bg: #2a1d08; --warn-line: #5c3d0b;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f6f7fa; --panel: #ffffff; --panel2: #eef1f6; --line: #d9dee8; --fg: #141821; --muted: #5b6477; --accent: #1d5fd1;
+  --tip-bg: #eaf2ff; --tip-line: #bcd3fb; --warn-bg: #fff6e5; --warn-line: #f3d39b; color-scheme: light; } }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+a { color: var(--accent); }
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top strong { font-size: 17px; }
+.top .sp { flex: 1; }
+.top a.btn { text-decoration: none; color: var(--fg); border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 7px 12px; font-size: 14px; white-space: nowrap; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; padding: 24px 16px 80px; }
+nav.toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 14px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: t; }
+nav.toc li { counter-increment: t; }
+nav.toc a { display: block; padding: 5px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; }
+nav.toc a::before { content: counter(t) ". "; }
+nav.toc a:hover, nav.toc a.on { background: var(--panel2); color: var(--fg); }
+details.toc-m { display: none; }
+main { min-width: 0; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+.lead { color: var(--muted); font-size: 18px; margin: 0 0 28px; }
+main { counter-reset: h2; }
+h2 { counter-increment: h2; counter-reset: h3; font-size: 25px; margin: 56px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+h2::before { content: counter(h2) ". "; color: var(--accent); }
+h3 { counter-increment: h3; font-size: 19px; margin: 30px 0 8px; }
+h3::before { content: counter(h2) "." counter(h3) " "; color: var(--muted); font-weight: 600; }
+p, li { max-width: 72ch; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+kbd { font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; background: var(--panel2); border-radius: 6px; padding: 3px 6px; }
+.tip, .warn { border: 1px solid var(--tip-line); background: var(--tip-bg); border-radius: 12px; padding: 12px 16px; margin: 16px 0; max-width: 76ch; }
+.warn { border-color: var(--warn-line); background: var(--warn-bg); }
+.tip > :first-child, .warn > :first-child { margin-top: 0; } .tip > :last-child, .warn > :last-child { margin-bottom: 0; }
+.tip b.l, .warn b.l { display: block; margin-bottom: 2px; }
+.who { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: middle; border: 1px solid var(--line); color: var(--muted); }
+.who.adm { color: #f0abfc; border-color: #6b2a73; }
+.who.spk { color: #86efac; border-color: #1d5a35; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 16px 0 8px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.card .ic { font-size: 22px; line-height: 1; }
+.card b { display: block; margin: 8px 0 2px; }
+.card span { color: var(--muted); font-size: 14px; line-height: 1.45; display: block; }
+figure { margin: 20px 0; }
+figure.shots { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+figure.shots > div { flex: 0 1 250px; min-width: 0; }
+.phone { display: block; width: 100%; border-radius: 22px; border: 6px solid #232a38; background: #000; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.wide { display: block; width: 100%; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+figcaption, .shots small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 8px; line-height: 1.4; }
+.anno { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 28px; align-items: start; margin: 20px 0; }
+.pin { position: relative; margin: 18px 18px 22px; }
+.pin i { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: #f59e0b; color: #111; font: 700 13px/24px system-ui, sans-serif; text-align: center; font-style: normal; box-shadow: 0 0 0 2px #111, 0 2px 6px rgba(0,0,0,.5); }
+ol.legend { margin: 0; padding: 0; list-style: none; counter-reset: l; }
+ol.legend li { counter-increment: l; position: relative; padding-left: 34px; margin: 0 0 9px; }
+ol.legend li::before { content: counter(l); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%; background: #f59e0b; color: #111; font: 700 13px/24px system-ui, sans-serif; text-align: center; }
+table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 8px 10px; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+.tw { overflow-x: auto; }
+.cover, .print-only { display: none; }
+.ver { color: var(--muted); font-size: 14px; }
+.top .sm { display: none; }
+
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; padding-top: 12px; }
+  nav.toc { display: none; }
+  details.toc-m { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 0 0 20px; }
+  details.toc-m summary { cursor: pointer; font-weight: 600; }
+  details.toc-m ol { margin: 8px 0 0; padding-left: 22px; font-size: 15px; }
+  details.toc-m a { color: var(--fg); text-decoration: none; display: block; padding: 3px 0; }
+  .anno { grid-template-columns: 1fr; }
+  .top .lg { display: none; }
+  .top .sm { display: inline; }
+  .top { gap: 8px; }
+  .anno .pin { max-width: 300px; }
+  figure.shots > div { flex: 1 1 140px; max-width: 250px; }
+  h1 { font-size: 27px; }
+  h2 { font-size: 22px; }
+  td:first-child { white-space: normal; }
+}
+
+/* ===== druk / PDF ===== */
+@page { size: A4; margin: 16mm 15mm 18mm; }
+@media print {
+  :root, :root:not([data-theme="dark"]) { --bg: #fff; --panel: #fff; --panel2: #f1f3f7; --line: #d6dbe5; --fg: #111827; --muted: #5b6477; --accent: #1d5fd1;
+    --tip-bg: #eef4ff; --tip-line: #c4d6f7; --warn-bg: #fff7e8; --warn-line: #f0d29a; color-scheme: light; }
+  body { font-size: 10.5pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .top, nav.toc, details.toc-m, .screen-only { display: none !important; }
+  .wrap { display: block; max-width: none; padding: 0; }
+  .print-only { display: block; }
+  .cover { display: flex; flex-direction: column; justify-content: space-between; height: 255mm; break-after: page; padding: 10mm 4mm 0; }
+  .cover .big { font-size: 44pt; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: 30mm 0 6mm; }
+  .cover .sub { font-size: 16pt; color: var(--muted); margin: 0; max-width: none; }
+  .cover .bar { height: 6px; width: 70mm; background: linear-gradient(90deg, #22c55e, #3b82f6, #ef4444); border-radius: 3px; }
+  .cover .meta { font-size: 11pt; color: var(--muted); }
+  .cover .hero { display: flex; gap: 8mm; align-items: flex-end; }
+  .cover .hero img { width: 48mm; border-radius: 16px; border: 4px solid #232a38; }
+  .cover .hero img.d { width: 110mm; border-radius: 8px; border: 1px solid #d6dbe5; }
+  .ptoc { break-after: page; }
+  .ptoc h2 { border: 0; margin-top: 0; } .ptoc h2::before { content: none; }
+  .ptoc ol { font-size: 12pt; line-height: 2; padding-left: 10mm; }
+  .ptoc a { color: var(--fg); text-decoration: none; }
+  h1.screen-h, p.lead.screen-h { display: none; }
+  h2 { break-after: avoid; margin-top: 12mm; padding-top: 5mm; font-size: 18pt; }
+  h2.newpage { break-before: page; border-top: 0; margin-top: 0; padding-top: 0; }
+  h3 { font-size: 13pt; break-after: avoid; }
+  h3 + p, h2 + p { break-before: avoid; }
+  figure, .tip, .warn, .card, table, .anno, tr { break-inside: avoid; }
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .card { padding: 9px 11px; } .card span { font-size: 9pt; }
+  figure.shots { gap: 6mm; } figure.shots > div { flex: 0 0 44mm; }
+  .phone { border-width: 3px; border-radius: 12px; box-shadow: none; }
+  .wide { box-shadow: none; }
+  .anno { grid-template-columns: 58mm 1fr; gap: 6mm; }
+  .pin { margin: 4mm; }
+  a { color: inherit; text-decoration: none; }
+  table { font-size: 9.5pt; }
+  p, li { max-width: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <strong>📖 Instrukcja</strong><span class="ver lg">Interkom 0.44.1</span>
+  <span class="sp"></span>
+  <a class="btn" href="/pomoc/Interkom-instrukcja.pdf" download>⬇ PDF</a>
+  <a class="btn" href="/">← <span class="lg">Wróć do interkomu</span><span class="sm">Interkom</span></a>
+</header>
+
+<div class="wrap">
+<nav class="toc" aria-label="Spis treści"><ol id="tocList"></ol></nav>
+
+<main>
+  <!-- okładka (tylko w PDF) -->
+  <section class="cover">
+    <div>
+      <div class="bar"></div>
+      <p class="big">Interkom<br>instrukcja obsługi</p>
+      <p class="sub">Łączność ekip nabożeństwa: kanały, czat, mówienie przez przycisk, plan z Planning Center, odliczanie czasu, transmisja live, osobisty mikser i aplikacja na telefon.</p>
+    </div>
+    <div class="hero"><img src="/pomoc/main.jpg" alt=""><img class="d" src="/pomoc/desktop.jpg" alt=""></div>
+    <p class="meta">Wersja aplikacji 0.44.1 · dla członków ekip i administratorów</p>
+  </section>
+  <section class="ptoc print-only"><h2>Spis treści</h2><ol id="ptocList"></ol></section>
+
+  <h1 class="screen-h">Interkom – instrukcja obsługi</h1>
+  <p class="lead screen-h">Wszystko, co trzeba wiedzieć, żeby sprawnie porozumiewać się w czasie nabożeństwa. Części oznaczone <span class="who spk">mówiący</span> dotyczą osób z prawem mówienia, a <span class="who adm">administrator</span> – osób z dostępem do panelu.</p>
+  <details class="toc-m"><summary>Spis treści</summary><ol id="tocM"></ol></details>
+
+  <!-- ============ 1 ============ -->
+  <h2 class="newpage" id="co-to">Czym jest Interkom</h2>
+  <p>Interkom to łączność dla ekip nabożeństwa: realizacji, kamer, dźwięku, uwielbienia, powitania i dzieci. Działa w przeglądarce na telefonie, tablecie i komputerze, więc nie trzeba niczego instalować ze sklepu. Łączy w jednym miejscu krótkofalówkę, czat zespołu i plan nabożeństwa z Planning Center.</p>
+  <div class="grid">
+    <div class="card"><div class="ic">📻</div><b>Kanały</b><span>Ogólny, Technika, Kamery… Każdy słucha tych, które go dotyczą. Głos trafia tylko do słuchających.</span></div>
+    <div class="card"><div class="ic">🎙</div><b>Mówienie przez przycisk</b><span>Przytrzymaj i mów albo włącz kłódkę 🔒. Na komputerze działa spacja.</span></div>
+    <div class="card"><div class="ic">📝</div><b>Transkrypcja</b><span>Każda wypowiedź pojawia się też jako tekst. Rozpoznawanie mowy działa na serwerze parafii.</span></div>
+    <div class="card"><div class="ic">💬</div><b>Czat i szybkie przyciski</b><span>OK, Gotowe, Czekam, Następny punkt, PILNE! – jednym dotknięciem.</span></div>
+    <div class="card"><div class="ic">@</div><b>Oznaczanie i ksywki</b><span>@realizacja, @Anna, @wszyscy – oznaczona osoba dostaje sygnał i powiadomienie.</span></div>
+    <div class="card"><div class="ic">📣</div><b>Wezwania i rozmowy prywatne</b><span>Wezwanie na cały ekran z odpowiedzią „Idę”, prywatny czat i szept do jednej osoby.</span></div>
+    <div class="card"><div class="ic">▶</div><b>Plan z Planning Center</b><span>Bieżący i następny punkt, notatki zespołów, przełączanie Live, strzałki na klawiaturze.</span></div>
+    <div class="card"><div class="ic">⏳</div><b>Odliczanie czasu</b><span>Zgodne z Planning Center Live, jednakowe na wszystkich urządzeniach i w ProPresenterze.</span></div>
+    <div class="card"><div class="ic">🔴</div><b>Transmisja live</b><span>Komunikaty z Web Presentera, YouTube i Facebooka: start, koniec, problemy z łączem.</span></div>
+    <div class="card"><div class="ic">🔔</div><b>Powiadomienia</b><span>Na zablokowanym telefonie, z własnym wzorem wibracji dla każdego rodzaju.</span></div>
+    <div class="card"><div class="ic">🔊</div><b>Lektor</b><span>Wiadomości i zmiany punktu mogą być czytane na głos – nie trzeba patrzeć w ekran.</span></div>
+    <div class="card"><div class="ic">🎚</div><b>Osobisty mikser</b><span>Każdy ustawia u siebie głośność głosów, dźwięku transmisji, lektora i sygnałów.</span></div>
+    <div class="card"><div class="ic">📱</div><b>Aplikacja na telefon</b><span>iPhone i Android: rozmowy przy zablokowanym ekranie, przycisk PTT na słuchawkach i pilocie.</span></div>
+    <div class="card"><div class="ic">🌐</div><b>Praca zdalna</b><span>Operatorzy spoza kościoła łączą się przez internet, logując się kontem Planning Center.</span></div>
+    <div class="card"><div class="ic">⚙️</div><b>Panel administratora</b><span>Kanały, uprawnienia, wygląd, Planning Center, transkrypcja, transmisja, stan serwera – bez dotykania serwera.</span></div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <h2 id="start">Pierwsze kroki</h2>
+  <h3>Otwarcie i logowanie</h3>
+  <figure class="shots"><div><img class="phone" src="/pomoc/login.jpg" alt="Ekran logowania"><small>Ekran logowania</small></div></figure>
+  <p>Otwórz adres interkomu w przeglądarce (najlepiej Safari na iPhonie i Chrome na Androidzie). Masz dwie możliwości logowania:</p>
+  <ul>
+    <li><b>Zaloguj przez Planning Center</b> – dla osób z grafiku. Interkom wie wtedy, kim jesteś: sam dobiera kanały Twojego zespołu i prawo mówienia, a Twoje ksywki i rozmowy prywatne zostają zapamiętane.</li>
+    <li><b>PIN ekipy + imię</b> – dla gości i zastępstw. Wpisz imię albo stanowisko, które zobaczą inni, np. „Kamera 2”.</li>
+  </ul>
+  <p><b>Spoza sieci kościoła</b> (praca zdalna) logujesz się kontem Planning Center – logowanie PIN-em działa tylko na miejscu, chyba że administrator zdecydował inaczej.</p>
+  <p>Jeśli masz mówić, a nie jesteś liderem zespołu ani nie stoisz na stanowisku z prawem mówienia, rozwiń <b>„Mam PIN mówiącego / administratora”</b> i wpisz PIN, który podał Ci administrator. Można to też zrobić później w ⚙️ → <b>Uprawnienia</b>.</p>
+
+  <h3>Dodaj interkom do ekranu początkowego</h3>
+  <p>Aplikacja otwarta z ikony działa na pełnym ekranie i – na iPhonie – tylko wtedy może dostawać powiadomienia.</p>
+  <ul>
+    <li><b>iPhone / iPad:</b> w Safari dotknij <b>Udostępnij</b> → <b>Do ekranu początkowego</b>, potem otwieraj interkom z tej ikony i zaloguj się w niej ponownie.</li>
+    <li><b>Android:</b> w Chrome menu <b>⋮</b> → <b>Dodaj do ekranu głównego</b> (lub „Zainstaluj aplikację”).</li>
+  </ul>
+
+  <h3>Włącz powiadomienia</h3>
+  <p>W ⚙️ dotknij <b>🔔 Włącz powiadomienia</b> i zezwól. Przycisk <b>Wyślij test</b> wysyła próbne powiadomienie po 5 sekundach – zdążysz zablokować telefon i sprawdzić, czy dotarło. Szczegóły w rozdziale <a href="#powiadomienia">Powiadomienia</a>.</p>
+
+  <h3>Słuchawki i dźwięk</h3>
+  <ul>
+    <li>Najlepiej sprawdzają się <b>słuchawki przewodowe</b>. Bluetooth dodaje 150–250 ms opóźnienia.</li>
+    <li>Jeśli u góry pojawi się żółty pasek <b>„🔇 Dotknij tutaj, aby włączyć dźwięk”</b>, dotknij go – przeglądarki wymagają jednego dotknięcia, zanim zaczną odtwarzać dźwięk.</li>
+    <li>Ekran nie gaśnie, dopóki interkom jest otwarty. Na iPhonie zostaw aplikację na wierzchu – po zablokowaniu ekranu iOS wstrzymuje dźwięk (wiadomości dotrą wtedy jako powiadomienia).</li>
+  </ul>
+
+  <!-- ============ 3 ============ -->
+  <h2 class="newpage" id="ekran">Ekran główny</h2>
+  <div class="anno">
+    <div class="pin">
+      <img class="phone" src="/pomoc/main.jpg" alt="Ekran główny na telefonie">
+      <i style="left:-5%;top:2.6%">1</i><i style="left:40%;top:-2%">2</i><i style="left:66%;top:-2%">3</i><i style="left:80%;top:-2%">4</i><i style="left:96%;top:-2%">5</i>
+      <i style="left:105%;top:7.6%">6</i><i style="left:105%;top:16.4%">7</i><i style="left:105%;top:40%">8</i><i style="left:105%;top:87.4%">9</i>
+      <i style="left:-5%;top:94.6%">10</i><i style="left:50%;top:102%">11</i><i style="left:105%;top:94.6%">12</i>
+    </div>
+    <ol class="legend">
+      <li><b>Kropka stanu i nazwa.</b> Zielona – tekst i głos działają; żółta – działa tylko tekst; czerwona – brak połączenia (aplikacja sama łączy się ponownie).</li>
+      <li><b>Znaczek transmisji:</b> <b>◌ PODGLĄD</b> (szary) – sygnał dociera do platformy, ale transmisja nie jest jeszcze publiczna; <b>● LIVE</b> (czerwony) – jesteśmy na żywo.</li>
+      <li><b>🎚 Mikser</b> – głośność głosów, dźwięku transmisji, lektora i sygnałów na tym urządzeniu (rozdział „Mikser”).</li>
+      <li><b>Kto jest online</b> – lista osób według kanałów. Stąd wzywasz osobę i piszesz prywatnie.</li>
+      <li><b>Ustawienia</b> – kanały, dźwięk, lektor, powiadomienia, ksywki, ta instrukcja. Obok, gdy realizator nadaje, pojawia się <b>🎵</b> – dźwięk transmisji.</li>
+      <li><b>Pasek planu:</b> TERAZ / DALEJ i odliczanie do końca punktu. Dotknij, aby otworzyć cały plan.</li>
+      <li><b>Zakładki kanałów</b> (i rozmów prywatnych). Licznik pokazuje nieprzeczytane. Mówisz i piszesz do kanału, który masz otwarty.</li>
+      <li><b>Wiadomości</b>: tekst, wypowiedzi z transkrypcją, ogłoszenia planu i transmisji.</li>
+      <li><b>Szybkie przyciski</b> – przewiń w bok, żeby zobaczyć wszystkie.</li>
+      <li><b>⌨️ Klawiatura</b> – przełącza na pisanie; 🎙 wraca do mówienia.</li>
+      <li><b>Przytrzymaj i mów</b> <span class="who spk">mówiący</span> – pod spodem widać, do kogo mówisz.</li>
+      <li><b>🔒 Kłódka</b> – mikrofon włączony na stałe, bez trzymania.</li>
+    </ol>
+  </div>
+  <p>Osoby bez prawa mówienia zamiast przycisku mówienia widzą od razu pole tekstowe.</p>
+  <h3>Widok podzielony (tablet, komputer)</h3>
+  <figure><img class="wide" src="/pomoc/desktop.jpg" alt="Widok podzielony na komputerze"><figcaption>Na szerokim ekranie plan jest stale widoczny obok rozmowy.</figcaption></figure>
+  <p>Od szerokości ok. 900 px (tablet poziomo, komputer) plan nabożeństwa jest stale widoczny z boku. W ⚙️ → <b>Układ ekranu</b> wybierzesz: automatycznie, plan po lewej, plan po prawej albo jeden panel.</p>
+  <h3>Kilka kanałów naraz (kolumny)</h3>
+  <p>Na tablecie i komputerze w ⚙️ → <b>Kolumny kanałów</b> wybierzesz 2–4 kolumny. Pierwsza to kanał, na który mówisz (wybierasz go zakładką). W pozostałych u góry wybierasz kanał do podglądu. 🎙 przy kolumnie przenosi mówienie na ten kanał (kolumny zamieniają się miejscami), ✕ zamyka kolumnę. Wiadomości widoczne w kolumnie nie zwiększają licznika nieprzeczytanych.</p>
+
+  <!-- ============ 4 ============ -->
+  <h2 id="mowienie">Mówienie <span class="who spk">mówiący</span></h2>
+  <figure class="shots">
+    <div><img class="phone" src="/pomoc/ptt-on.jpg" alt="Nadawanie"><small>Nadajesz: przycisk świeci na zielono</small></div>
+    <div><img class="phone" src="/pomoc/talking.jpg" alt="Ktoś mówi"><small>Ktoś inny mówi: zielony pasek u góry</small></div>
+  </figure>
+  <h3>Przytrzymaj i mów</h3>
+  <ul>
+    <li><b>Przytrzymaj</b> duży przycisk przez cały czas mówienia i puść, gdy skończysz. Na komputerze możesz trzymać <kbd>Spacja</kbd> (gdy kursor nie jest w polu tekstowym).</li>
+    <li>Mówisz do <b>kanału, który masz otwarty</b> – jego nazwa jest pod napisem na przycisku („→ Ogólny”). Usłyszą Cię tylko osoby, które słuchają tego kanału.</li>
+    <li><b>🔒 Kłódka</b> włącza mikrofon na stałe, np. gdy prowadzisz realizację i potrzebujesz wolnych rąk. Dotknij kłódki ponownie, żeby wyłączyć.</li>
+    <li>Gdy ktoś mówi, w nagłówku (w miejscu nazwy interkomu) pojawia się zielony znacznik „Imię → Kanał” – nie zasłania zakładek kanałów.</li>
+  </ul>
+  <div class="tip"><b class="l">Wskazówka</b>Zacznij mówić pół sekundy po wciśnięciu i puść przycisk chwilę po ostatnim słowie. Aplikacja ma niewielki zapas, ale tak transkrypcja będzie najpełniejsza.</div>
+  <h3>Transkrypcja wypowiedzi</h3>
+  <p>Po każdej wypowiedzi na czacie pojawia się wpis „🎙 Anna mówiła 4 s”, a po 1–3 sekundach jego treść jako tekst. Dzięki temu ktoś, kto akurat nie słuchał, może przeczytać komunikat.</p>
+  <ul>
+    <li>Tekst <b>szary z „≈ … (niepewne)”</b> – model nie był pewien. Traktuj go ostrożnie: Whisper potrafi wtedy „dopowiedzieć” słowa.</li>
+    <li>Długie nadawanie (np. z kłódką) jest dzielone w przerwach w mowie na <b>fragmenty</b> – każdy pojawia się osobno z dopiskiem „(fragment)”.</li>
+    <li>Gdy transkrypcja się nie uda, pod wpisem widać krótki powód. Nagranie można zgłosić administratorowi – w panelu jest podgląd ostatnich nagrań.</li>
+    <li>W ⚙️ → <b>Transkrypcja mowy</b> każdy wybiera: pokazuj zawsze, tylko gdy mam wyłączony głos, albo nie pokazuj.</li>
+  </ul>
+  <h3>Szept – mówienie do jednej osoby</h3>
+  <p>Otwórz rozmowę prywatną z daną osobą (zakładka z jej zdjęciem) i przytrzymaj przycisk mówienia. Słyszy Cię tylko ta osoba, a wpis i transkrypcja trafiają do Waszej rozmowy prywatnej.</p>
+
+  <!-- ============ 5 ============ -->
+  <h2 id="wiadomosci">Wiadomości, oznaczenia i wezwania</h2>
+  <h3>Pisanie i szybkie przyciski</h3>
+  <ul>
+    <li>Wpisz tekst i naciśnij <kbd>Enter</kbd> albo ➤. Wiadomość trafia do otwartego kanału.</li>
+    <li><b>Szybkie przyciski</b> (OK, Gotowe, Czekam, Następny punkt, Potrzebuję pomocy, PILNE!) wysyłają gotowy komunikat jednym dotknięciem. Administrator może zmienić ich napisy i kolory.</li>
+    <li><b>PILNE!</b> daje u wszystkich na kanale sygnał dźwiękowy, wibrację i czerwony alert, a na zablokowanych telefonach – powiadomienie. Używaj tylko wtedy, gdy naprawdę trzeba.</li>
+    <li>Wiadomości z innych słuchanych kanałów pokazują się na chwilę u góry ekranu i jako licznik na zakładce.</li>
+  </ul>
+  <h3>Oznaczanie osób (@)</h3>
+  <figure class="shots"><div><img class="phone" src="/pomoc/mention.jpg" alt="Lista podpowiedzi po wpisaniu @"><small>Po wpisaniu „@Ka” pojawia się podpowiedź</small></div></figure>
+  <ul>
+    <li>Wpisz <b>@</b> w polu wiadomości – pojawi się lista zalogowanych osób. Pisz dalej, żeby zawęzić (szuka po imieniu i ksywkach). Stuknij osobę albo wybierz ją <kbd>↑</kbd> <kbd>↓</kbd> i <kbd>Tab</kbd> / <kbd>Enter</kbd>.</li>
+    <li><b>@wszyscy</b> oznacza wszystkich słuchających danego kanału.</li>
+    <li>Oznaczona osoba widzi wiadomość <b>podświetloną na żółto</b>, dostaje sygnał i wibrację (także gdy nie słucha tego kanału), lektor czyta „Kasia do Ciebie: …”, a na zablokowanym telefonie przychodzi powiadomienie.</li>
+  </ul>
+  <h3>Ksywki</h3>
+  <p>W ⚙️ → <b>Twoje ksywki</b> wpisz do czterech ksywek oddzielonych przecinkami, np. „Tomi, realizacja”, i zapisz. Inni mogą Cię wtedy oznaczyć jako <b>@realizacja</b>. Ksywki widać na liście „Kto jest online”. Administrator może ustawić ksywki wszystkim, także osobom z grafiku, które jeszcze się nie zalogowały.</p>
+  <h3>Rozmowy prywatne</h3>
+  <figure class="shots">
+    <div><img class="phone" src="/pomoc/people.jpg" alt="Kto jest online"><small>Kto jest online – stuknij osobę</small></div>
+    <div><img class="phone" src="/pomoc/dm-tab.jpg" alt="Rozmowa prywatna"><small>Rozmowa prywatna jako zakładka</small></div>
+  </figure>
+  <ul>
+    <li>Dotknij 👥, stuknij osobę i wybierz <b>💬 Napisz</b>. Rozmowa otworzy się jako zakładka z jej zdjęciem, z licznikiem nieprzeczytanych. Zamkniesz ją ✕ – nowa wiadomość otworzy ją ponownie.</li>
+    <li>W rozmowie prywatnej działają tekst, szybkie przyciski i szept.</li>
+    <li>Wiadomości prywatne widzą wyłącznie dwie osoby – nie widzi ich administrator i nie trafiają do dziennika.</li>
+  </ul>
+  <h3>Wezwanie osoby</h3>
+  <figure class="shots"><div><img class="phone" src="/pomoc/call.jpg" alt="Wezwanie na cały ekran"><small>Tak wygląda wezwanie u odbiorcy</small></div></figure>
+  <ul>
+    <li>Dotknij 👥, stuknij osobę, wpisz opcjonalnie krótki powód (np. „zbliżenie na mówcę”) i dotknij <b>📣 Wezwij</b>.</li>
+    <li>U wzywanego na cały ekran pojawia się czerwone wezwanie z sygnałem, wibracją i odczytem głosowym. Odpowiada <b>✓ Idę</b> albo <b>Nie teraz</b>, a odpowiedź wraca do Ciebie.</li>
+    <li>Wezwanie przychodzi także na zablokowany telefon. Jeśli ktoś otworzy aplikację w ciągu 90 s, zobaczy je na pełnym ekranie.</li>
+  </ul>
+  <h3>Wyciszenie i przeniesienie osoby <span class="who adm">reżyser, administrator</span></h3>
+  <ul>
+    <li>Dotknij 👥 i stuknij osobę. Pod polem wezwania są przyciski: <b>🔇 Wycisz</b> (gdy ktoś zapomniał wyłączyć mikrofon i wszyscy go słyszą) oraz wybór kanału i <b>↪ Przenieś</b> (gdy mówi na złym kanale).</li>
+    <li>Wyciszona osoba dostaje powiadomienie z sygnałem i może mówić dalej dopiero po ponownym naciśnięciu przycisku. Przeniesiona – mówi i słucha od razu na nowym kanale. Działa też, gdy ma telefon w kieszeni (aplikacja).</li>
+    <li>Mogą to robić administrator oraz osoby, które sterują planem w Planning Center (reżyser, prowadzący).</li>
+    <li>Administrator ma tu jeszcze <b>📝 Wyłącz transkrypcję</b> dla tej osoby, a przy nazwie kanału na liście – <b>📝 wł./wył.</b> transkrypcji całego kanału.</li>
+  </ul>
+
+  <!-- ============ 6 ============ -->
+  <h2 id="kanaly">Kanały</h2>
+  <ul>
+    <li>W ⚙️ → <b>Słucham kanałów</b> zaznaczasz kanały, które Cię dotyczą. Kanał ogólny słyszą wszyscy.</li>
+    <li>Po zalogowaniu przez Planning Center kanały Twojego zespołu są zaznaczone automatycznie (np. osoba z zespołu „Kamery” słucha kanałów Kamery i Ogólny).</li>
+    <li>Zakładki u góry przełączają kanał, który widzisz i do którego mówisz. Głos z pozostałych słuchanych kanałów też słyszysz.</li>
+    <li>Na kanałach pojawiają się szare linijki „➕ dołączył(a)”, „➖ opuścił(a) kanał”, „⏏ rozłączył(a) się”. Rozłączenie pokazuje się dopiero po 30 s, bo telefony często na moment gubią Wi-Fi.</li>
+  </ul>
+
+  <!-- ============ 7 ============ -->
+  <h2 id="plan">Plan nabożeństwa i odliczanie</h2>
+  <figure class="shots"><div><img class="phone" src="/pomoc/plan.jpg" alt="Plan nabożeństwa"><small>Plan: przypięty bieżący i następny punkt, pod spodem cały program</small></div></figure>
+  <h3>Pasek planu i karta planu</h3>
+  <ul>
+    <li>Pasek u góry pokazuje <b>TERAZ</b> i <b>DALEJ</b>. Zielona kropka oznacza, że plan prowadzony jest w Planning Center Live. Gdy prowadzący przełącza punkty, pasek przesuwa się u wszystkich w ciągu kilku sekund.</li>
+    <li>Dotknij paska, aby otworzyć plan. Na górze zawsze widać bieżący i następny punkt z odliczaniem, niżej przewijany <b>cały program</b> – jedna linia na punkt, kropka oznacza notatki. Dotknięcie punktu rozwija szczegóły: tonację, tempo, metrum, sekwencję (I V1 C V2…), notatki aranżacji i notatki zespołów.</li>
+    <li>Notatki Twojego zespołu są wyróżnione. W ⚙️ → <b>Kolumny z Planning Center</b> wybierasz, które kolumny notatek (np. Audio, Światła, Wideo) mają się pojawiać przy zmianie punktu – na czacie, w lektorze i na pasku planu. „Automatycznie” wybiera kolumny Twoich zespołów.</li>
+  </ul>
+  <h3>Odliczanie czasu</h3>
+  <ul>
+    <li>Przy bieżącym punkcie widać, ile czasu zostało do jego końca – liczone od chwili rozpoczęcia punktu w Planning Center Live, według długości z planu.</li>
+    <li>Wszystkie urządzenia używają zegara serwera, więc odliczanie jest identyczne u wszystkich, nawet przy źle ustawionym zegarze telefonu.</li>
+    <li>Ostatnia minuta jest <b style="color:#f59e0b">pomarańczowa</b>, przekroczenie <b style="color:#ef4444">czerwone</b> (np. „+1:30”). Przy punktach bez długości widać czas od rozpoczęcia (⏱).</li>
+    <li>W planie widać też przewidywaną godzinę końca nabożeństwa.</li>
+    <li>Jeśli administrator włączył synchronizację, to samo odliczanie pokazuje zegar w <b>ProPresenterze</b> (np. na ekranie sceny).</li>
+  </ul>
+  <h3>Zmiana punktu <span class="who spk">uprawnieni</span></h3>
+  <p>Osoby, którym administrator dał <b>sterowanie planem</b>, widzą przyciski <b>◀ ▶</b> na pasku planu, a w rozwiniętym punkcie przycisk <b>„▶ Przełącz Live na ten punkt”</b> (zwykłe dotknięcie punktu niczego nie przełącza). Na komputerze działają klawisze:</p>
+  <div class="tw"><table>
+    <tr><th>Klawisz</th><th>Działanie</th></tr>
+    <tr><td><kbd>→</kbd> lub <kbd>PageDown</kbd></td><td>następny punkt</td></tr>
+    <tr><td><kbd>←</kbd> lub <kbd>PageUp</kbd></td><td>poprzedni punkt</td></tr>
+  </table></div>
+  <p>Działa też pilot do prezentacji. Przytrzymanie klawisza przesuwa tylko o jeden punkt, a pisanie w polu tekstowym nie zmienia planu. Każda zmiana punktu pojawia się na kanale ogólnym jako „▶ TERAZ … / Następnie …” i jest czytana przez lektora (można to wyłączyć w ⚙️).</p>
+
+  <!-- ============ 8 ============ -->
+  <h2 id="transmisja">Transmisja live</h2>
+  <p>Interkom śledzi transmisję z Web Presenterów na YouTube i Facebooku i ogłasza na kanale ogólnym (także głosem):</p>
+  <div class="tw"><table>
+    <tr><th>Komunikat</th><th>Co oznacza</th></tr>
+    <tr><td>📡 sygnał dociera (podgląd)</td><td>Web Presenter nadaje, ale transmisja nie jest jeszcze publiczna – trzeba ją uruchomić w YouTube Studio / Facebook Live Producer.</td></tr>
+    <tr><td>🔴 transmisja na żywo wystartowała</td><td>Transmisja jest publiczna – widzowie nas oglądają.</td></tr>
+    <tr><td>⏹ transmisja zakończona</td><td>Z czasem trwania.</td></tr>
+    <tr><td>⚠️ sygnał przerwany</td><td>Web Presenter stracił połączenie z platformą i próbuje wrócić.</td></tr>
+    <tr><td>⚠️ słabe łącze</td><td>Bufor urządzenia się zapełnia – internet nie nadąża.</td></tr>
+    <tr><td>⚠️ przestał nadawać, a transmisja trwa</td><td>Widzowie widzą zatrzymany obraz – sprawdź Web Presenter.</td></tr>
+  </table></div>
+  <p>W nagłówku znaczek pokazuje <b>◌ PODGLĄD</b> albo <b>● LIVE</b>.</p>
+  <h3>Dźwięk transmisji 🎵</h3>
+  <figure class="shots"><div><img class="phone" src="/pomoc/prog.jpg" alt="Okienko dźwięku transmisji"><small>Przycisk 🎵 i okienko z głośnością</small></div></figure>
+  <p>Gdy realizator nadaje miks z konsolety, u góry ekranu pojawia się przycisk <b>🎵</b>. Każdy decyduje u siebie:</p>
+  <ul>
+    <li><b>Słucham</b> – włącza i wyłącza odsłuch (domyślnie wyłączony). Zielona kropka przy 🎵 oznacza, że słuchasz.</li>
+    <li><b>Suwak</b> – głośność samej transmisji, niezależnie od głośności rozmów. Ustawienie zapamiętuje się na urządzeniu; działa także na iPhonie.</li>
+    <li><b>Ściszaj, gdy ktoś mówi</b> – gdy ktoś mówi przez interkom (albo Ty mówisz), transmisja automatycznie cichnie, żeby nie zagłuszać komunikatów.</li>
+    <li>„wyciszone przez realizatora” – nadajnik jest chwilowo wyciszony; „nie nadaje” – przycisk znika, gdy komputer z dźwiękiem przestanie nadawać.</li>
+  </ul>
+  <p>W sieci kościoła telefon słucha <b>prosto z komputera z nadajnikiem</b> („na żywo · lokalnie”), z pominięciem serwera – opóźnienie to wtedy zwykle ok. 60–100 ms. Poza siecią kościoła (np. przez LTE) dźwięk idzie przez serwer; aplikacja wybiera to sama. W okienku 🎵 widać zmierzone opóźnienie i ostrzeżenia (np. słuchawki Bluetooth).</p>
+  <p><b>⚡ Tryb ultra</b> (domyślnie włączony, w sieci kościoła): dźwięk idzie z pominięciem mechanizmów WebRTC, a telefon trzyma tylko tyle zapasu, ile wymaga Wi-Fi. W okienku 🎵 wybierasz <b>Bufor</b>: <i>Automatyczny</i> (zalecany), <i>Minimalny</i> (najmniejsze opóźnienie, możliwe trzaski przy słabszym Wi-Fi) albo <i>Stabilny</i> (słabe Wi-Fi).</p>
+  <p>Przez serwer opóźnienie wynosi zwykle ok. 0,1–0,5 s – dobrze nadaje się do kontroli tego, co słyszą widzowie, ale nie jako odsłuch dla muzyków na scenie. Gdy odsłuch jest wyłączony, dźwięk transmisji w ogóle nie jest przesyłany do Twojego telefonu.</p>
+  <p><b>Jakość:</b> transmisja idzie w stereo, w jakości ustawionej przez administratora (96–320 kb/s). W <b>aplikacji</b> okienko 🎵 ma jeszcze dwie opcje:</p>
+  <ul>
+    <li><b>Stereo (zalecane)</b> – tylko iPhone; aplikacja odtwarza transmisję własnym odtwarzaczem stereo. Wyłącz tylko wtedy, gdy coś działa źle.</li>
+    <li><b>🎧 Jakość muzyczna</b> – włącz, gdy słuchasz w słuchawkach. Telefon przestaje grać „jak rozmowa telefoniczna”, a słuchawki Bluetooth (np. AirPods) przechodzą w tryb muzyczny – <b>mówisz wtedy do mikrofonu telefonu</b>. Bez słuchawek zostaw wyłączone (głośnik może dawać echo). Na Androidzie transmisja przez serwer jest na razie mono.</li>
+  </ul>
+
+  <h2 id="mikser">Mikser 🎚</h2>
+  <figure class="shots"><div><img class="phone" src="/pomoc/mixer.jpg" alt="Mikser"><small>Przycisk 🎚 u góry ekranu otwiera mikser</small></div></figure>
+  <p>Każdy operator ustawia u siebie proporcje tego, co słyszy. Mikser ma cztery suwaki, każdy z przyciskiem <b>MUTE</b>:</p>
+  <div class="tw"><table>
+    <tr><th>Suwak</th><th>Co reguluje</th></tr>
+    <tr><td>🎙 Głosy</td><td>rozmowy innych operatorów i reżyserów. MUTE = „Odtwarzaj głos” wyłączone (zostaje tekst i transkrypcja).</td></tr>
+    <tr><td>🎵 Transmisja</td><td>dźwięk z konsolety (ten sam poziom co w okienku 🎵). MUTE wyłącza odsłuch.</td></tr>
+    <tr><td>🗣 Komunikaty</td><td>lektor: zmiana punktu z Planning Center, wiadomości czytane na głos, komunikaty o transmisji live.</td></tr>
+    <tr><td>🔔 Sygnały</td><td>dźwięki wezwań i wiadomości PILNE!</td></tr>
+  </table></div>
+  <ul>
+    <li>Suwak przesuwasz palcem lub myszką; na komputerze działają też strzałki, a dwuklik ustawia 100%. Po puszczeniu suwaka komunikatów i sygnałów słychać krótką próbkę.</li>
+    <li>Pod suwakami: <b>Ściszaj transmisję, gdy ktoś mówi</b> – transmisja automatycznie cichnie na czas wypowiedzi.</li>
+    <li>Ustawienia zapamiętują się na danym urządzeniu. W aplikacji na telefon głosy i transmisja są regulowane także przy zablokowanym ekranie.</li>
+  </ul>
+
+  <!-- ============ 9 ============ -->
+  <h2 id="ustawienia">Ustawienia ⚙️</h2>
+  <figure class="shots">
+    <div><img class="phone" src="/pomoc/settings0.jpg" alt=""><small>Ksywki, kanały, mikrofon</small></div>
+    <div><img class="phone" src="/pomoc/settings2.jpg" alt=""><small>Opcje, układ, kolumny planu</small></div>
+    <div><img class="phone" src="/pomoc/settings4.jpg" alt=""><small>Powiadomienia</small></div>
+  </figure>
+  <div class="tw"><table>
+    <tr><th>Ustawienie</th><th>Do czego służy</th></tr>
+    <tr><td>Twoje ksywki</td><td>Po nich inni mogą Cię oznaczyć (@).</td></tr>
+    <tr><td>Słucham kanałów</td><td>Których kanałów słuchasz i z których dostajesz wiadomości.</td></tr>
+    <tr><td>Mikrofon</td><td>Wybór mikrofonu ze wskaźnikiem poziomu. „Przetwarzanie mikrofonu” (redukcja echa i szumów, automatyczne wzmocnienie) wyłącz przy sygnale z miksera lub dobrym mikrofonie.</td></tr>
+    <tr><td>🎧 Pałąk słuchawek</td><td>Dla słuchawek, które wyciszają mikrofon po podniesieniu pałąka: „Mów, gdy pałąk słuchawek jest opuszczony” – opuszczasz pałąk i mówisz, podnosisz – koniec. Najpierw <b>📏 Kalibruj słuchawki</b> (opuść, potem podnieś pałąk) i wyłącz redukcję szumów oraz automatyczne wzmocnienie. Na razie w przeglądarce (komputer, telefon), w aplikacji w kolejnej wersji.</td></tr>
+    <tr><td>Otwieraj mikrofon dopiero przy mówieniu</td><td>Na komputerze domyślnie włączone: otwarty mikrofon przełącza komputer w „tryb rozmowy”, który ścisza muzykę i filmy w innych programach. Z tą opcją mikrofon otwiera się tylko na czas mówienia (start ok. 0,3 s później). Samo ściszanie robi redukcja echa – na komputerze jest domyślnie wyłączona; włącz ją tylko przy mówieniu przez głośniki.</td></tr>
+    <tr><td>Głośnik / słuchawki</td><td>Wyjście dźwięku (komputer, Android) – dla głosów, transmisji i sygnałów. Wybór jest zapamiętywany także po nazwie urządzenia, więc wraca po ponownym podłączeniu. Na iPhonie wybierasz je w Centrum sterowania (AirPlay).</td></tr>
+    <tr><td>🎚 Mikser (przycisk u góry ekranu)</td><td>Osobne suwaki i przyciski MUTE dla: <b>głosów</b> innych osób, <b>dźwięku transmisji</b>, <b>komunikatów</b> czytanych na głos (plan, wiadomości, transmisja live) i <b>sygnałów</b> (wezwania, pilne). Po puszczeniu suwaka komunikatów i sygnałów słychać krótką próbkę. Ustawienia dotyczą tylko Twojego urządzenia.</td></tr>
+    <tr><td>Odtwarzaj głos</td><td>Wyłącz, jeśli chcesz tylko czytać.</td></tr>
+    <tr><td>Czytaj wiadomości na głos</td><td>Lektor czyta wiadomości tekstowe. „Test mowy” sprawdza lektora.</td></tr>
+    <tr><td>Transkrypcja mowy</td><td>Kiedy pokazywać tekst pod wypowiedziami.</td></tr>
+    <tr><td>Układ ekranu, Kolumny kanałów</td><td>Widok podzielony i kilka kanałów obok siebie na tablecie i komputerze.</td></tr>
+    <tr><td>Wibracje, Nie wygaszaj ekranu</td><td>Wibracja przy nowych wiadomościach; ekran nie gaśnie w trakcie pracy.</td></tr>
+    <tr><td>Czytaj zmianę punktu / komunikaty o transmisji</td><td>Lektor dla ogłoszeń planu i transmisji.</td></tr>
+    <tr><td>Kolumny z Planning Center</td><td>Które notatki z planu pokazywać przy zmianie punktu.</td></tr>
+    <tr><td>Uprawnienia</td><td>PIN mówiącego lub administratora bez wylogowania.</td></tr>
+    <tr><td>Powiadomienia</td><td>Włączenie, test i wybór, o czym powiadamiać (rozdział 10).</td></tr>
+    <tr><td>Wyloguj</td><td>Kończy sesję na tym urządzeniu.</td></tr>
+  </table></div>
+  <p>Wybór mikrofonu, głośnika i opcji jest zapamiętywany na danym urządzeniu.</p>
+
+  <!-- ============ 10 ============ -->
+  <h2 id="powiadomienia">Powiadomienia na zablokowanym telefonie</h2>
+  <p>Gdy aplikacja jest w tle albo telefon jest zablokowany, ważne rzeczy przychodzą jako powiadomienia systemowe. <b>Wezwania i PILNE! przychodzą zawsze.</b> Pozostałe wybierasz w ⚙️:</p>
+  <ul>
+    <li>@ oznaczenie mnie w wiadomości;</li>
+    <li>💬 wiadomości prywatne;</li>
+    <li>📢 wiadomości i wypowiedzi (z transkrypcją) na kanałach, których słuchasz;</li>
+    <li>▶ zmiana punktu planu;</li>
+    <li>⏳ koniec czasu punktu – ostatnia minuta i przekroczenie;</li>
+    <li>🔴 transmisja live – start, koniec, problemy.</li>
+  </ul>
+  <p><b>Kiedy przychodzą:</b> tylko gdy jesteś zalogowany i otwierałeś interkom w ciągu ostatnich 6 godzin (np. zablokowałeś telefon w trakcie nabożeństwa). Kto był tylko na jednym nabożeństwie, nie dostaje powiadomień z kolejnych – wystarczy przed następnym otworzyć interkom. Po <b>Wyloguj</b> telefon przestaje dostawać powiadomienia od razu, a gdy na tym samym telefonie zaloguje się ktoś inny, dostaje je tylko nowa osoba.</p>
+  <p>Kilka wiadomości w krótkim czasie łączy się w jedno powiadomienie („+2 wcześniej”). Każdy rodzaj ma własny wzór wibracji – wezwanie najdłuższy.</p>
+  <div class="warn"><b class="l">iPhone</b>Powiadomienia działają tylko z interkomem dodanym do ekranu początkowego (iOS 16.4 lub nowszy) – nie w samej przeglądarce Safari. Wibracje ustawia się w systemie (Dźwięki i haptyka), a tryb Skupienia / „Nie przeszkadzać” może wyciszyć powiadomienia.</div>
+
+  <h2 id="aplikacja">Aplikacja na telefon (iPhone i Android)</h2>
+  <p>Zamiast strony w przeglądarce możesz używać <b>aplikacji Interkom</b>. Przyciski do jej pobrania są na ekranie logowania (gdy administrator wpisze linki albo wgra plik aplikacji na Androida w panelu: Ogólne → Aplikacja na telefon) – na iPhone’a z App Store lub przez TestFlight, na Androida z Google Play lub jako plik do zainstalowania. Wygląda i działa tak samo jak strona, ale:</p>
+  <ul>
+    <li>słyszysz i mówisz także <b>przy zablokowanym ekranie</b>, z telefonem w kieszeni;</li>
+    <li>możesz mówić <b>przyciskiem na słuchawkach</b>, pilotem PTT na Bluetooth albo przyciskiem głośności. Ustawisz to w ⚙️ → Przyciski;</li>
+    <li>powiadomienia przychodzą przez aplikację, bez dodawania do ekranu początkowego.</li>
+  </ul>
+  <figure class="shots">
+    <div><img class="phone" src="/pomoc/app-servers.jpg" alt="Wybór serwera"><small>Wybór serwera przy pierwszym uruchomieniu</small></div>
+    <div><img class="phone" src="/pomoc/app-buttons.jpg" alt="Przyciski w aplikacji"><small>⚙️ → przyciski sprzętowe (Android)</small></div>
+  </figure>
+  <p><b>Pierwsze uruchomienie:</b> aplikacja pokazuje listę serwerów interkomu znalezionych w sieci Wi-Fi kościoła – wybierz swój. Możesz też wpisać adres ręcznie (ten sam, który otwierasz w przeglądarce). Aplikacja zapamiętuje wybór; inny serwer wybierzesz przyciskiem <b>🔁 Zmień serwer</b> na ekranie logowania albo w ⚙️. iPhone zapyta o dostęp do „sieci lokalnej” – zezwól, inaczej wyszukiwanie nie zadziała.</p>
+  <div class="tip"><b class="l">Android</b>Przytrzymaj przycisk i mów, puść, żeby skończyć. Działa także przy zablokowanym ekranie. Przycisk „Naucz przycisk PTT” pozwala przypisać dowolny przycisk pilota. W ustawieniach baterii telefonu daj aplikacji „Bez ograniczeń”.</div>
+  <div class="warn"><b class="l">iPhone</b>Przycisk słuchawek i pilota Bluetooth działa jako przełącznik: naciśnij, żeby mówić, naciśnij ponownie, żeby skończyć. Przyciski głośności działają tylko wtedy, gdy aplikacja jest na ekranie. Ściśnięcie nóżki AirPods nie steruje interkomem – iOS zostawia ten gest dla siebie.</div>
+  <h3>Praca zdalna (spoza sieci kościoła)</h3>
+  <p>Jeśli administrator włączył dostęp z internetu, interkom ma drugi, „zdalny” adres. Otwórz go w przeglądarce albo w aplikacji (🔁 <b>Zmień serwer</b> → <b>Wpisz adres</b>) i zaloguj się kontem Planning Center. Rozmowy, czat, plan i dźwięk transmisji działają tak samo jak w kościele; opóźnienie zależy od Twojego internetu. Na miejscu, w Wi-Fi kościoła, używaj adresu lokalnego – dźwięk płynie wtedy najkrótszą drogą.</p>
+
+  <!-- ============ 11 ============ -->
+  <h2 class="newpage" id="admin">Dla administratora <span class="who adm">administrator</span></h2>
+  <p>Panel otwierasz pod adresem <b>/admin</b> (np. <i>https://adres-interkomu/admin</i>) albo z ⚙️ → <b>Otwórz panel administracyjny</b>. Logujesz się PIN-em administratora. Osoba zalogowana przez Planning Center, której nadano rolę administratora „na stałe”, wchodzi do panelu bez PIN-u. Zmiany działają od razu u wszystkich, bez restartu.</p>
+  <p>Zakładki (na komputerze w menu po lewej, na telefonie przewijany pasek u góry): <b>Stan</b> · <b>Ogólne</b> (nazwa, wygląd, aplikacja na telefon) · <b>Dostęp i PIN-y</b> · <b>Kanały i przyciski</b> · <b>Dźwięk transmisji</b> · <b>Transkrypcja</b> · <b>Planning Center</b> (z zegarem ProPresentera) · <b>Transmisja live</b> (Web Presenter, YouTube, Facebook, mostek) · <b>Serwer</b> (obciążenie, restart, kopia ustawień).</p>
+  <h3>Stan</h3>
+  <figure><img class="wide" src="/pomoc/adm-status.jpg" alt="Zakładka Stan"></figure>
+  <ul>
+    <li>Kto jest online, czego słucha, czy działa transkrypcja i Planning Center.</li>
+    <li>Uprawnienia każdej osoby: <b>Administrator</b>, <b>Mówienie</b>, <b>Sterowanie planem</b> – Auto (według grafiku / PIN-u), Tak – zawsze, Nie – nigdy. Dla osób z Planning Center zapisuje się to na stałe.</li>
+    <li><b>Ksywki</b> dla wszystkich osób, także z grafiku.</li>
+  </ul>
+  <div class="tip"><b class="l">Klucze wpisujesz tylko raz</b>Ustawienia i klucze są zapisane na serwerze w <code>/var/lib/interkom</code>, poza folderem programu. Aktualizacja – także do świeżo rozpakowanego folderu – niczego nie kasuje, a instalator nie pyta ponownie o klucze Planning Center.</div>
+  <h3>Serwer</h3>
+  <figure><img class="wide" src="/pomoc/adm-server.jpg" alt="Zakładka Serwer"><figcaption>Obciążenie, pamięć, dysk, temperatura, usługi i ponowne uruchomienie</figcaption></figure>
+  <ul>
+    <li>Obciążenie procesora, pamięć, dysk, temperatura, stan usług (głos, transkrypcja, nadajnik) oraz przyciski <b>Uruchom ponownie interkom</b>, <b>Uruchom ponownie komputer</b> i <b>Wyłącz komputer</b>.</li>
+    <li><b>Wyczyść czat</b> przed kolejnym nabożeństwem (historia dnia zostaje w dzienniku na serwerze).</li>
+    <li><b>Kopia ustawień</b>: „⬇ Pobierz kopię” zapisuje jeden plik z całą konfiguracją – PIN-y, kanały, przyciski, klucze Planning Center, YouTube i Facebooka, token mostka, ksywki, uprawnienia i powiadomienia telefonów. „⬆ Wczytaj kopię” odtwarza to wszystko na nowym serwerze (np. przy przenosinach z VPS na mini PC) – interkom uruchomi się ponownie po kilku sekundach. Plik zawiera hasła: przechowuj go bezpiecznie.</li>
+  </ul>
+  <h3>Dostęp i PIN-y</h3>
+  <p>PIN-y: ekipy (logowanie), mówiącego (prawo mówienia dla osób spoza grafiku) i administratora. Zmiana PIN-u nie wylogowuje połączonych osób.</p>
+  <p><b>Dostęp spoza sieci kościoła</b></p>
+  <figure><img class="wide" src="/pomoc/adm-remote.jpg" alt="Dostęp spoza sieci"></figure>
+  <p>Operatorzy pracujący zdalnie łączą się przez osobny adres „zdalny” (konfiguruje go instalator, a w routerze trzeba przekierować porty). Spoza sieci domyślnie można logować się tylko kontem Planning Center, a panel administracyjny jest niedostępny – oba ustawienia zmienisz w <b>Dostęp i PIN-y → Dostęp spoza sieci kościoła</b>, tam też jednym przełącznikiem wyłączysz dostęp z internetu.</p>
+  <h3>Wygląd</h3>
+  <figure><img class="wide" src="/pomoc/adm-look.jpg" alt="Wygląd"></figure>
+  <p>Zakładka <b>Ogólne → Wygląd</b> (tam też nazwa interkomu i linki do aplikacji na telefon): <b>kolor przewodni</b> (przyciski, zaznaczenia, własne wiadomości) i <b>logo</b> parafii lub zespołu (PNG/SVG, najlepiej poziome z przezroczystym tłem). Logo pokazuje się na ekranie logowania i w nagłówku; logo SVG lub PNG z przezroczystym tłem można przekolorować (białe, czarne, jak kolor przewodni, własny kolor). Zmiany widać od razu u wszystkich – w przeglądarce i w aplikacji na telefon.</p>
+  <h3>Transkrypcja</h3>
+  <figure><img class="wide" src="/pomoc/adm-general.jpg" alt="Zakładka Transkrypcja"></figure>
+  <ul>
+    <li><b>Model rozpoznawania mowy:</b> <i>base</i> (szybki, słabe serwery), <i>small</i> (dobra jakość, mini PC), <i>medium</i>, <i>large-v3-turbo</i> (najlepszy polski, ok. 2 GB RAM, od 4 rdzeni). Zmiana działa od razu, model ładuje się w tle.</li>
+    <li><b>Dokładność:</b> szybko / zrównoważona / dokładnie.</li>
+    <li><b>Słownik:</b> imiona, nazwy, tytuły pieśni, które model myli. Tytuły z bieżącego planu i (opcjonalnie) imiona z grafiku dodają się same. Nie wpisuj długich list.</li>
+    <li><b>Gdzie działa:</b> na których kanałach, czy w rozmowach prywatnych i czyje wypowiedzi zapisywać (osoby).</li>
+    <li><b>Ostatnie nagrania:</b> 20 ostatnich wypowiedzi do odsłuchu. „Ponów” transkrybuje je jeszcze raz bieżącymi ustawieniami – tak najłatwiej dobrać model i słownik.</li>
+  </ul>
+  <h3>Kanały i szybkie przyciski</h3>
+  <figure><img class="wide" src="/pomoc/adm-channels.jpg" alt="Zakładka Kanały"></figure>
+  <p>Dodawanie kanałów, nazwy, kolory, kolejność i wybór kanału ogólnego. Niżej, w tej samej zakładce, <b>szybkie przyciski</b> – napisy, kolory, alarm i kolejność (maks. 12).</p>
+  <h3>Planning Center</h3>
+  <figure><img class="wide" src="/pomoc/adm-pco.jpg" alt="Zakładka Planning Center"></figure>
+  <ul>
+    <li>Połączenie tokenem z testem, wybór planu i typów nabożeństw.</li>
+    <li>Kto może mówić: liderzy zespołów, całe zespoły, wybrane stanowiska.</li>
+    <li>Przypisanie zespołów do kanałów (także kilku zespołów do jednego kanału) i podgląd obsady.</li>
+    <li><b>Logowanie przez Planning Center</b> (Client ID i Secret aplikacji OAuth) – opcjonalnie tylko dla osób z obsady.</li>
+    <li><b>Sterowanie Live</b>: które stanowiska lub zespoły mogą przełączać punkty. Właściciel tokenu musi być Editorem lub Administratorem w Services.</li>
+    <li>Ogłaszanie zmiany punktu na kanale ogólnym (można wyłączyć dla wszystkich).</li>
+  </ul>
+  <h3>ProPresenter – zegar punktu</h3>
+  <figure><img class="wide" src="/pomoc/adm-pp.jpg" alt="Karta ProPresenter"></figure>
+  <ol>
+    <li>W ProPresenterze (7.9 lub nowszy): <b>Settings → Network → Enable Network</b> (Ustawienia → Sieć → Włącz sieć). Zanotuj adres IP i port.</li>
+    <li>W panelu, w zakładce Planning Center, zaznacz <b>Synchronizuj zegar ProPresenter</b>, wpisz IP i port.</li>
+    <li>Wybierz, gdzie stoi serwer: w sieci kościoła (połączenie bezpośrednie) albo w chmurze – wtedy zegar ustawia <b>mostek</b> z zakładki Transmisja live, uruchomiony na komputerze w kościele.</li>
+    <li>W ProPresenterze pojawi się zegar „Interkom – punkt” – wstaw go na ekran sceny. Opcjonalnie drugi zegar odlicza do końca nabożeństwa.</li>
+  </ol>
+  <p>Interkom poprawia zegar, gdy rozjedzie się o ponad ~2,5 s albo ktoś go zatrzyma. „Synchronizuj teraz” wymusza ponowne ustawienie. ProPresenter nie przyjmuje wartości ujemnych – punkt, który już się przeciągnął, zaczyna odliczanie od 0:00 w dół.</p>
+  <h3>Dźwięk transmisji dla ekipy</h3>
+  <figure><img class="wide" src="/pomoc/adm-prog.jpg" alt="Karta dźwięku transmisji w panelu"></figure>
+  <ol>
+    <li>W zakładce <b>🎵 Dźwięk transmisji</b> zaznacz <b>Włącz dźwięk transmisji</b>, ustaw nazwę i to, jak bardzo ściszać transmisję, gdy ktoś mówi (np. 30%), i zapisz.</li>
+    <li>Kliknij <b>Wygeneruj link nadajnika</b> i otwórz ten link w Chrome lub Edge na komputerze w kościele, do którego dochodzi miks z konsolety (np. interfejs audio USB podłączony do wyjścia Mix/Matrix z miksem do transmisji). Link zapamięta się na tym komputerze.</li>
+    <li>Na stronie nadajnika wybierz wejście, sprawdź wskaźnik L/P (szczyty ok. −12…−6 dB) i kliknij <b>▶ Nadawaj</b>. Opcja „Nadawaj automatycznie po otwarciu” przydaje się na stałym komputerze.</li>
+  </ol>
+  <figure><img class="wide" src="/pomoc/zrodlo.jpg" alt="Strona nadajnika dźwięku transmisji"><figcaption>Strona nadajnika na komputerze z dźwiękiem</figcaption></figure>
+  <p>Dźwięk idzie w stereo, w jakości wybranej w panelu (<b>Jakość dźwięku</b>: 96–320 kb/s, domyślnie 160 kb/s – tyle danych pobiera każdy słuchający; zmiana działa od razu), bez redukcji szumów i echa. W aplikacji na telefon w okienku 🎵 są dwie opcje (na Androidzie tylko druga – tam transmisja przez serwer jest jeszcze mono): <b>Stereo</b> (domyślnie włączone) i <b>🎧 Jakość muzyczna</b> – włącz ją, gdy słuchasz w słuchawkach: dźwięk przestaje brzmieć jak rozmowa telefoniczna, a słuchawki Bluetooth (np. AirPods) grają w trybie muzycznym (mówisz wtedy przez mikrofon telefonu). Przycisk <b>🔇 Wycisz</b> na nadajniku chwilowo wycisza dźwięk u wszystkich. W panelu widać, czy nadajnik działa i jaki ma poziom. Nowy link unieważnia poprzedni i od razu rozłącza stary nadajnik. Na nadajniku ustawisz też <b>poziom wejścia</b> (−24…+24 dB, z ogranicznikiem) i <b>kanały</b> (L/P albo mono z sumy) – poziom i wyciszenie można zmieniać także zdalnie z panelu. Chrome i Edge udostępniają tylko kanały 1–2 wejścia: w Qu-SB przypisz miks do <b>USB Send 1–2</b> (Setup → I/O Patch → USB Audio), w Dante Controller podłącz miks do <b>DVS Receive 1–2</b> (na Windows w trybie WDM wybierasz też parę kanałów z listy wejść); Firefox widzi więcej kanałów i pozwala wybrać np. 17–18.</p>
+  <h3>Nadajnik na serwerze (bez przeglądarki)</h3>
+  <p>Gdy serwer stoi w kościele i ma wejście audio (line-in płyty głównej, interfejs USB, Qu-SB przez USB), dźwięk może czytać, przetwarzać i wysyłać <b>sam serwer</b>. W karcie „Dźwięk transmisji dla ekipy” wybierz <b>Skąd brać dźwięk → Wejście audio tego serwera</b> i zapisz. Pojawią się: włącznik nadawania, wybór wejścia i kanałów (bez ograniczenia do kanałów 1–2 – np. 17–18 z Qu-SB), poziom wejścia, ogranicznik, wyciszenie i wskaźnik L/P. Zmiany działają od razu; nic więcej nie trzeba mieć otwartego. Opcja „Sygnał testowy” pozwala sprawdzić cały tor bez konsolety.</p>
+  <h3>Transmisja live</h3>
+  <figure><img class="wide" src="/pomoc/adm-streams.jpg" alt="Zakładka Transmisja"></figure>
+  <ul>
+    <li><b>Urządzenia:</b> nazwa, adres IP Web Presentera, platforma (YouTube / Facebook).</li>
+    <li><b>YouTube:</b> klient OAuth typu „TVs and Limited Input devices” z YouTube Data API v3; połączenie kodem na google.com/device. Opublikuj aplikację w „OAuth consent screen”, inaczej połączenie wygaśnie po 7 dniach.</li>
+    <li><b>Facebook:</b> aplikacja na developers.facebook.com i token z uprawnieniami <i>pages_show_list</i>, <i>pages_read_engagement</i>; potem wybór strony (można ją zmieniać bez ponownego wpisywania kluczy).</li>
+    <li><b>Mostek</b> (gdy serwer jest w chmurze): wygeneruj token i uruchom podane polecenie na komputerze w sieci kościoła. Mostek łączy się tylko wychodząco i obsługuje też ProPresenter.</li>
+  </ul>
+  <p>Szczegółowe instrukcje krok po kroku są wyświetlane bezpośrednio w panelu.</p>
+
+  <h2 class="newpage" id="serwer">Serwer – instalacja i utrzymanie <span class="who adm">administrator</span></h2>
+  <p>Interkom działa na własnym komputerze w kościele (np. mini PC z Ubuntu Server) albo na serwerze w chmurze. Instalator <code>install.sh</code> instaluje wszystko sam (Docker, usługi, certyfikat) i zadaje kilka pytań.</p>
+  <h3>Sposób łączenia (pytanie instalatora)</h3>
+  <div class="tw"><table>
+    <tr><th>Tryb</th><th>Kiedy</th></tr>
+    <tr><td>1 – domena w Cloudflare</td><td>Masz domenę z DNS w Cloudflare. Prawdziwy certyfikat, nic nie trzeba instalować na telefonach.</td></tr>
+    <tr><td>2 – sam adres IP</td><td>Najprostszy start; na każdym urządzeniu trzeba raz zainstalować certyfikat serwera. Logowanie przez Planning Center nie zadziała.</td></tr>
+    <tr><td>3 – serwer w internecie (VPS)</td><td>Do testów, zanim przyjdzie sprzęt.</td></tr>
+    <tr><td>4 – darmowa subdomena DuckDNS</td><td>Jak tryb 1, bez kupowania domeny: nazwa wskazuje adres serwera w sieci kościoła, certyfikat wydawany przez DNS.</td></tr>
+  </table></div>
+  <h3>Najważniejsze polecenia (na serwerze, w folderze interkomu)</h3>
+  <div class="tw"><table>
+    <tr><th>Polecenie</th><th>Do czego</th></tr>
+    <tr><td><code>unzip -o interkom-X.zip &amp;&amp; cd interkom &amp;&amp; sudo ./install.sh</code></td><td>aktualizacja do nowej wersji – ustawienia, PIN-y i klucze zostają</td></tr>
+    <tr><td><code>sudo ./install.sh --reconfigure</code></td><td>zmiana trybu łączenia, domeny, tokenu</td></tr>
+    <tr><td><code>sudo ./install.sh --remote</code> / <code>--remote-off</code></td><td>włączenie / wyłączenie dostępu spoza sieci kościoła</td></tr>
+    <tr><td><code>sudo ./install.sh --pco</code></td><td>token Planning Center</td></tr>
+    <tr><td><code>sudo docker compose logs -f app</code></td><td>podgląd dziennika (zamiast <i>app</i>: <i>caddy</i>, <i>livekit</i>, <i>stt</i>, <i>audio</i>)</td></tr>
+  </table></div>
+  <ul>
+    <li><b>Stały adres:</b> w routerze zrób rezerwację DHCP dla serwera. Podłącz serwer <b>kablem</b> – Wi-Fi dodaje opóźnień i przerw.</li>
+    <li><b>Dostęp spoza sieci:</b> po <code>--remote</code> przekieruj w routerze na serwer porty <b>443/TCP, 7881/TCP i 7882/UDP</b> i dopisz w Planning Center drugi adres powrotu. Wymaga publicznego adresu IP (nie CGNAT).</li>
+    <li><b>Wejście audio:</b> w małych komputerach (np. Dell OptiPlex Micro) gniazdo „Line Out” z tyłu da się przestawić na wejście liniowe; prościej jest użyć karty dźwiękowej USB albo wyjścia USB konsolety. Nagrywanie w karcie musi być włączone (<code>sudo amixer -c 0 sset Capture 70% cap</code>, potem <code>sudo alsactl store</code>).</li>
+    <li><b>Restart i wyłączenie:</b> z panelu (zakładka Serwer). Po zaniku prądu komputer powinien włączyć się sam – ustaw w BIOS-ie „AC Recovery: Power On”.</li>
+    <li><b>Kopia ustawień:</b> Serwer → Kopia ustawień → Pobierz kopię – rób ją po większych zmianach i przed przenosinami na inny komputer.</li>
+  </ul>
+
+  <!-- ============ 12 ============ -->
+  <h2 class="newpage" id="problemy">Gdy coś nie działa</h2>
+  <div class="tw"><table>
+    <tr><th>Problem</th><th>Co zrobić</th></tr>
+    <tr><td>Nic nie słychać</td><td>Dotknij żółtego paska „Dotknij, aby włączyć dźwięk”. Sprawdź 🎚 mikser (czy suwak nie jest na zero i czy nie świeci MUTE) i czy słuchasz danego kanału. Na iPhonie sprawdź przełącznik wyciszenia i wyjście w Centrum sterowania.</td></tr>
+    <tr><td>Nie słyszą mnie</td><td>Czy pod przyciskiem jest właściwy kanał? ⚙️ → Mikrofon: pasek poziomu powinien ruszać się, gdy mówisz. Przy pierwszym użyciu zezwól na dostęp do mikrofonu.</td></tr>
+    <tr><td>Nie ma przycisku mówienia</td><td>Nie masz prawa mówienia – wpisz PIN mówiącego w ⚙️ → Uprawnienia albo poproś administratora.</td></tr>
+    <tr><td>Kropka żółta / czerwona</td><td>Żółta: działa tylko tekst (głos łączy się ponownie). Czerwona: brak połączenia – sprawdź Wi-Fi; aplikacja połączy się sama.</td></tr>
+    <tr><td>Nie przychodzą powiadomienia</td><td>⚙️ → Włącz powiadomienia i Wyślij test. Na iPhonie tylko z ikony na ekranie początkowym. Sprawdź tryb Skupienia.</td></tr>
+    <tr><td>Dotyk trafia obok przycisków (iPhone, ikona)</td><td>Zamknij aplikację gestem i otwórz ponownie z ikony.</td></tr>
+    <tr><td>Transkrypcja nieudana lub dziwna</td><td>Mów bliżej mikrofonu, zacznij chwilę po wciśnięciu. Administrator może sprawdzić nagranie w panelu (Ogólne → Ostatnie nagrania) i dopisać słowa do słownika.</td></tr>
+    <tr><td>Plan się nie zmienia</td><td>Sprawdź, czy prowadzący przełącza punkty w Planning Center Live. Administrator: ⚙️ → Odśwież dane z Planning Center.</td></tr>
+    <tr><td>Aplikacja: „Brak połączenia z serwerem”</td><td>Sprawdź, czy telefon jest w Wi-Fi kościoła (adres lokalny działa tylko tam). „Wybierz inny serwer” – np. adres zdalny poza kościołem.</td></tr>
+    <tr><td>Spoza kościoła nie da się zalogować PIN-em</td><td>Tak ma być – zdalnie loguj się kontem Planning Center albo poproś administratora o zmianę ustawienia.</td></tr>
+    <tr><td>Brak dźwięku transmisji z serwera</td><td>Administrator: panel → Stan → Serwer (czy „Nadajnik dźwięku” ma ✔), wskaźnik L/P w karcie dźwięku transmisji, kabel w gnieździe <b>wejściowym</b>.</td></tr>
+    <tr><td>Transmisja w aplikacji brzmi jak rozmowa telefoniczna</td><td>W okienku 🎵 włącz <b>🎧 Jakość muzyczna</b> (przy słuchawkach) i na iPhonie <b>Stereo</b>.</td></tr>
+    <tr><td>Safari / Chrome: po jakimś czasie „Mów” nic nie nadaje</td><td>Przeglądarka „usypia” mikrofon (uśpienie komputera, inna karta, blokada ekranu). Strona sama go przywraca w ciągu kilku sekund albo przy naciśnięciu „Mów”. Jeśli przeglądarka zapyta o mikrofon – zezwól. Gdy dalej cisza: odśwież stronę.</td></tr>
+    <tr><td>Echo lub sprzężenie</td><td>Używaj słuchawek. Przy mikrofonie z miksera wyłącz „Przetwarzanie mikrofonu”.</td></tr>
+  </table></div>
+  <div class="tip"><b class="l">Najlepsze warunki</b>Wszystkie urządzenia ekip w jednej sieci Wi-Fi 5 GHz, oddzielonej od Wi-Fi dla wiernych; słuchawki przewodowe; telefony naładowane.</div>
+
+  <!-- ============ 13 ============ -->
+  <h2 id="sciaga">Ściąga</h2>
+  <div class="tw"><table>
+    <tr><th>Skrót / znak</th><th>Znaczenie</th></tr>
+    <tr><td><kbd>Spacja</kbd> (przytrzymaj)</td><td>mówienie na komputerze</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>wyślij wiadomość</td></tr>
+    <tr><td><kbd>→</kbd> <kbd>PageDown</kbd> / <kbd>←</kbd> <kbd>PageUp</kbd></td><td>następny / poprzedni punkt planu (z uprawnieniem)</td></tr>
+    <tr><td><kbd>@</kbd>, <kbd>↑</kbd> <kbd>↓</kbd>, <kbd>Tab</kbd></td><td>oznaczanie osoby: wybór z listy</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>zamknij listę podpowiedzi</td></tr>
+    <tr><td>🔒</td><td>mikrofon na stałe</td></tr>
+    <tr><td>⌨️ / 🎙</td><td>przełączanie pisania i mówienia na telefonie</td></tr>
+    <tr><td>≈ … (niepewne)</td><td>transkrypcja, której model nie był pewien</td></tr>
+    <tr><td>◌ PODGLĄD / ● LIVE</td><td>stan transmisji</td></tr>
+    <tr><td>🎵</td><td>dźwięk transmisji: odsłuch i głośność</td></tr>
+    <tr><td>🎚</td><td>mikser: głosy, transmisja, komunikaty, sygnały</td></tr>
+    <tr><td>🔁 Zmień serwer</td><td>aplikacja: wybór innego serwera (np. adres zdalny)</td></tr>
+    <tr><td>pomarańczowy / czerwony zegar</td><td>ostatnia minuta / przekroczenie czasu punktu</td></tr>
+  </table></div>
+  <p class="ver">Interkom 0.44.1 · Instrukcja jest dostępna w aplikacji: ⚙️ → 📖 Instrukcja obsługi, oraz pod adresem /pomoc.</p>
+</main>
+</div>
+
+<script>
+// spis treści z nagłówków
+const hs = [...document.querySelectorAll('main h2[id]')];
+const item = (h) => `<li><a href="#${h.id}">${h.childNodes[0].textContent.trim()}</a></li>`;
+for (const id of ['tocList', 'tocM', 'ptocList']) document.getElementById(id).innerHTML = hs.map(item).join('');
+document.querySelectorAll('#tocM a').forEach((a) => a.addEventListener('click', () => a.closest('details').open = false));
+// podświetlenie bieżącego rozdziału
+const links = new Map([...document.querySelectorAll('#tocList a')].map((a) => [a.getAttribute('href').slice(1), a]));
+const io = 'IntersectionObserver' in window && new IntersectionObserver((es) => {
+  for (const e of es) if (e.isIntersecting) { links.forEach((a) => a.classList.remove('on')); links.get(e.target.id)?.classList.add('on'); }
+}, { rootMargin: '-10% 0px -80% 0px' });
+if (io) hs.forEach((h) => io.observe(h));
+// otwarta z aplikacji w nowej karcie – „Wróć” zamyka kartę; otwarta w tej samej – cofa
+document.querySelector('.top a[href="/"]').addEventListener('click', (e) => {
+  const same = document.referrer && new URL(document.referrer).origin === location.origin;
+  if (history.length <= 1) { e.preventDefault(); window.close(); setTimeout(() => (location.href = '/'), 300); }
+  else if (same) { e.preventDefault(); history.back(); }
+});
+</script>
+</body>
+</html>

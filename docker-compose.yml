@@ -1,0 +1,72 @@
+# Interkom – całość działa lokalnie. Wszystkie usługi w sieci hosta (najprostsze dla WebRTC w LAN).
+services:
+  app:
+    build: ./app
+    image: interkom-app:0.43.1
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 127.0.0.1
+      PORT: "3000"
+      CONFIG_PATH: /config/config.json
+      DATA_DIR: /data
+      TZ: Europe/Warsaw
+      STT_URL: http://127.0.0.1:8001
+    volumes:
+      - ./config:/config
+      - ./data/app:/data
+      - ./data/caddy:/caddy-data:ro
+    user: "0:0"
+
+  # Rozpoznawanie mowy (Whisper) – lokalnie, nagrania nie opuszczają serwera.
+  # Model i dokładność ustawia się w panelu (Ogólne → Rozpoznawanie mowy). Model pobiera się raz, przy pierwszym wyborze.
+  stt:
+    build: ./stt
+    image: interkom-stt:0.43.1
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-auto}
+    volumes:
+      - ./data/stt-models:/models
+
+  # Nadajnik dźwięku transmisji na serwerze: wejście audio (line-in / USB / Qu-SB) → Opus → telefony.
+  # Włączany instalatorem tylko wtedy, gdy serwer ma kartę dźwiękową (COMPOSE_PROFILES=audio w .env).
+  # Sterowanie wyłącznie z panelu: Transmisja → Dźwięk transmisji → „Wejście audio tego serwera”.
+  audio:
+    build: ./audio
+    image: interkom-audio:0.43.1
+    network_mode: host
+    restart: unless-stopped
+    profiles: ["audio"]
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      CONFIG_PATH: /config/config.json
+      IK_APP: http://127.0.0.1:3000
+      LIVEKIT_INTERNAL_WS: ws://127.0.0.1:7880
+      TZ: Europe/Warsaw
+    volumes:
+      - ./config:/config:ro
+    user: "0:0"
+
+  livekit:
+    image: livekit/livekit-server:latest
+    network_mode: host
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+
+  caddy:
+    build: ./caddy
+    image: interkom-caddy:0.43.1
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/sites:/etc/caddy/sites:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config

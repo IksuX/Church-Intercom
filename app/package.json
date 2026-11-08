@@ -1,0 +1,20 @@
+{
+  "name": "interkom",
+  "version": "0.44.1",
+  "description": "Hybrydowy interkom głos + tekst dla ekip nabożeństwa (self-hosted)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.2.1",
+    "livekit-client": "^2.22.3",
+    "livekit-server-sdk": "^2.19.1",
+    "opus-decoder": "^0.7.12",
+    "web-push": "^3.6.7",
+    "ws": "^8.18.3"
+  }
+}
