@@ -964,14 +964,19 @@ function progLevel() {
   if (lo.gain) lo.gain.gain.setTargetAtTime(v, lo.gain.context.currentTime, 0.03);
   else if (lo.el && lo.state === 'on') lo.el.volume = Math.min(1, v);
 }
-// iPhone nie pozwala zmieniać głośności elementu <audio> – dlatego program idzie przez Web Audio (wzmacniacz)
+// iPhone nie pozwala zmieniać głośności elementu <audio> – dlatego tam program idzie przez Web Audio (wzmacniacz).
+// Na komputerze i Androidzie zwykły element <audio>: Web Audio w Chrome nie nadąża za zmianą częstotliwości
+// wyjścia (np. słuchawki Bluetooth przechodzą w tryb rozmowy przy otwarciu mikrofonu, inna karta przestawia
+// urządzenie) i transmisja grała wtedy za szybko / za wolno – zmieniała się wysokość dźwięku.
+const progViaCtx = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function progAttach(track) {
   if (prog.track && prog.track !== track) prog.track.detach().forEach((el) => el.remove());
   prog.track = track;
   track.detach().forEach((el) => el.remove());
   progClearEls();
   prog.ctx = null;
-  if (actx) { try { track.setAudioContext(actx); prog.ctx = actx; } catch {} }
+  if (actx && progViaCtx()) { try { track.setAudioContext(actx); prog.ctx = actx; } catch {} }
+  else { try { track.setAudioContext(undefined); } catch {} }
   const el = track.attach();
   el.dataset.pid = prog.cfg.id; el.dataset.prog = '1';
   if (S.opt.spkId) el.setSinkId?.(S.opt.spkId).catch(() => {});
@@ -980,7 +985,7 @@ function progAttach(track) {
 }
 const progClearEls = () => document.querySelectorAll('audio[data-prog]').forEach((el) => { el.srcObject = null; el.remove(); });
 function progUseCtx() { // po pierwszym dotknięciu (utworzenie AudioContext)
-  if (prog.track && actx && prog.ctx !== actx) progAttach(prog.track);
+  if (prog.track && actx && progViaCtx() && prog.ctx !== actx) progAttach(prog.track);
   // lokalnie w zwykłym trybie, a „ultra” stało się możliwe – przełącz
   const lo = prog.local;
   if (actx && lo.state === 'on' && !lo.fast && !lo.fastAsk && S.opt.progFast !== false) { progLocalStop(); lo.failedAt = 0; setTimeout(progLocalSync, 50); }
@@ -1019,7 +1024,7 @@ function renderProg() {
   renderMixer();
 }
 function updateGatesOnlyProg() { const p = progParticipant(); if (p) gate(p); progLevel(); }
-if (/[?&]ikdebug\b/.test(location.search)) window.__ik = { S, prog }; // tylko do testów
+if (/[?&]ikdebug\b/.test(location.search)) window.__ik = { S, prog, progAttach }; // tylko do testów
 // ---- lokalny odsłuch: prosto z komputera w kościele (WebRTC w sieci lokalnej), bez serwera w chmurze ----
 // Telefon prosi nadajnik o połączenie; jeśli w ciągu kilku sekund się nie uda (np. telefon poza siecią kościoła),
 // zostaje odsłuch przez serwer. Gdy połączenie lokalne padnie w trakcie – płynnie wracamy do serwera.
@@ -1084,7 +1089,7 @@ function progLocalMaybeOn() {
   // Chrome podaje dźwięk WebRTC do Web Audio tylko wtedy, gdy strumień gra też w elemencie <audio> (wyciszonym)
   lo.el = document.createElement('audio'); lo.el.autoplay = true; lo.el.dataset.proglocal = '1';
   lo.el.srcObject = lo.stream;
-  if (actx) {
+  if (actx && progViaCtx()) {
     lo.el.muted = true;
     lo.src = actx.createMediaStreamSource(lo.stream); lo.gain = actx.createGain(); lo.gain.gain.value = 0;
     lo.src.connect(lo.gain); lo.gain.connect(actx.destination);

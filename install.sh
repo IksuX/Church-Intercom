@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IK_VERSION="0.44.4"
+IK_VERSION="0.44.5"
 c_ok="\033[32m"; c_warn="\033[33m"; c_err="\033[31m"; c_0="\033[0m"
 say()  { echo -e "${c_ok}==>${c_0} $*"; }
 warn() { echo -e "${c_warn}[!]${c_0} $*"; }
