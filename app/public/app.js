@@ -359,14 +359,15 @@ function renderCols() {
   document.body.classList.toggle('cols', extra.length > 0);
   const head = $('#mainHead');
   head.hidden = !extra.length;
-  if (extra.length) { const c = chan(S.active); head.style.setProperty('--c', c?.color || '#38bdf8'); head.innerHTML = `<b>${esc(c?.name || '')}</b> · mówisz tutaj`; }
+  if (extra.length) { const c = chan(S.active); head.style.setProperty('--c', c?.color || '#38bdf8'); head.innerHTML = `<b>${esc(c?.name || '')}</b> · mówisz tutaj${!isDm(S.active) && !S.listen.has(S.active) ? ' · 🔇 nie słuchasz' : ''}`; }
   box.querySelectorAll('.fcol.extra').forEach((el) => el.remove());
   extra.forEach((ch, i) => {
     const col = document.createElement('section');
     col.className = 'fcol extra';
     const c = chan(ch);
-    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select><button type="button" class="xx" title="Mów na tym kanale">🎙</button><button type="button" class="xx" title="Zamknij kolumnę">✕</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
-    const [sel, talk, close] = [col.querySelector('select'), ...col.querySelectorAll('button')];
+    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select>${isDm(ch) ? '' : `<button type="button" class="xx li ${S.listen.has(ch) ? '' : 'off'}" title="${S.listen.has(ch) ? 'Słuchasz – kliknij, żeby wyciszyć' : 'Nie słuchasz – kliknij, żeby słuchać'}">${S.listen.has(ch) ? '🔊' : '🔇'}</button>`}<button type="button" class="xx" title="Mów na tym kanale">🎙</button><button type="button" class="xx" title="Zamknij kolumnę">✕</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
+    const lb = col.querySelector('.li'); if (lb) lb.onclick = () => setListen(ch, !S.listen.has(ch));
+    const [sel, talk, close] = [col.querySelector('select'), ...col.querySelectorAll('button:not(.li)')];
     sel.onchange = () => { const list = colChannels(); list[i] = sel.value; S.opt.colCh = list; store.set('opt', S.opt); S.unread.delete(sel.value); renderCols(); renderTabs(); };
     talk.onclick = () => setActive(ch);
     close.onclick = () => { const list = colChannels(); list.splice(i, 1); S.opt.colCh = list; S.opt.cols = colsN() - 1; store.set('opt', S.opt); if ($('#optCols')) $('#optCols').value = String(S.opt.cols); renderCols(); };
@@ -476,6 +477,35 @@ function toast(m) {
 }
 
 // ================= ZAKŁADKI / KANAŁY =================
+// Słuchanie kanału = słyszysz głos i dostajesz powiadomienia. Widać je na zakładkach (🔊 / 🔇), dotknięcie ikony przełącza.
+function setListen(ch, on, quiet) {
+  if (!chan(ch) || isDm(ch) || S.listen.has(ch) === !!on) return;
+  if (on) S.listen.add(ch); else S.listen.delete(ch);
+  store.set('listen:' + S.me.id, [...S.listen]); store.set('listen', [...S.listen]);
+  wsSend({ t: 'listen', channels: [...S.listen] });
+  savePushPrefs(); updateGates(); renderTalkNow();
+  renderTabs(); renderListenBar(); if (!$('#sheetSettings').hidden) renderListenList(); if (colChannels().length) renderCols();
+  // potwierdzenie bez dymka (dymek zasłaniał zakładki): ikona na zakładce „podskakuje”
+  if (!quiet) requestAnimationFrame(() => [...document.querySelectorAll('#tabs .tab')].find((t) => t.querySelector('.li') && t.textContent.startsWith(chan(ch).name))?.querySelector('.li')?.classList.add('pop'));
+}
+function renderListenList() {
+  const list = $('#listenList');
+  list.innerHTML = '';
+  for (const c of S.channels) {
+    const l = document.createElement('label');
+    l.style.setProperty('--c', c.color);
+    l.innerHTML = `<input type="checkbox" ${S.listen.has(c.id) ? 'checked' : ''}><span class="sw"></span>${esc(c.name)}`;
+    l.querySelector('input').onchange = (e) => setListen(c.id, e.target.checked, true);
+    list.appendChild(l);
+  }
+}
+$('#listenBarOn').onclick = () => setListen(S.active, true, true);
+function renderListenBar() {
+  const bar = $('#listenBar'), c = chan(S.active);
+  const off = !!c && !isDm(S.active) && !S.listen.has(S.active);
+  bar.hidden = !off;
+  if (off) { bar.style.setProperty('--c', c.color); $('#listenBarName').textContent = c.name; }
+}
 function renderTabs() {
   const tabs = $('#tabs');
   tabs.innerHTML = '';
@@ -487,8 +517,10 @@ function renderTabs() {
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', c.id === S.active);
     const n = S.unread.get(c.id);
-    b.innerHTML = esc(c.name) + (n ? `<span class="badge ${S.urgent.has(c.id) ? 'urgent' : ''}">${n}</span>` : '');
-    b.onclick = () => setActive(c.id);
+    const on = S.listen.has(c.id);
+    b.innerHTML = esc(c.name) + (n ? `<span class="badge ${S.urgent.has(c.id) ? 'urgent' : ''}">${n}</span>` : '')
+      + `<span class="li" role="switch" aria-checked="${on}" title="${on ? 'Słuchasz – dotknij, żeby wyciszyć' : 'Nie słuchasz – dotknij, żeby słuchać'}">${on ? '🔊' : '🔇'}</span>`;
+    b.onclick = (e) => { if (e.target.closest('.li')) { e.stopPropagation(); setListen(c.id, !S.listen.has(c.id)); return; } setActive(c.id); };
     tabs.appendChild(b);
   }
   for (const d of S.dms.values()) {
@@ -511,6 +543,7 @@ function renderTabs() {
   }
   tabs.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   markColTalking();
+  renderListenBar();
 }
 function setActive(id) {
   if (S.pttOn) stopTalk();
@@ -519,7 +552,9 @@ function setActive(id) {
   S.active = id; store.set('active', id);
   S.unread.delete(id); S.urgent.delete(id);
   wsSend({ t: 'target', channel: id });
-  renderTabs(); renderFeed(); renderPttLabel();
+  // wchodzisz na kanał = chcesz go słyszeć (można wyłączyć w ustawieniach)
+  if (S.opt.autoListen !== false && chan(id) && !isDm(id) && !S.listen.has(id)) setListen(id, true);
+  renderTabs(); renderFeed(); renderPttLabel(); renderListenBar();
   $('#msgInput').placeholder = `Napisz do: ${chan(id).name}…`;
 }
 
@@ -1531,7 +1566,9 @@ function stopTalk() {
 }
 function renderPttLabel() {
   if (!canTalk()) return;
-  $('#pttTarget').textContent = `→ ${chan(S.active).name}`;
+  const c = chan(S.active);
+  $('#pttTarget').innerHTML = `<span class="ptt-ch">${isDm(S.active) ? '💬 ' : '📢 '}${esc(c?.name || '')}</span>`;
+  $('#ptt').style.setProperty('--c', isDm(S.active) ? '#38bdf8' : (c?.color || '#64748b'));
   if (!S.pttOn) $('#ptt .ptt-l1').textContent = S.pttLocked ? 'Mikrofon włączony – dotknij 🔒' : S.opt.boom && !NAT ? 'Opuść pałąk albo przytrzymaj' : 'Przytrzymaj i mów';
 }
 const ptt = $('#ptt');
@@ -1768,7 +1805,7 @@ function onModMuted(by) {
 function onModMoved(ch, by, wasTalking) {
   const c = chan(ch); if (!c || !modOnce('move')) return;
   const keep = S.pttOn && (S.pttLocked || boom.talk); // mówienie „na stałe” (kłódka, pałąk) – kontynuuj na nowym kanale
-  if (!S.listen.has(ch)) { S.listen.add(ch); store.set('listen:' + S.me.id, [...S.listen]); store.set('listen', [...S.listen]); wsSend({ t: 'listen', channels: [...S.listen] }); }
+  setListen(ch, true, true);
   setActive(ch);
   if (keep) startTalk();
   beep(); vibrate([200, 100, 200]);
@@ -1813,21 +1850,9 @@ function renderSettings() {
   // wskaźnik poziomu; gdy mikrofon był zamknięty (komputer), po jego otwarciu przeglądarka odsłania pełną listę urządzeń
   if (canTalk() && S.micPub) { unlockAudio(); micPreview().then(() => { if (!$('#sheet').hidden && !$('#sheetSettings').hidden) renderDevices(); }); }
   renderNoteCats();
-  const list = $('#listenList');
-  list.innerHTML = '';
-  for (const c of S.channels) {
-    const l = document.createElement('label');
-    l.style.setProperty('--c', c.color);
-    l.innerHTML = `<input type="checkbox" ${S.listen.has(c.id) ? 'checked' : ''}><span class="sw"></span>${esc(c.name)}`;
-    l.querySelector('input').onchange = (e) => {
-      e.target.checked ? S.listen.add(c.id) : S.listen.delete(c.id);
-      store.set('listen:' + S.me.id, [...S.listen]); store.set('listen', [...S.listen]);
-      wsSend({ t: 'listen', channels: [...S.listen] });
-      savePushPrefs();
-      updateGates(); renderTabs(); renderTalkNow();
-    };
-    list.appendChild(l);
-  }
+  renderListenList();
+  $('#optAutoListen').checked = S.opt.autoListen !== false;
+  $('#optAutoListen').onchange = (e) => { S.opt.autoListen = e.target.checked; store.set('opt', S.opt); };
   const oc = $('#optCols');
   oc.value = String(Math.max(1, Math.min(4, Number(S.opt.cols) || 1)));
   oc.onchange = () => { S.opt.cols = Number(oc.value); store.set('opt', S.opt); renderCols(); };

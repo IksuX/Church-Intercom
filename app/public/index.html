@@ -96,6 +96,10 @@
     <div id="toast" class="toast" hidden></div>
 
     <nav id="tabs" class="tabs" role="tablist"></nav>
+    <div id="listenBar" class="listenbar" hidden>
+      <span>🔇 Nie słuchasz kanału <b id="listenBarName"></b> – nie usłyszysz z niego głosu ani powiadomień.</span>
+      <button type="button" id="listenBarOn" class="primary">🔊 Słuchaj</button>
+    </div>
 
     <div id="feeds" class="feeds">
       <section class="fcol main"><div class="colhead" id="mainHead" hidden></div><main id="feed" class="feed" aria-live="polite"></main></section>
@@ -150,7 +154,9 @@
         <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
           <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
         <h3>Słucham kanałów</h3>
+        <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną 🔊 / 🔇 na zakładce kanału.</p>
         <div id="listenList" class="checklist"></div>
+        <label class="switch"><input type="checkbox" id="optAutoListen" checked> Wejście na kanał włącza jego słuchanie</label>
         <h3>Dźwięk</h3>
         <div id="audioBox">
           <div id="natBox" class="natbox" hidden>

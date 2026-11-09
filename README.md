@@ -1,4 +1,4 @@
-# Interkom 0.44.6
+# Interkom 0.45.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.44.6.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.45.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.44.6.zip && cd interkom
+   unzip interkom-0.45.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,13 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.45.0
+- **Słuchanie kanałów widoczne i pod ręką** (zamiast tylko w ustawieniach):
+  - na każdej zakładce **🔊** (słuchasz) albo **🔇** z przekreśloną nazwą (nie słuchasz) – dotknięcie ikony przełącza; to samo w kolumnach podglądu,
+  - **wejście na kanał włącza jego słuchanie** (poprzednie zostają) – kto przełączy się na „Kamery”, od razu je słyszy; można wyłączyć w ⚙️,
+  - gdy oglądasz kanał, którego nie słuchasz, nad rozmową żółty pasek „🔇 Nie słuchasz kanału …” z przyciskiem **🔊 Słuchaj**,
+  - przycisk mówienia pokazuje kanał, na który idzie głos – 📢 nazwa w kolorze kanału, ramka przycisku też w tym kolorze.
 
 ## 0.44.6
 - Instalator 0.44.4–0.44.5 przerywał się w linii 408 (sklejone dwa polecenia przy instalacji usługi aktualizacji z panelu). Poprawione; sekcja usługi sterowania jest teraz sprawdzana w teście w całości.

@@ -495,3 +495,22 @@ body.cols .feed { padding: 10px 12px; }
 .modform { flex-wrap: wrap; }
 .modform select { flex: 1; min-width: 110px; padding: 8px; }
 .pgroup h4 .chstt { margin-left: 8px; padding: 1px 8px; font-size: 12px; font-weight: 400; }
+
+/* słuchanie kanałów – widoczne na zakładkach i nad rozmową */
+.tab .li { margin-left: 7px; font-size: 13px; padding: 2px 3px; margin-right: -6px; border-radius: 6px; cursor: pointer; }
+.tab .li:hover { background: color-mix(in srgb, var(--fg) 12%, transparent); }
+.tab.muted { opacity: .7; }
+.tab.muted:not([aria-selected="true"]) { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent); }
+.tab.muted .badge, .tab.muted .li { text-decoration: none; display: inline-block; }
+.listenbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: color-mix(in srgb, var(--warn, #f59e0b) 16%, var(--panel)); border-bottom: 1px solid color-mix(in srgb, var(--warn, #f59e0b) 55%, transparent); font-size: 14px; }
+.listenbar span { flex: 1; min-width: 0; }
+.listenbar b { color: var(--c); }
+.listenbar button { flex: none; padding: 8px 14px; }
+.colhead .li.off { opacity: .8; }
+/* przycisk mówienia: kanał w jego kolorze – widać, dokąd idzie głos */
+.ptt { border-color: color-mix(in srgb, var(--c, #334155) 70%, #334155); }
+.ptt-l2 { margin-top: 2px; }
+.ptt-ch { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 12px; border-radius: 999px; font-size: 15px; font-weight: 800; letter-spacing: .02em; color: #fff; background: color-mix(in srgb, var(--c, #64748b) 75%, #000); }
+.ptt.live .ptt-ch { background: var(--c, #16a34a); box-shadow: 0 0 0 2px #fff6; }
+.tab .li.pop { animation: lipop .6s ease-out; }
+@keyframes lipop { 0% { transform: scale(1); } 35% { transform: scale(1.7); } 100% { transform: scale(1); } }
