@@ -514,3 +514,5 @@ body.cols .feed { padding: 10px 12px; }
 .ptt.live .ptt-ch { background: var(--c, #16a34a); box-shadow: 0 0 0 2px #fff6; }
 .tab .li.pop { animation: lipop .6s ease-out; }
 @keyframes lipop { 0% { transform: scale(1); } 35% { transform: scale(1.7); } 100% { transform: scale(1); } }
+.tab .li.fixed { cursor: default; }
+.tab .li.fixed:hover { background: none; }

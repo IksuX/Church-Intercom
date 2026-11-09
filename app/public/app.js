@@ -149,7 +149,7 @@ function start(sess, resumed = false) {
   $('#ver').textContent = 'Wersja ' + sess.version;
   const savedListen = store.get('listen:' + S.me.id, null) || sess.defaultListen || store.get('listen', null);
   S.listen = new Set((savedListen || [S.broadcast]).filter((id) => chan(id)));
-  if (!S.listen.size) S.listen.add(S.broadcast);
+  S.listen.add(S.broadcast); // kanał ogólny – zawsze
   S.active = sess.defaultListen ? null : store.get('active', null);
   if (!chan(S.active)) S.active = [...S.listen].find((c) => c !== S.broadcast) || S.broadcast;
   $('#login').hidden = true; $('#main').hidden = false;
@@ -209,7 +209,8 @@ function onWs(m) {
     case 'channels': applyChannels(m.channels); break;
     case 'plan': S.session.pco = !m.disabled; $('#optPlanRow').hidden = !S.session.pco; setPlan(m, true); if (splitOn() !== !!S.session.pco) applyLayout(); break;
     case 'config': // administrator zmienił ustawienia w panelu
-      S.quick = m.quick; S.broadcast = m.broadcastChannel;
+      S.quick = m.quick;
+      if (S.broadcast !== m.broadcastChannel) { S.broadcast = m.broadcastChannel; S.listen.add(S.broadcast); wsSend({ t: 'listen', channels: [...S.listen] }); renderTabs(); }
       S.session.sttOff = m.sttOff || []; S.session.sttDm = m.sttDm !== false;
       document.title = m.org; $('#orgName').textContent = m.org; applyBrand(m.brand);
       renderQuick(); setProgCfg(m.program);
@@ -365,7 +366,7 @@ function renderCols() {
     const col = document.createElement('section');
     col.className = 'fcol extra';
     const c = chan(ch);
-    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select>${isDm(ch) ? '' : `<button type="button" class="xx li ${S.listen.has(ch) ? '' : 'off'}" title="${S.listen.has(ch) ? 'Słuchasz – kliknij, żeby wyciszyć' : 'Nie słuchasz – kliknij, żeby słuchać'}">${S.listen.has(ch) ? '🔊' : '🔇'}</button>`}<button type="button" class="xx" title="Mów na tym kanale">🎙</button><button type="button" class="xx" title="Zamknij kolumnę">✕</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
+    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select>${isDm(ch) || ch === S.broadcast ? '' : `<button type="button" class="xx li ${S.listen.has(ch) ? '' : 'off'}" title="${S.listen.has(ch) ? 'Słuchasz – kliknij, żeby wyciszyć' : 'Nie słuchasz – kliknij, żeby słuchać'}">${S.listen.has(ch) ? '🔊' : '🔇'}</button>`}<button type="button" class="xx" title="Mów na tym kanale">🎙</button><button type="button" class="xx" title="Zamknij kolumnę">✕</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
     const lb = col.querySelector('.li'); if (lb) lb.onclick = () => setListen(ch, !S.listen.has(ch));
     const [sel, talk, close] = [col.querySelector('select'), ...col.querySelectorAll('button:not(.li)')];
     sel.onchange = () => { const list = colChannels(); list[i] = sel.value; S.opt.colCh = list; store.set('opt', S.opt); S.unread.delete(sel.value); renderCols(); renderTabs(); };
@@ -480,6 +481,7 @@ function toast(m) {
 // Słuchanie kanału = słyszysz głos i dostajesz powiadomienia. Widać je na zakładkach (🔊 / 🔇), dotknięcie ikony przełącza.
 function setListen(ch, on, quiet) {
   if (!chan(ch) || isDm(ch) || S.listen.has(ch) === !!on) return;
+  if (!on && ch === S.broadcast) return; // kanał ogólny (wywoławczy) słyszą zawsze wszyscy
   if (on) S.listen.add(ch); else S.listen.delete(ch);
   store.set('listen:' + S.me.id, [...S.listen]); store.set('listen', [...S.listen]);
   wsSend({ t: 'listen', channels: [...S.listen] });
@@ -494,7 +496,8 @@ function renderListenList() {
   for (const c of S.channels) {
     const l = document.createElement('label');
     l.style.setProperty('--c', c.color);
-    l.innerHTML = `<input type="checkbox" ${S.listen.has(c.id) ? 'checked' : ''}><span class="sw"></span>${esc(c.name)}`;
+    const fixed = c.id === S.broadcast;
+    l.innerHTML = `<input type="checkbox" ${S.listen.has(c.id) || fixed ? 'checked' : ''} ${fixed ? 'disabled' : ''}><span class="sw"></span>${esc(c.name)}${fixed ? ' <span class="hint">· słyszą wszyscy</span>' : ''}`;
     l.querySelector('input').onchange = (e) => setListen(c.id, e.target.checked, true);
     list.appendChild(l);
   }
@@ -519,8 +522,9 @@ function renderTabs() {
     const n = S.unread.get(c.id);
     const on = S.listen.has(c.id);
     b.innerHTML = esc(c.name) + (n ? `<span class="badge ${S.urgent.has(c.id) ? 'urgent' : ''}">${n}</span>` : '')
-      + `<span class="li" role="switch" aria-checked="${on}" title="${on ? 'Słuchasz – dotknij, żeby wyciszyć' : 'Nie słuchasz – dotknij, żeby słuchać'}">${on ? '🔊' : '🔇'}</span>`;
-    b.onclick = (e) => { if (e.target.closest('.li')) { e.stopPropagation(); setListen(c.id, !S.listen.has(c.id)); return; } setActive(c.id); };
+      + (c.id === S.broadcast ? '<span class="li fixed" title="Kanał ogólny – słyszą go zawsze wszyscy">📢</span>'
+        : `<span class="li" role="switch" aria-checked="${on}" title="${on ? 'Słuchasz – dotknij, żeby wyciszyć' : 'Nie słuchasz – dotknij, żeby słuchać'}">${on ? '🔊' : '🔇'}</span>`);
+    b.onclick = (e) => { if (e.target.closest('.li:not(.fixed)')) { e.stopPropagation(); setListen(c.id, !S.listen.has(c.id)); return; } setActive(c.id); };
     tabs.appendChild(b);
   }
   for (const d of S.dms.values()) {
@@ -1986,7 +1990,7 @@ function applyChannels(list) {
   if (!list?.length) return;
   S.channels = list;
   for (const id of [...S.listen]) if (!chan(id)) S.listen.delete(id);
-  if (!S.listen.size) S.listen.add(S.broadcast);
+  S.listen.add(S.broadcast);
   if (!chan(S.active)) S.active = [...S.listen][0];
   renderTabs(); renderSettings(); renderFeed();
   $('#msgInput').placeholder = `Napisz do: ${chan(S.active).name}…`;

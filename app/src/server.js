@@ -19,7 +19,7 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 
-const VERSION = '0.45.0';
+const VERSION = '0.45.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -1459,7 +1459,7 @@ function handle(u, m, ws) {
     case 'listen': {
       const list = Array.isArray(m.channels) ? m.channels.filter((c) => channelIds.has(c)) : [];
       const before = u.listen;
-      u.listen = new Set(list);
+      u.listen = new Set([broadcastId, ...list]); // kanał ogólny (wywoławczy) słyszą wszyscy – nie da się go wyłączyć
       for (const ch of u.listen) if (!before.has(ch)) announceMember(u, ch, 'join');
       for (const ch of before) if (!u.listen.has(ch)) announceMember(u, ch, 'leave');
       schedulePresence();
