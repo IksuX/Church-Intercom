@@ -62,7 +62,12 @@
       <button id="btnProg" class="icon prog-btn" aria-label="Dźwięk transmisji" title="Dźwięk transmisji" aria-expanded="false" hidden>🎵</button>
       <button id="btnMix" class="icon" aria-label="Mikser – głośności" title="Mikser – głośności" aria-expanded="false">🎚</button>
       <button id="btnPeople" class="icon" aria-label="Kto jest online" title="Kto jest online">👥 <span id="onlineCount">0</span></button>
+      <select id="miniCh" class="mini-ch mini-only" aria-label="Kanał okienka"></select>
+      <button id="miniFontDn" class="icon mini-only" type="button" title="Mniejsza czcionka">A−</button>
+      <button id="miniFontUp" class="icon mini-only" type="button" title="Większa czcionka">A+</button>
+      <button id="miniPip" class="icon mini-only" type="button" title="Okienko zawsze na wierzchu (nad innymi programami)" hidden>📌</button>
       <button id="btnSettings" class="icon" aria-label="Ustawienia">⚙️</button>
+      <button id="miniExit" class="icon mini-only" type="button" title="Pełny widok interkomu">⤢</button>
       <div id="mixBox" class="progbox mixbox" hidden role="dialog" aria-label="Mikser">
         <div class="pb-h"><b>🎚 Mikser</b><span class="pb-st">tylko na tym urządzeniu</span></div>
         <div class="mixer" id="mixer"></div>
@@ -126,6 +131,12 @@
     </div>
   </section>
 
+  <!-- gdy okienko czatu jest „na wierzchu”, tutaj zostaje tylko informacja -->
+  <div id="pipNote" class="pipnote" hidden>
+    <div><div class="logo">📌</div><p>Okienko czatu jest na wierzchu.</p><p class="hint">Zamknij je, żeby wrócić tutaj.</p>
+    <button type="button" id="pipBack" class="primary">Wróć do tego okna</button></div>
+  </div>
+
   <!-- WEZWANIE (pełny ekran) -->
   <div id="callBox" class="callbox" hidden role="alertdialog" aria-live="assertive">
     <div class="call-inner">
@@ -153,6 +164,8 @@
         <div class="app-links web-only" id="appLinksSet" hidden></div>
         <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
           <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
+        <div class="row"><button type="button" id="btnMini">🪟 Okienko czatu – jeden kanał</button></div>
+        <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk 📌 trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
         <h3>Słucham kanałów</h3>
         <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną 🔊 / 🔇 na zakładce kanału.</p>
         <div id="listenList" class="checklist"></div>

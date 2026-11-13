@@ -516,3 +516,33 @@ body.cols .feed { padding: 10px 12px; }
 @keyframes lipop { 0% { transform: scale(1); } 35% { transform: scale(1.7); } 100% { transform: scale(1); } }
 .tab .li.fixed { cursor: default; }
 .tab .li.fixed:hover { background: none; }
+
+/* ===== okienko czatu (jeden kanał) ===== */
+.mini-only { display: none; }
+html.mini .mini-only:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
+html.mini #tabs, html.mini #listenBar, html.mini #btnMix, html.mini #btnPeople, html.mini #btnProg,
+html.mini #orgName, html.mini #orgLogo, html.mini #liveBadge, html.mini #planPane, html.mini #planBar,
+html.mini .top-spacer, html.mini #btnToPtt, html.mini #btnToText, html.mini #mainHead { display: none !important; }
+html.mini .top { gap: 6px; padding-left: 8px; padding-right: 8px; }
+html.mini .mini-ch { flex: 1; min-width: 0; font-weight: 800; font-size: 16px; padding: 8px 10px; border-radius: 10px;
+  border: 2px solid var(--c, var(--line)); background: color-mix(in srgb, var(--c, #64748b) 18%, var(--panel)); color: var(--fg); }
+html.mini .top .icon.mini-only { padding: 6px 8px; min-width: 34px; font-weight: 700; }
+html.mini .top.talking .mini-ch { flex: 0 1 40%; }
+html.mini .feed { font-size: var(--mini-font, 17px); padding: 8px; }
+html.mini .feed .msg { max-width: 100%; }
+html.mini .split { display: flex; }
+html.mini .bottom { padding: 6px 8px calc(6px + var(--safe-b)); gap: 6px; }
+/* pisanie i mówienie naraz – bez przełączania trybów */
+html.mini body .composer { display: flex !important; }
+html.mini body.can-talk .pttrow { display: flex !important; }
+html.mini .ptt { min-height: 54px; border-radius: 12px; }
+html.mini .ptt-l1 { font-size: 14px; }
+html.mini .pttlock { width: 52px; }
+html.mini #quickBar { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+html.mini #quickBar button { flex: none; white-space: nowrap; padding: 7px 12px; }
+html.pip #miniPip, html.pip #miniExit, html.pip #btnSettings { display: none !important; }
+html.pip body { margin: 0; }
+html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
+.pipnote { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; background: var(--bg); padding: 24px; }
+.pipnote .logo { font-size: 48px; }
+.pipnote p { font-size: 18px; margin: 8px 0; }

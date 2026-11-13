@@ -1,8 +1,10 @@
 // Interkom – klient (PWA). Tekst + szybkie przyciski przez WebSocket, głos przez LiveKit (WebRTC).
 import { Room, RoomEvent, Track } from '/vendor/livekit-client.esm.mjs';
 
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
+// okienko czatu „na wierzchu” (Document Picture-in-Picture) przenosi część strony do osobnego dokumentu – szukamy w obu
+let pipDoc = null;
+const $ = (s) => document.querySelector(s) || pipDoc?.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s), ...(pipDoc ? pipDoc.querySelectorAll(s) : [])];
 // Aplikacja natywna (iPhone / Android, Capacitor): dźwięk, mówienie i przyciski Bluetooth obsługuje kod natywny,
 // który działa także przy zablokowanym ekranie. Strona zostaje taka sama – zmienia się tylko „silnik” głosu.
 const NAT = window.Capacitor?.isNativePlatform?.() ? window.Capacitor?.Plugins?.IkAudio || null : null;
@@ -152,6 +154,7 @@ function start(sess, resumed = false) {
   S.listen.add(S.broadcast); // kanał ogólny – zawsze
   S.active = sess.defaultListen ? null : store.get('active', null);
   if (!chan(S.active)) S.active = [...S.listen].find((c) => c !== S.broadcast) || S.broadcast;
+  if (isMini() && chan(MINI_CH) && !isDm(MINI_CH)) S.active = MINI_CH; // okienko czatu otwarte na konkretnym kanale
   $('#login').hidden = true; $('#main').hidden = false;
   $('#pttRow').hidden = !canTalk(); document.body.classList.toggle('can-talk', canTalk());
   $('#adminBox').hidden = S.me.role !== 'admin';
@@ -281,7 +284,7 @@ function addMsg(m, live) {
   arr.push(m); S.msgs.set(m.channel, arr);
   if (!live) return;
   const mine = isMine(m);
-  const colFeeds = [...document.querySelectorAll('.xfeed')].filter((f) => f.dataset.ch === m.channel);
+  const colFeeds = $$('.xfeed').filter((f) => f.dataset.ch === m.channel);
   colFeeds.forEach((f) => appendMsgEl(m, true, f));
   if (m.type === 'member') { if (m.channel === S.active) appendMsgEl(m); return; } // bez dźwięku, wibracji i licznika
   const tagged = mentionsMe(m);
@@ -311,7 +314,7 @@ function updateMsg(m) {
   const arr = S.msgs.get(m.channel) || [];
   const i = arr.findIndex((x) => x.id === m.id);
   if (i >= 0) arr[i] = m; else { arr.push(m); S.msgs.set(m.channel, arr); }
-  document.querySelectorAll(`[data-mid="${CSS.escape(m.id)}"]`).forEach((el) => el.replaceWith(msgEl(m))); // także w kolumnach
+  $$(`[data-mid="${CSS.escape(m.id)}"]`).forEach((el) => el.replaceWith(msgEl(m))); // także w kolumnach
   if (m.stt === 'done' && showStt() && m.from !== S.me.id && listening(m.channel) && (m.channel !== S.active || document.hidden)) {
     toast({ ...m, text: '🎙 ' + m.text });
   }
@@ -346,6 +349,7 @@ const colsWide = window.matchMedia('(min-width: 700px)');
 const colsN = () => (colsWide.matches ? Math.max(1, Math.min(4, Number(S.opt.cols) || 1)) : 1);
 const colChoices = () => [...S.channels.map((c) => ({ id: c.id, name: c.name })), ...[...S.dms.values()].filter((d) => !d.hidden).map((d) => ({ id: 'dm:' + d.key, name: '💬 ' + d.name }))];
 function colChannels() { // kanały kolumn podglądu – bez powtórzeń i bez kanału głównego
+  if (isMini()) return [];
   const n = colsN() - 1, ok = new Set(colChoices().map((c) => c.id));
   const want = (S.opt.colCh || []).filter((id) => ok.has(id) && id !== S.active);
   const out = [];
@@ -381,7 +385,7 @@ function renderCols() {
 function markColTalking() {
   const talkingCh = new Set(S.talking.values());
   $('#mainHead')?.classList.toggle('talking', talkingCh.has(S.active));
-  document.querySelectorAll('.fcol.extra').forEach((col) => col.querySelector('.colhead')?.classList.toggle('talking', talkingCh.has(col.querySelector('.xfeed')?.dataset.ch)));
+  $$('.fcol.extra').forEach((col) => col.querySelector('.colhead')?.classList.toggle('talking', talkingCh.has(col.querySelector('.xfeed')?.dataset.ch)));
 }
 colsWide.addEventListener?.('change', () => renderCols());
 
@@ -488,7 +492,7 @@ function setListen(ch, on, quiet) {
   savePushPrefs(); updateGates(); renderTalkNow();
   renderTabs(); renderListenBar(); if (!$('#sheetSettings').hidden) renderListenList(); if (colChannels().length) renderCols();
   // potwierdzenie bez dymka (dymek zasłaniał zakładki): ikona na zakładce „podskakuje”
-  if (!quiet) requestAnimationFrame(() => [...document.querySelectorAll('#tabs .tab')].find((t) => t.querySelector('.li') && t.textContent.startsWith(chan(ch).name))?.querySelector('.li')?.classList.add('pop'));
+  if (!quiet) requestAnimationFrame(() => $$('#tabs .tab').find((t) => t.querySelector('.li') && t.textContent.startsWith(chan(ch).name))?.querySelector('.li')?.classList.add('pop'));
 }
 function renderListenList() {
   const list = $('#listenList');
@@ -548,6 +552,7 @@ function renderTabs() {
   tabs.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   markColTalking();
   renderListenBar();
+  renderMini();
 }
 function setActive(id) {
   if (S.pttOn) stopTalk();
@@ -1623,6 +1628,102 @@ function planStep(dir) {
 }
 window.addEventListener('blur', () => { if (!S.pttLocked && !boom.talk) stopTalk(); });
 
+
+// ================= OKIENKO CZATU (jeden kanał) =================
+// /?okno lub /?okno=kanał – tylko wybrany kanał: wiadomości, pisanie i przycisk mówienia (np. obok ProPresentera).
+// 📌 przenosi widok do okienka „zawsze na wierzchu” (Document Picture-in-Picture, Chrome/Edge) – to samo połączenie,
+// bez drugiej kopii aplikacji (dwie kopie na jednym koncie wyrzucałyby się nawzajem z rozmowy głosowej).
+const MINI_Q = new URLSearchParams(location.search);
+const MINI_CH = MINI_Q.get('okno') || '';
+let miniOn = MINI_Q.has('okno');
+function isMini() { return miniOn; }
+function applyMiniClass() {
+  document.documentElement.classList.toggle('mini', miniOn);
+  document.documentElement.style.setProperty('--mini-font', (S.opt.miniFont || 17) + 'px');
+}
+applyMiniClass();
+function renderMini() {
+  if (!miniOn) return;
+  const sel = $('#miniCh');
+  const list = S.channels.filter((c) => !isDm(c.id));
+  const sig = list.map((c) => c.id + c.name).join('|');
+  if (sel.dataset.sig !== sig) {
+    sel.innerHTML = list.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+    sel.dataset.sig = sig;
+  }
+  if (!isDm(S.active)) sel.value = S.active;
+  const c = chan(S.active);
+  sel.style.setProperty('--c', c?.color || '#64748b');
+  const url = new URL(location.href); url.searchParams.set('okno', isDm(S.active) ? '' : S.active);
+  if (url.href !== location.href) history.replaceState(null, '', url);
+  document.title = (c && !isDm(S.active) ? c.name + ' · ' : '') + ($('#orgName').textContent || 'Interkom');
+}
+function setMini(on) {
+  miniOn = on;
+  const url = new URL(location.href);
+  if (on) url.searchParams.set('okno', isDm(S.active) ? '' : S.active); else url.searchParams.delete('okno');
+  history.replaceState(null, '', url);
+  applyMiniClass();
+  if (!on) { if (pipWin) pipWin.close(); document.title = $('#orgName').textContent || 'Interkom'; }
+  renderTabs(); renderCols(); renderFeed();
+}
+$('#miniCh').onchange = (e) => setActive(e.target.value);
+$('#miniExit').onclick = () => setMini(false);
+$('#btnMini').onclick = () => { closeSheet(); setMini(true); };
+const miniFont = (d) => { S.opt.miniFont = Math.max(13, Math.min(28, (S.opt.miniFont || 17) + d)); store.set('opt', S.opt); applyMiniClass(); };
+$('#miniFontDn').onclick = () => miniFont(-2);
+$('#miniFontUp').onclick = () => miniFont(2);
+
+// ---- 📌 na wierzchu ----
+let pipWin = null, pipBack = [], pipObs = [];
+const pipSupported = () => 'documentPictureInPicture' in window && !NAT;
+$('#miniPip').hidden = !pipSupported();
+async function openPip() {
+  if (pipWin) { pipWin.focus(); return; }
+  try {
+    const w = await window.documentPictureInPicture.requestWindow({ width: 400, height: 600 });
+    enterPip(w);
+  } catch (err) { toast({ channel: S.active, fromName: '📌', text: 'Nie udało się otworzyć okienka na wierzchu: ' + (err?.message || err) }); }
+}
+function enterPip(w) { // osobna funkcja – w testach zamiast okienka PiP można podać zwykłe okno
+  pipWin = w; const d = w.document;
+  for (const l of document.querySelectorAll('link[rel="stylesheet"], style')) d.head.appendChild(l.cloneNode(true));
+  d.title = document.title;
+  // klasy i zmienne stylu (kolor akcentu, tryby body) – na bieżąco jak w głównym oknie
+  const syncHtml = () => { d.documentElement.className = document.documentElement.className + ' pip'; d.documentElement.style.cssText = document.documentElement.style.cssText; };
+  const syncBody = () => { d.body.className = document.body.className; };
+  syncHtml(); syncBody();
+  pipObs = [new MutationObserver(syncHtml), new MutationObserver(syncBody)];
+  pipObs[0].observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+  pipObs[1].observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  pipBack = [];
+  for (const el of [$('#main'), $('#callBox')]) {
+    const mark = document.createComment('pip'); el.before(mark); pipBack.push([el, mark]);
+    d.body.appendChild(el);
+  }
+  pipDoc = d;
+  $('#pipNote').hidden = false;
+  // spacja = mówienie, utrata fokusu = koniec mówienia – także w okienku
+  d.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat && !['INPUT', 'TEXTAREA', 'SELECT'].includes(d.activeElement?.tagName)) { e.preventDefault(); startTalk(); } });
+  d.addEventListener('keyup', (e) => { if (e.code === 'Space' && !S.pttLocked && !boom.talk) stopTalk(); });
+  w.addEventListener('blur', () => { if (!S.pttLocked && !boom.talk) stopTalk(); });
+  w.addEventListener('pagehide', leavePip);
+  w.addEventListener('unload', leavePip);
+  setTimeout(() => { const f = $('#feed'); f.scrollTop = f.scrollHeight; }, 50);
+}
+function leavePip() {
+  if (!pipWin) return;
+  if (!S.pttLocked && !boom.talk) stopTalk();
+  for (const [el, mark] of pipBack) { mark.replaceWith(el); }
+  pipBack = []; pipObs.forEach((o) => o.disconnect()); pipObs = [];
+  pipDoc = null; pipWin = null;
+  $('#pipNote').hidden = true;
+  const f = $('#feed'); f.scrollTop = f.scrollHeight;
+}
+$('#miniPip').onclick = openPip;
+$('#pipBack').onclick = () => pipWin?.close();
+if (/[?&]ikdebug\b/.test(location.search)) Object.assign(window, { __ikPip: { enterPip, leavePip, setMini } });
+
 // ================= PAŁĄK SŁUCHAWEK =================
 // Słuchawki z wyciszaniem mikrofonu podniesieniem pałąka odcinają mikrofon – telefon dostaje wtedy (prawie) zero.
 // Opuszczony pałąk zawsze daje jakiś szum tła, więc po poziomie sygnału widać, gdzie jest pałąk: w dół = mówi, w górę = koniec.
@@ -1696,7 +1797,7 @@ function renderTalkNow() {
   }
   const bar = $('#talkBar');
   bar.hidden = !parts.length;
-  document.querySelector('.top').classList.toggle('talking', parts.length > 0);
+  $('.top').classList.toggle('talking', parts.length > 0);
   bar.innerHTML = parts.map((p) => `<span>${esc(p)}</span>`).join('');
   bar.title = parts.join(' · ');
 }
@@ -2126,14 +2227,14 @@ function countdown() {
 }
 function tickCountdown() {
   const c = countdown();
-  for (const el of document.querySelectorAll('[data-cd]')) {
+  for (const el of $$('[data-cd]')) {
     if (!c) { el.textContent = ''; el.className = el.className.replace(/ ?cd-(over|warn|up)/g, ''); continue; }
     const over = c.len && c.left < 0, warn = c.len && !over && c.left <= 60;
     el.textContent = !c.len ? `⏱ ${fmtClock(c.elapsed)}` : over ? `+${fmtClock(-c.left)}` : fmtClock(c.left);
     el.classList.toggle('cd-over', !!over); el.classList.toggle('cd-warn', !!warn); el.classList.toggle('cd-up', !c.len);
     el.title = !c.len ? 'Punkt bez ustalonej długości – czas od rozpoczęcia' : over ? 'Przekroczony czas punktu' : 'Pozostało do końca punktu';
   }
-  for (const el of document.querySelectorAll('[data-end]')) el.textContent = c?.hasRest ? `koniec nabożeństwa ok. ${c.end.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}` : '';
+  for (const el of $$('[data-end]')) el.textContent = c?.hasRest ? `koniec nabożeństwa ok. ${c.end.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}` : '';
 }
 setInterval(tickCountdown, 1000);
 

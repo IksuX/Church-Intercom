@@ -1,4 +1,4 @@
-# Interkom 0.45.1
+# Interkom 0.46.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.45.1.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.46.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.45.1.zip && cd interkom
+   unzip interkom-0.46.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,10 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.46.0
+- **Okienko czatu – jeden kanał** (⚙️ → „🪟 Okienko czatu”, albo adres `/?okno=<kanał>`): tylko wybrany kanał – wiadomości, pisanie i przycisk mówienia jednocześnie (bez przełączania trybów), wybór kanału listą u góry, większa czcionka (A− / A+, zapamiętywana). Np. dla osoby od tekstów w ProPresenterze.
+- **📌 Na wierzchu** (Chrome / Edge, Document Picture-in-Picture): okienko zostaje nad innymi programami. To ta sama strona przeniesiona do okienka – jedno połączenie (druga kopia aplikacji na tym samym koncie wyrzucałaby pierwszą z rozmowy głosowej). Spacja i przycisk mówienia działają w okienku; po jego zamknięciu widok wraca do głównego okna.
 
 ## 0.45.1
 - **Kanału ogólnego nie da się wyciszyć** – to kanał wywoławczy, słyszą go zawsze wszyscy. Na zakładce zamiast 🔊/🔇 jest 📢, w ustawieniach pole jest zaznaczone na stałe („słyszą wszyscy”). Pilnuje tego też serwer, więc starsza wersja strony czy zapamiętane ustawienie tego nie obejdą.
