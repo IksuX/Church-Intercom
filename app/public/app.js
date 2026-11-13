@@ -106,7 +106,7 @@ function applyBrand(b) {
   }
   const hd = $('#orgLogo');
   hd.innerHTML = b.logo ? logoHtml(b, 90, 26) : ''; hd.hidden = !b.logo;
-  $('#loginLogo').innerHTML = b.logo ? logoHtml(b, 220, 96) : '🎧';
+  $('#loginLogo').innerHTML = b.logo ? logoHtml(b, 220, 96) : icon('headphones');
 }
 // logo w oryginalnych kolorach (<img>) albo przekolorowane: kształt logo jako maska wypełniona kolorem
 function logoHtml(b, maxW, maxH) {
@@ -526,8 +526,8 @@ function renderTabs() {
     const n = S.unread.get(c.id);
     const on = S.listen.has(c.id);
     b.innerHTML = esc(c.name) + (n ? `<span class="badge ${S.urgent.has(c.id) ? 'urgent' : ''}">${n}</span>` : '')
-      + (c.id === S.broadcast ? '<span class="li fixed" title="Kanał ogólny – słyszą go zawsze wszyscy">📢</span>'
-        : `<span class="li" role="switch" aria-checked="${on}" title="${on ? 'Słuchasz – dotknij, żeby wyciszyć' : 'Nie słuchasz – dotknij, żeby słuchać'}">${on ? '🔊' : '🔇'}</span>`);
+      + (c.id === S.broadcast ? `<span class="li fixed" title="Kanał ogólny – słyszą go zawsze wszyscy">${icon('broadcast')}</span>`
+        : `<span class="li" role="switch" aria-checked="${on}" aria-label="${on ? 'Słuchasz' : 'Nie słuchasz'}" title="${on ? 'Słuchasz – dotknij, żeby wyciszyć' : 'Nie słuchasz – dotknij, żeby słuchać'}">${icon(on ? 'volume' : 'volume-x')}</span>`);
     b.onclick = (e) => { if (e.target.closest('.li:not(.fixed)')) { e.stopPropagation(); setListen(c.id, !S.listen.has(c.id)); return; } setActive(c.id); };
     tabs.appendChild(b);
   }
@@ -567,15 +567,39 @@ function setActive(id) {
   $('#msgInput').placeholder = `Napisz do: ${chan(id).name}…`;
 }
 
+// ikony z zestawu w index.html (<symbol id="i-…">)
+function icon(name) { return `<svg class="ic" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
+function setPttL1(text) { $('#ptt .ptt-l1').innerHTML = icon('mic') + esc(text); }
+// PILNE: przytrzymaj ~0,6 s (pasek się wypełnia), puść wcześniej = nic nie wysyła. Z klawiatury: Enter/spacja.
+(() => {
+  const u = $('#urgentBtn'); let t = 0;
+  const send = () => {
+    if (!u.dataset.key) return;
+    wsSend({ t: 'quick', channel: S.active, key: u.dataset.key }); vibrate([60, 40, 60]);
+    u.classList.remove('arming'); u.classList.add('sent'); $('#urgentHint').textContent = 'wysłano';
+    setTimeout(() => { u.classList.remove('sent'); $('#urgentHint').textContent = 'przytrzymaj'; }, 1600);
+  };
+  const cancel = () => { clearTimeout(t); u.classList.remove('arming'); };
+  u.addEventListener('pointerdown', (e) => { if (e.button > 0) return; cancel(); u.classList.add('arming'); t = setTimeout(send, 600); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) u.addEventListener(ev, cancel);
+  u.addEventListener('contextmenu', (e) => e.preventDefault());
+  u.addEventListener('click', (e) => { if (e.detail === 0) send(); }); // klawiatura: świadome naciśnięcie
+})();
+
 function renderQuick() {
   const q = $('#quickBar');
   q.innerHTML = '';
+  const urgent = S.quick.find((x) => x.urgent);
   for (const x of S.quick) {
+    if (x === urgent) continue; // PILNE ma własny przycisk obok – zawsze widoczny, wysyłany przytrzymaniem
     const b = document.createElement('button');
     b.type = 'button'; b.textContent = x.label; b.className = 'tone-' + (x.tone || 'info');
     b.onclick = () => { wsSend({ t: 'quick', channel: S.active, key: x.key }); vibrate(30); };
     q.appendChild(b);
   }
+  const u = $('#urgentBtn');
+  u.hidden = !urgent; u.dataset.key = urgent?.key || '';
+  $('#urgentLabel').textContent = (urgent?.label || 'PILNE').replace(/!+$/, '');
   $('#msgInput').placeholder = `Napisz do: ${chan(S.active).name}…`;
 }
 
@@ -750,19 +774,19 @@ for (const [id, k] of [['#optEc', 'ec'], ['#optNs', 'ns'], ['#optAgc', 'agc']]) 
 // Głosy, dźwięk transmisji, komunikaty czytane na głos (plan, wiadomości, transmisja) i sygnały – każdy z suwakiem i wyciszeniem.
 const pct = (v, d) => (typeof v === 'number' ? v : d);
 const MIX = [
-  { k: 'voice', ic: '🎙', name: 'Głosy',
+  { k: 'voice', ic: icon('mic'), name: 'Głosy',
     vol: () => pct(S.opt.vol, 100), muted: () => S.opt.voice === false,
     setVol: (v) => { S.opt.vol = v; for (const el of document.querySelectorAll('audio[data-pid]:not([data-prog])')) el.volume = volLevel(); nativeSync(); },
     setMute: (m) => { S.opt.voice = !m; $('#optVoice').checked = !m; updateGates(); renderFeed(); nativeSync(); } },
-  { k: 'prog', ic: '🎵', name: 'Transmisja', na: () => !prog.cfg.enabled,
+  { k: 'prog', ic: icon('music'), name: 'Transmisja', na: () => !prog.cfg.enabled,
     vol: () => progVolPct(), muted: () => !S.opt.progOn,
     setVol: (v) => { S.opt.progVol = v; $('#progVol').value = v; $('#progVolVal').textContent = `${v}%`; progLevel(); },
     setMute: (m) => { unlockAudio(); S.opt.progOn = !m; S.room?.startAudio?.(); renderProg(); } },
-  { k: 'tts', ic: '🗣', name: 'Komunikaty',
+  { k: 'tts', ic: icon('message'), name: 'Komunikaty',
     vol: () => pct(S.opt.ttsVol, 100), muted: () => !!S.opt.ttsMute,
     setVol: (v) => { S.opt.ttsVol = v; }, test: () => { unlockAudio(); if (!NAT) speechSynthesis?.cancel?.(); say('Komunikat'); },
     setMute: (m) => { S.opt.ttsMute = m; if (m) speechSynthesis?.cancel?.(); } },
-  { k: 'beep', ic: '🔔', name: 'Sygnały',
+  { k: 'beep', ic: icon('bell'), name: 'Sygnały',
     vol: () => pct(S.opt.beepVol, 100), muted: () => !!S.opt.beepMute,
     setVol: (v) => { S.opt.beepVol = v; }, test: () => { unlockAudio(); beep(); },
     setMute: (m) => { S.opt.beepMute = m; } },
@@ -892,7 +916,7 @@ async function nativeConnect() {
     NAT.addListener('ptt', (e) => { // mówienie z przycisku Bluetooth / słuchawek / głośności
       S.pttOn = !!e.on; if (e.talkId) S.talkId = e.talkId;
       $('#ptt').classList.toggle('live', S.pttOn);
-      if (S.pttOn) $('#ptt .ptt-l1').textContent = 'MÓWISZ'; else renderPttLabel();
+      if (S.pttOn) setPttL1('MÓWISZ'); else renderPttLabel();
     });
     NAT.addListener('program', (e) => { if (prog.natLive === !!e.live) return; prog.natLive = !!e.live; renderProg(); });
     NAT.addListener('notice', (e) => sysMsg(e.message));
@@ -1554,7 +1578,7 @@ function startTalk() {
     S.talkId = talkId;
     NAT.setMic({ on: true, talkId, channel: S.active }).catch(() => {});
     wsSend({ t: 'ptt', channel: S.active, on: true, talkId });
-    $('#ptt').classList.add('live'); $('#ptt .ptt-l1').textContent = 'MÓWISZ'; vibrate(25);
+    $('#ptt').classList.add('live'); setPttL1('MÓWISZ'); vibrate(25);
     return;
   }
   if (canTalk() && !S.micPub && S.room && !S.pttOn) { prepareMic(); return; } // mikrofon nie ruszył (np. brak zgody) – naciśnięcie zapyta ponownie
@@ -1581,7 +1605,7 @@ function startTalk() {
   wsSend({ t: 'ptt', channel: S.active, on: true, talkId });
   if (!ready) Promise.resolve(unmuted).catch(() => {}).then(() => { if (S.pttOn && S.talkId === talkId) startRecording(talkId); });
   $('#ptt').classList.add('live');
-  $('#ptt .ptt-l1').textContent = 'MÓWISZ';
+  setPttL1('MÓWISZ');
   vibrate(25);
 }
 let stopTimer, recStopTimer;
@@ -1607,9 +1631,9 @@ function stopTalk() {
 function renderPttLabel() {
   if (!canTalk()) return;
   const c = chan(S.active);
-  $('#pttTarget').innerHTML = `<span class="ptt-ch">${isDm(S.active) ? '💬 ' : '📢 '}${esc(c?.name || '')}</span>`;
+  $('#pttTarget').innerHTML = `<span class="ptt-ch">→ ${esc(c?.name || '')}</span>`;
   $('#ptt').style.setProperty('--c', isDm(S.active) ? '#38bdf8' : (c?.color || '#64748b'));
-  if (!S.pttOn) $('#ptt .ptt-l1').textContent = micDenied && !NAT ? '🎙 Brak zgody na mikrofon – naciśnij' : S.pttLocked ? 'Mikrofon włączony – dotknij 🔒' : S.opt.boom && !NAT ? 'Opuść pałąk albo przytrzymaj' : 'Przytrzymaj i mów';
+  if (!S.pttOn) setPttL1(micDenied && !NAT ? 'Brak zgody na mikrofon – naciśnij' : S.pttLocked ? 'Mikrofon włączony – dotknij kłódki' : S.opt.boom && !NAT ? 'Opuść pałąk albo przytrzymaj' : 'Przytrzymaj i mów');
   $('#ptt').classList.toggle('nomic', micDenied && !NAT);
 }
 const ptt = $('#ptt');

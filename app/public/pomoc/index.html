@@ -7,18 +7,25 @@
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="/icon-192.png">
 <style>
+@font-face { font-family: "Instrument Sans"; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans-latin-wght-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Instrument Sans"; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans-latin-ext-wght-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "DM Mono"; font-weight: 400; font-display: swap; src: url(/fonts/dm-mono-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "DM Mono"; font-weight: 400; font-display: swap; src: url(/fonts/dm-mono-latin-ext-400-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 :root {
-  --bg: #0b0d12; --panel: #141821; --panel2: #1c2130; --line: #2a3142;
-  --fg: #e8ebf2; --muted: #8b93a7; --accent: #3b82f6; --ok: #22c55e; --warn: #f59e0b; --urgent: #ef4444;
-  --tip-bg: #10233f; --tip-line: #1e3a66; --warn-bg: #2a1d08; --warn-line: #5c3d0b;
+  --bg: #0a0d14; --panel: #131824; --panel2: #182033; --line: #232b3b;
+  --fg: #e9edf3; --muted: #8f99ab; --accent: #5ab9fc; --ok: #4ade80; --warn: #fbbf24; --urgent: #ff5a5f;
+  --tip-bg: #0f2235; --tip-line: #1e4466; --warn-bg: #2a2010; --warn-line: #5c4512;
+  --adm: #f0abfc; --adm-line: #6b2a73; --spk: #86efac; --spk-line: #1d5a35; --pin: #fbbf24;
+  --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: "DM Mono", ui-monospace, Menlo, monospace;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
   --bg: #f6f7fa; --panel: #ffffff; --panel2: #eef1f6; --line: #d9dee8; --fg: #141821; --muted: #5b6477; --accent: #1d5fd1;
-  --tip-bg: #eaf2ff; --tip-line: #bcd3fb; --warn-bg: #fff6e5; --warn-line: #f3d39b; color-scheme: light; } }
+  --tip-bg: #eaf2ff; --tip-line: #bcd3fb; --warn-bg: #fff6e5; --warn-line: #f3d39b;
+  --adm: #9d1fa8; --adm-line: #e3b3e8; --spk: #15703a; --spk-line: #a9dcbb; --pin: #b45309; --warn: #b45309; --urgent: #c81e1e; --ok: #15703a; color-scheme: light; } }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 64px; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--font); -webkit-text-size-adjust: 100%; }
 a { color: var(--accent); }
 .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
@@ -35,23 +42,25 @@ nav.toc a:hover, nav.toc a.on { background: var(--panel2); color: var(--fg); }
 details.toc-m { display: none; }
 main { min-width: 0; }
 h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
-.lead { color: var(--muted); font-size: 18px; margin: 0 0 28px; }
+.lead { color: var(--muted); font-size: 18px; margin: 0 0 28px; max-width: 60ch; text-wrap: pretty; }
 main { counter-reset: h2; }
 h2 { counter-increment: h2; counter-reset: h3; font-size: 25px; margin: 56px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
 h2::before { content: counter(h2) ". "; color: var(--accent); }
 h3 { counter-increment: h3; font-size: 19px; margin: 30px 0 8px; }
 h3::before { content: counter(h2) "." counter(h3) " "; color: var(--muted); font-weight: 600; }
-p, li { max-width: 72ch; }
+p, li { max-width: 68ch; text-wrap: pretty; }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -.01em; font-weight: 600; }
+h2::before, h3::before { font-family: var(--mono); font-weight: 400; }
 ul, ol { padding-left: 22px; }
 li { margin: 4px 0; }
-kbd { font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; background: var(--panel2); border-radius: 6px; padding: 3px 6px; }
+kbd { font: 500 13px/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; background: var(--panel2); border-radius: 6px; padding: 3px 6px; }
 .tip, .warn { border: 1px solid var(--tip-line); background: var(--tip-bg); border-radius: 12px; padding: 12px 16px; margin: 16px 0; max-width: 76ch; }
 .warn { border-color: var(--warn-line); background: var(--warn-bg); }
 .tip > :first-child, .warn > :first-child { margin-top: 0; } .tip > :last-child, .warn > :last-child { margin-bottom: 0; }
 .tip b.l, .warn b.l { display: block; margin-bottom: 2px; }
 .who { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: middle; border: 1px solid var(--line); color: var(--muted); }
-.who.adm { color: #f0abfc; border-color: #6b2a73; }
-.who.spk { color: #86efac; border-color: #1d5a35; }
+.who.adm { color: var(--adm); border-color: var(--adm-line); }
+.who.spk { color: var(--spk); border-color: var(--spk-line); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 16px 0 8px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
 .card .ic { font-size: 22px; line-height: 1; }
@@ -352,7 +361,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <ul>
     <li>Przy bieżącym punkcie widać, ile czasu zostało do jego końca – liczone od chwili rozpoczęcia punktu w Planning Center Live, według długości z planu.</li>
     <li>Wszystkie urządzenia używają zegara serwera, więc odliczanie jest identyczne u wszystkich, nawet przy źle ustawionym zegarze telefonu.</li>
-    <li>Ostatnia minuta jest <b style="color:#f59e0b">pomarańczowa</b>, przekroczenie <b style="color:#ef4444">czerwone</b> (np. „+1:30”). Przy punktach bez długości widać czas od rozpoczęcia (⏱).</li>
+    <li>Ostatnia minuta jest <b style="color:var(--warn)">pomarańczowa</b>, przekroczenie <b style="color:var(--urgent)">czerwone</b> (np. „+1:30”). Przy punktach bez długości widać czas od rozpoczęcia (⏱).</li>
     <li>W planie widać też przewidywaną godzinę końca nabożeństwa.</li>
     <li>Jeśli administrator włączył synchronizację, to samo odliczanie pokazuje zegar w <b>ProPresenterze</b> (np. na ekranie sceny).</li>
   </ul>

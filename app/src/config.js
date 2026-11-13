@@ -155,7 +155,7 @@ export function validateConfig(input) {
   // wygląd (panel → Ogólne → Wygląd): kolor przewodni i logo – takie same dla wszystkich
   const br = c.branding && typeof c.branding === 'object' ? c.branding : {};
   c.branding = {
-    accent: /^#[0-9a-f]{6}$/i.test(br.accent || '') ? br.accent.toLowerCase() : '#3b82f6',
+    accent: /^#[0-9a-f]{6}$/i.test(br.accent || '') ? br.accent.toLowerCase() : '#5ab9fc',
     logo: /^[a-z0-9.-]{1,40}$/i.test(br.logo || '') ? br.logo : '', // nazwa pliku w data/branding (ustawia serwer przy wgraniu)
     // kolor logo (SVG/PNG z przezroczystym tłem): '' = oryginalny, 'accent' = jak kolor przewodni, '#rrggbb' = własny
     logoColor: br.logoColor === 'accent' || /^#[0-9a-f]{6}$/i.test(br.logoColor || '') ? String(br.logoColor).toLowerCase() : '',

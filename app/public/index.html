@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0b0d12">
+  <meta name="theme-color" content="#0a0d14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,10 +15,32 @@
   <link rel="stylesheet" href="/branding.css">
 </head>
 <body>
+  <!-- ikony (jeden zestaw, obrys 1.8) – użycie: <svg class="ic"><use href="#i-mic"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+    <symbol id="i-mixer" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="6" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3H7l3-3-1-6z"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM22 9l-6 6M16 9l6 6"/></symbol>
+    <symbol id="i-broadcast" viewBox="0 0 24 24"><path d="M3 10v4h4l7 5V5L7 10H3zM18 8a5 5 0 0 1 0 8"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  </svg>
   <!-- LOGOWANIE -->
   <section id="login" class="view">
     <form id="loginForm" class="card" autocomplete="on">
-      <div class="logo" id="loginLogo">🎧</div>
+      <div class="logo" id="loginLogo"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></div>
       <h1 id="loginTitle">Interkom</h1>
       <div id="pcoLoginBox" hidden>
         <a href="/auth/pco/start" class="pcologin">Zaloguj przez Planning Center</a>
@@ -59,17 +81,17 @@
       <span id="liveBadge" class="live-badge" hidden></span>
       <div id="talkBar" class="talkbar" hidden aria-live="polite"></div>
       <span class="top-spacer"></span>
-      <button id="btnProg" class="icon prog-btn" aria-label="Dźwięk transmisji" title="Dźwięk transmisji" aria-expanded="false" hidden>🎵</button>
-      <button id="btnMix" class="icon" aria-label="Mikser – głośności" title="Mikser – głośności" aria-expanded="false">🎚</button>
-      <button id="btnPeople" class="icon" aria-label="Kto jest online" title="Kto jest online">👥 <span id="onlineCount">0</span></button>
+      <button id="btnProg" class="icon prog-btn" aria-label="Dźwięk transmisji" title="Dźwięk transmisji" aria-expanded="false" hidden><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
+      <button id="btnMix" class="icon" aria-label="Mikser – głośności" title="Mikser – głośności" aria-expanded="false"><svg class="ic" aria-hidden="true"><use href="#i-mixer"/></svg></button>
+      <button id="btnPeople" class="icon" aria-label="Kto jest online" title="Kto jest online"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><span id="onlineCount">0</span></button>
       <select id="miniCh" class="mini-ch mini-only" aria-label="Kanał okienka"></select>
       <button id="miniFontDn" class="icon mini-only" type="button" title="Mniejsza czcionka">A−</button>
       <button id="miniFontUp" class="icon mini-only" type="button" title="Większa czcionka">A+</button>
-      <button id="miniPip" class="icon mini-only" type="button" title="Okienko zawsze na wierzchu (nad innymi programami)" hidden>📌</button>
-      <button id="btnSettings" class="icon" aria-label="Ustawienia">⚙️</button>
-      <button id="miniExit" class="icon mini-only" type="button" title="Pełny widok interkomu">⤢</button>
+      <button id="miniPip" class="icon mini-only" type="button" title="Okienko zawsze na wierzchu (nad innymi programami)" hidden><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></button>
+      <button id="btnSettings" class="icon" aria-label="Ustawienia" title="Ustawienia"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <button id="miniExit" class="icon mini-only" type="button" title="Pełny widok interkomu" aria-label="Pełny widok interkomu"><svg class="ic" aria-hidden="true"><use href="#i-expand"/></svg></button>
       <div id="mixBox" class="progbox mixbox" hidden role="dialog" aria-label="Mikser">
-        <div class="pb-h"><b>🎚 Mikser</b><span class="pb-st">tylko na tym urządzeniu</span></div>
+        <div class="pb-h"><b>Mikser</b><span class="pb-st">tylko na tym urządzeniu</span></div>
         <div class="mixer" id="mixer"></div>
         <label class="pb-ck" id="mixDuckRow"><input type="checkbox" id="mixDuck"> Ściszaj transmisję, gdy ktoś mówi przez interkom</label>
       </div>
@@ -93,17 +115,17 @@
 
     <div class="split" id="split">
     <aside id="planPane" class="planpane" hidden aria-label="Plan nabożeństwa">
-      <div class="pp-head">📋 Plan nabożeństwa</div>
+      <div class="pp-head">Plan nabożeństwa</div>
     </aside>
     <div class="comm">
     <div id="planBar" class="planbar" hidden></div>
-    <div id="audioBlocked" class="banner warn" hidden>🔇 Dotknij tutaj, aby włączyć dźwięk</div>
+    <div id="audioBlocked" class="banner warn" hidden><svg class="ic" aria-hidden="true"><use href="#i-volume-x"/></svg> Dotknij tutaj, aby włączyć dźwięk</div>
     <div id="toast" class="toast" hidden></div>
 
     <nav id="tabs" class="tabs" role="tablist"></nav>
     <div id="listenBar" class="listenbar" hidden>
-      <span>🔇 Nie słuchasz kanału <b id="listenBarName"></b> – nie usłyszysz z niego głosu ani powiadomień.</span>
-      <button type="button" id="listenBarOn" class="primary">🔊 Słuchaj</button>
+      <span><svg class="ic" aria-hidden="true"><use href="#i-volume-x"/></svg> Nie słuchasz kanału <b id="listenBarName"></b> – nie usłyszysz z niego głosu ani powiadomień.</span>
+      <button type="button" id="listenBarOn" class="primary"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Słuchaj</button>
     </div>
 
     <div id="feeds" class="feeds">
@@ -111,20 +133,20 @@
     </div>
 
     <footer class="bottom">
-      <div id="quickBar" class="quick"></div>
+      <div class="quickrow"><div id="quickBar" class="quick"></div><button type="button" id="urgentBtn" class="urgentbtn" hidden aria-describedby="urgentHint"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span id="urgentLabel">PILNE</span><small id="urgentHint">przytrzymaj</small></button></div>
       <div id="mentionBox" class="mentionbox" hidden role="listbox" aria-label="Oznacz osobę"></div>
       <form id="composer" class="composer">
-        <button type="button" id="btnToPtt" class="modebtn" aria-label="Wróć do mówienia" title="Wróć do mówienia">🎙</button>
+        <button type="button" id="btnToPtt" class="modebtn" aria-label="Wróć do mówienia" title="Wróć do mówienia"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
         <input id="msgInput" maxlength="500" placeholder="Napisz do kanału…" autocomplete="off" enterkeyhint="send">
-        <button type="submit" class="primary" aria-label="Wyślij">➤</button>
+        <button type="submit" class="primary" aria-label="Wyślij"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></button>
       </form>
       <div id="pttRow" class="pttrow" hidden>
-        <button type="button" id="btnToText" class="modebtn" aria-label="Napisz wiadomość" title="Napisz wiadomość">⌨️</button>
+        <button type="button" id="btnToText" class="modebtn" aria-label="Napisz wiadomość" title="Napisz wiadomość"><svg class="ic" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
         <button id="ptt" class="ptt" type="button">
-          <span class="ptt-l1">Przytrzymaj i mów</span>
+          <span class="ptt-l1"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg>Przytrzymaj i mów</span>
           <span class="ptt-l2" id="pttTarget"></span>
         </button>
-        <button id="pttLock" class="pttlock" type="button" aria-pressed="false" title="Mikrofon na stałe">🔒</button>
+        <button id="pttLock" class="pttlock" type="button" aria-pressed="false" title="Mikrofon włączony na stałe" aria-label="Mikrofon włączony na stałe"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg></button>
       </div>
     </footer>
     </div>
@@ -133,7 +155,7 @@
 
   <!-- gdy okienko czatu jest „na wierzchu”, tutaj zostaje tylko informacja -->
   <div id="pipNote" class="pipnote" hidden>
-    <div><div class="logo">📌</div><p>Okienko czatu jest na wierzchu.</p><p class="hint">Zamknij je, żeby wrócić tutaj.</p>
+    <div><div class="logo"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></div><p>Okienko czatu jest na wierzchu.</p><p class="hint">Zamknij je, żeby wrócić tutaj.</p>
     <button type="button" id="pipBack" class="primary">Wróć do tego okna</button></div>
   </div>
 
@@ -156,7 +178,7 @@
     <div class="sheet-body">
       <div class="sheet-head">
         <h2 id="sheetTitle">Ustawienia</h2>
-        <button id="sheetClose" class="icon" aria-label="Zamknij">✕</button>
+        <button id="sheetClose" class="icon" aria-label="Zamknij"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div id="sheetSettings">
         <p class="me" id="meLine"></p>
@@ -165,7 +187,7 @@
         <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
           <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
         <div class="row"><button type="button" id="btnMini">🪟 Okienko czatu – jeden kanał</button></div>
-        <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk 📌 trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
+        <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk z pinezką trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
         <h3>Słucham kanałów</h3>
         <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną 🔊 / 🔇 na zakładce kanału.</p>
         <div id="listenList" class="checklist"></div>
@@ -208,7 +230,7 @@
           <p class="hint" id="devMoreHint" hidden>Przeglądarka pokazuje pełną listę mikrofonów i wyjść dopiero po zgodzie na mikrofon. Kliknij przycisk i zezwól (mikrofon zostanie od razu zamknięty). Najlepiej wybierz „Zezwalaj zawsze” – wtedy lista będzie pełna od razu.</p>
           <p class="hint" id="spkHint" hidden>Na iPhonie i iPadzie wyjście dźwięku wybierasz w Centrum sterowania (ikona AirPlay) – przeglądarka nie może go zmienić.</p>
           <div class="row"><button id="btnSpkTest" type="button">🔊 Test głośnika</button><button id="btnDevRefresh" type="button">↻ Odśwież listę urządzeń</button></div>
-          <p class="hint">🎚 <b>Mikser</b> u góry ekranu: głośność rozmów, dźwięku transmisji, komunikatów czytanych na głos i sygnałów – osobno, z wyciszaniem. 🎵 <b>Dźwięk transmisji</b> włączasz przyciskiem 🎵 – pojawia się, gdy realizator go nadaje.</p>
+          <p class="hint"><b>Mikser</b> u góry ekranu: głośność rozmów, dźwięku transmisji, komunikatów czytanych na głos i sygnałów – osobno, z wyciszaniem. <b>Dźwięk transmisji</b> włączasz przyciskiem z nutą – pojawia się, gdy realizator go nadaje.</p>
         </div>
         <h3>Opcje</h3>
         <label class="switch"><input type="checkbox" id="optVoice"> Odtwarzaj głos</label>
@@ -269,7 +291,7 @@
         <button id="btnSrv" type="button" class="srvbtn" hidden>🔁 Zmień serwer</button>
         <div id="adminBox" hidden>
           <h3>Administrator</h3>
-          <p id="adminLink"><a href="/admin" target="_blank" class="adminlink">⚙️ Otwórz panel administracyjny</a></p>
+          <p id="adminLink"><a href="/admin" target="_blank" class="adminlink">Otwórz panel administracyjny</a></p>
           <button id="btnClear" type="button" class="danger">Wyczyść czat (nowe nabożeństwo)</button>
           <div id="pcoAdmin" hidden>
             <h3>Planning Center</h3>
