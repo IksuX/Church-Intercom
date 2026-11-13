@@ -299,14 +299,14 @@ function renderRemote() {
   }).catch(() => {});
 }
 // ---------- WYGLĄD ----------
-const BRAND_DEFAULT = '#3b82f6';
-const BRAND_PRESETS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#a3a3a3'];
+const BRAND_DEFAULT = '#5ab9fc';
+const BRAND_PRESETS = ['#5ab9fc', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#a3a3a3'];
 function renderBrand() {
   cfg.branding ||= { accent: BRAND_DEFAULT, logo: '' };
   const set = (hex) => {
     cfg.branding.accent = hex; dirty();
     document.documentElement.style.setProperty('--accent', hex);
-    { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); document.documentElement.style.setProperty('--accent-fg', 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#111' : '#fff'); }
+    { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); document.documentElement.style.setProperty('--accent-fg', 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? '#0a0d14' : '#fff'); }
     $('#gAccent').value = hex; $('#gAccentHex').textContent = hex;
     $$('#gAccentPresets button').forEach((b) => b.classList.toggle('sel', b.dataset.c === hex));
     showLogo();

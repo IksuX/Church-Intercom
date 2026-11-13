@@ -730,10 +730,12 @@ function brandPublic() {
   return { accent: b.accent, logo: logoUrl(), logoColor: c, ratio: f ? logoRatio(f) : null, tintable: logoTintable(f) };
 }
 function brandCss() {
-  const a = config.branding?.accent || '#3b82f6';
+  // #3b82f6 to stary domyślny kolor (sprzed wyglądu „Nocna nawa”) – traktujemy go jak brak wyboru
+  const a = !config.branding?.accent || config.branding.accent === '#3b82f6' ? '#5ab9fc' : config.branding.accent;
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return `:root{--accent:${a};--accent-fg:${lum > 0.45 ? '#111' : '#fff'}}\n`;
+  // tekst na kolorze przewodnim: ciemny albo biały – ten, który daje większy kontrast (próg WCAG ≈ 0,18)
+  return `:root{--accent:${a};--accent-fg:${lum > 0.179 ? '#0a0d14' : '#fff'}}\n`;
 }
 app.get('/branding.css', (_req, res) => { res.set('cache-control', 'no-cache').type('text/css').send(brandCss()); });
 app.get('/branding/logo', (_req, res) => {
