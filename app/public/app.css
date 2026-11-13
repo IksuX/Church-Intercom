@@ -546,3 +546,5 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 .pipnote { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; background: var(--bg); padding: 24px; }
 .pipnote .logo { font-size: 48px; }
 .pipnote p { font-size: 18px; margin: 8px 0; }
+.ptt.nomic { border-style: dashed; border-color: #f59e0b; }
+.ptt.nomic .ptt-l1 { color: #fbbf24; font-size: 14px; }

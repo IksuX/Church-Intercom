@@ -1,6 +1,6 @@
 {
   "name": "interkom-audio",
-  "version": "0.46.0",
+  "version": "0.46.1",
   "private": true,
   "type": "module",
   "description": "Interkom – nadajnik dźwięku transmisji działający na serwerze (wejście ALSA → Opus → telefony)",

@@ -955,6 +955,7 @@ async function prepareMic() {
     if (actx && !micRelease()) ensureCapture(); // bufor sprzed wciśnięcia działa od pierwszego razu
     await S.micPub?.mute(); // mikrofon gotowy, ale wyciszony – włączenie jest natychmiastowe
     $('#ptt').disabled = false;
+    if (S.micPub) micDenied = false;
     renderPttLabel();
   } catch (err) {
     if (S.opt.micId) { // zapamiętany mikrofon zniknął (np. odłączone słuchawki) – spróbuj domyślnego
@@ -962,8 +963,13 @@ async function prepareMic() {
       sysMsg('Wybrany mikrofon jest niedostępny – używam domyślnego.');
       return prepareMic();
     }
-    $('#ptt').disabled = true;
-    sysMsg('Brak dostępu do mikrofonu. Sprawdź uprawnienia przeglądarki (wymagane HTTPS).');
+    if (isPermErr(err)) {
+      micDenied = true; $('#ptt').disabled = false; renderPttLabel(); // naciśnięcie „mów” zapyta o zgodę jeszcze raz
+      micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
+    } else {
+      $('#ptt').disabled = true;
+      micMsg('Brak dostępu do mikrofonu (' + (err?.message || err) + '). Sprawdź, czy mikrofon jest podłączony i czy strona ma zgodę.');
+    }
   }
 }
 
@@ -1495,8 +1501,26 @@ function detectPause(f) {
 // i odciszenie nic nie daje (cisza do odświeżenia strony). Wtedy pobieramy mikrofon od nowa – w tej samej stronie bez pytania.
 const micHealthy = () => { const t = S.micPub?.track?.mediaStreamTrack; return !!t && t.readyState === 'live' && !t.muted; };
 let micFixing = null;
-function reviveMic(why) {
+// Zgoda na mikrofon: automatyczne sprawdzanie NIE może pytać o zgodę ani zasypywać czatu komunikatami.
+// Bez trwałej zgody („tylko tym razem”, „pytaj”, odmowa) naprawiamy mikrofon dopiero po naciśnięciu „mów”.
+var micPerm = 'unknown', micDenied = false; // var: czytane też przez wcześniej zdefiniowane funkcje
+try {
+  navigator.permissions?.query({ name: 'microphone' }).then((st) => {
+    const upd = () => { micPerm = st.state; if (st.state === 'granted' && micDenied) { micDenied = false; renderPttLabel(); } else if (st.state === 'denied') { micDenied = true; renderPttLabel(); } };
+    upd(); st.onchange = upd;
+  }).catch(() => {});
+} catch {}
+const micAutoOk = () => !micDenied && (micPerm === 'granted' || micPerm === 'unknown');
+const micMsgAt = new Map(); // ten sam komunikat o mikrofonie najwyżej raz na 10 minut
+function micMsg(text) {
+  const k = text.replace(/\(.*\)/, '');
+  if (Date.now() - (micMsgAt.get(k) || 0) < 600e3) return;
+  micMsgAt.set(k, Date.now()); sysMsg(text);
+}
+const isPermErr = (err) => /NotAllowed|Permission|SecurityError|denied/i.test((err?.name || '') + ' ' + (err?.message || ''));
+function reviveMic(why, byUser) {
   if (micFixing) return micFixing;
+  if (!byUser && !micAutoOk()) return Promise.resolve(false); // bez zgody nie próbujemy w tle – zapytałoby albo dało błąd
   micFixing = (async () => {
     const tr = S.micPub?.track;
     if (!tr) return false;
@@ -1506,17 +1530,21 @@ function reviveMic(why) {
       if (S.micPub?.isMuted && !S.pttOn) tr.mediaStreamTrack.enabled = false; // nadal wyciszony, dopóki nie mówisz
       if (actx) await ensureCapture();
       console.info('[ik] mikrofon wznowiony:', why);
+      if (micDenied) { micDenied = false; renderPttLabel(); }
       return true;
     } catch (err) {
-      sysMsg('Mikrofon przestał odpowiadać, a przeglądarka nie dała go ponownie (' + (err?.message || err) + '). Odśwież stronę.');
+      if (isPermErr(err)) {
+        micDenied = true; renderPttLabel();
+        micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
+      } else micMsg('Mikrofon przestał odpowiadać (' + (err?.message || err) + '). Jeśli mówienie nie działa, odśwież stronę.');
       return false;
     }
   })().finally(() => { micFixing = null; });
   return micFixing;
 }
 // sprawdzanie co kilka sekund i po powrocie na kartę – żeby mikrofon był gotowy, zanim ktoś naciśnie „mów”
-setInterval(() => { if (!NAT && S.micPub && !S.pttOn && !micRelease() && document.visibilityState === 'visible' && !micHealthy()) reviveMic('sprawdzanie'); }, 5000);
-document.addEventListener('visibilitychange', () => { if (!NAT && S.micPub && !micRelease() && document.visibilityState === 'visible' && !micHealthy()) setTimeout(() => !micHealthy() && reviveMic('powrót na kartę'), 800); });
+setInterval(() => { if (!NAT && S.micPub && !S.pttOn && !micRelease() && micAutoOk() && document.visibilityState === 'visible' && !micHealthy()) reviveMic('sprawdzanie'); }, 5000);
+document.addEventListener('visibilitychange', () => { if (!NAT && S.micPub && !micRelease() && micAutoOk() && document.visibilityState === 'visible' && !micHealthy()) setTimeout(() => !micHealthy() && reviveMic('powrót na kartę'), 800); });
 
 function startTalk() {
   if (NAT) { // mikrofon i nagranie do transkrypcji po stronie natywnej
@@ -1529,6 +1557,7 @@ function startTalk() {
     $('#ptt').classList.add('live'); $('#ptt .ptt-l1').textContent = 'MÓWISZ'; vibrate(25);
     return;
   }
+  if (canTalk() && !S.micPub && S.room && !S.pttOn) { prepareMic(); return; } // mikrofon nie ruszył (np. brak zgody) – naciśnięcie zapyta ponownie
   if (!canTalk() || S.pttOn || !S.micPub) return;
   S.pttOn = true; progLevel();
   try { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); applyCtxSink(); } catch {}
@@ -1542,10 +1571,12 @@ function startTalk() {
   if (ready) startRecording(talkId);
   if (S.micPub.track) S.micPub.track.stopOnMute = micRelease();
   // mikrofon zamknięty między wypowiedziami (micRelease): LiveKit otwiera go sam przy odciszeniu
-  const unmuted = healthy || micRelease() ? S.micPub.unmute() : reviveMic('naciśnięcie mów').then(() => S.micPub?.unmute());
+  const unmuted = (healthy || micRelease() ? Promise.resolve(S.micPub.unmute()) : reviveMic('naciśnięcie mów', true).then(() => S.micPub?.unmute()))
+    .then(() => { if (micDenied) { micDenied = false; renderPttLabel(); } })
+    .catch((err) => { if (isPermErr(err)) { micDenied = true; renderPttLabel(); micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe).'); } });
   // mikrofon „żyje”, ale daje cyfrową ciszę (Safari) – po chwili pobierz go od nowa, mówienie trwa dalej
   if (healthy) setTimeout(() => {
-    if (S.pttOn && S.talkId === talkId && capLive() && Date.now() - (cap.sound || 0) > 1500) reviveMic('cisza z mikrofonu').then((ok) => { if (ok && S.pttOn && S.talkId === talkId) S.micPub?.unmute(); });
+    if (S.pttOn && S.talkId === talkId && capLive() && Date.now() - (cap.sound || 0) > 1500) reviveMic('cisza z mikrofonu', true).then((ok) => { if (ok && S.pttOn && S.talkId === talkId) S.micPub?.unmute(); });
   }, 1800);
   wsSend({ t: 'ptt', channel: S.active, on: true, talkId });
   if (!ready) Promise.resolve(unmuted).catch(() => {}).then(() => { if (S.pttOn && S.talkId === talkId) startRecording(talkId); });
@@ -1578,7 +1609,8 @@ function renderPttLabel() {
   const c = chan(S.active);
   $('#pttTarget').innerHTML = `<span class="ptt-ch">${isDm(S.active) ? '💬 ' : '📢 '}${esc(c?.name || '')}</span>`;
   $('#ptt').style.setProperty('--c', isDm(S.active) ? '#38bdf8' : (c?.color || '#64748b'));
-  if (!S.pttOn) $('#ptt .ptt-l1').textContent = S.pttLocked ? 'Mikrofon włączony – dotknij 🔒' : S.opt.boom && !NAT ? 'Opuść pałąk albo przytrzymaj' : 'Przytrzymaj i mów';
+  if (!S.pttOn) $('#ptt .ptt-l1').textContent = micDenied && !NAT ? '🎙 Brak zgody na mikrofon – naciśnij' : S.pttLocked ? 'Mikrofon włączony – dotknij 🔒' : S.opt.boom && !NAT ? 'Opuść pałąk albo przytrzymaj' : 'Przytrzymaj i mów';
+  $('#ptt').classList.toggle('nomic', micDenied && !NAT);
 }
 const ptt = $('#ptt');
 // Telefon + prawo mówienia: domyślnie duży przycisk mówienia, pole tekstu pod ⌨️ (więcej miejsca na wiadomości)
