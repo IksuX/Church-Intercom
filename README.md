@@ -1,4 +1,4 @@
-# Interkom 0.50.0
+# Interkom 0.50.1
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.50.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.50.1.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.50.0.zip && cd interkom
+   unzip interkom-0.50.1.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -170,7 +170,7 @@ Konfiguracja (panel → Planning Center → „Logowanie przez Planning Center�
 
 Opcja „tylko osoby z obsady” wpuszcza przez Planning Center wyłącznie osoby zaplanowane w bieżącym planie. Konta z innych organizacji są zawsze odrzucane. Logowanie wymaga internetu na telefonie tylko w chwili logowania, a sesja trwa 24 h.
 
-Prawo mówienia i zespoły liczą się na bieżąco z grafiku, więc zmiana w Planning Center działa po ponownym otwarciu aplikacji, bez ponownego logowania.
+Prawo mówienia i zespoły liczą się na bieżąco z grafiku: zmiana w Planning Center (np. ktoś dopisany jako reżyser) działa po najbliższym odświeżeniu planu – bez ponownego otwierania aplikacji i bez ponownego logowania (od 0.50.1).
 
 ### Ogłaszanie zmiany punktu (od 0.7.1)
 
@@ -685,6 +685,9 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.50.1
+- **Zmiany w grafiku Planning Center działają od razu.** Gdy ktoś zostanie dopisany do planu na stanowisku mówiącym (albo z niego zdjęty), dostaje lub traci przycisk mówienia po najbliższym odświeżeniu planu – bez zamykania aplikacji. Tak samo działa zmiana zasad w zakładce Planning Center (stanowiska i zespoły mówiące, liderzy). Wcześniej rola przeliczała się dopiero przy ponownym połączeniu.
 
 ## 0.50.0
 - **Panel → Osoby i uprawnienia** (nowa zakładka): wszystkie osoby z Planning Center Services – także te, które jeszcze się nie logowały i nie są w bieżącym planie. Filtry: wyszukiwanie po imieniu i nazwisku, zespół (albo „bez zespołu”) oraz „Pokaż”: z nadanymi uprawnieniami, administratorzy, mogą mówić, sterują planem, liderzy zespołów, w bieżącym planie, teraz online.

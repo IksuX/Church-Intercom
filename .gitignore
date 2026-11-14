@@ -17,3 +17,5 @@ mobile/ios/
 mobile/android/
 .DS_Store
 zmiany-lokalne-*.patch
+# graf wiedzy i pamięć podręczna narzędzia graphify (lokalnie)
+graphify-out/

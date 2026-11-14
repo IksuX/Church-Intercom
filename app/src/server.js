@@ -19,7 +19,7 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 
-const VERSION = '0.50.0';
+const VERSION = '0.50.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -115,7 +115,8 @@ function startPco() {
     cfg: config.planningCenter || {},
     onChange: (kind) => {
       if (pco !== inst) return; // stara instancja po zmianie ustawień
-      if (kind !== 'live') { setChannels(inst.channels(config.channels)); sendPerms(); for (const x of inst.state.roster) avatars.remember(x.personId, x.photo); }
+      // nowa obsada / zespoły: przelicz role połączonych osób od razu (prawo mówienia także w LiveKit), bez ponownego otwierania aplikacji
+      if (kind !== 'live') { setChannels(inst.channels(config.channels)); applyGrants(); for (const x of inst.state.roster) avatars.remember(x.personId, x.photo); }
       broadcastPlan();
     },
   });
@@ -139,7 +140,7 @@ function applyConfig(next) {
   nativeHearSoon();
   if (config.program.enabled && config.program.source === 'server' && !programKey()) saveJson(SECRETS_PATH, { ...readJson(SECRETS_PATH, {}), programKey: crypto.randomBytes(18).toString('base64url') }); // klucz dla usługi audio
   broadcast({ t: 'config', org: config.orgName, brand: brandPublic(), quick: config.quick, broadcastChannel: broadcastId, sttOff: config.sttOff || [], sttDm: config.sttDm !== false, program: publicProgram() });
-  sendPerms();
+  applyGrants(); // zmienione zasady (np. stanowiska mówiące) działają od razu; wysyła też uprawnienia
 }
 
 // Plan do wszystkich + ogłoszenie zmiany bieżącego punktu na kanale ogólnym (czytane przez syntezator)
