@@ -1982,17 +1982,38 @@ function sysMsg(text) {
 }
 
 // ================= PANEL USTAWIEŃ / OSÓB =================
+const sheetWide = window.matchMedia('(min-width: 700px)');
 function openSheet(which) {
   if (which === 'plan' && splitOn()) { renderPlanSheet(); return; }
-  $('#sheet').hidden = false;
+  closePersonMenu();
+  const sh = $('#sheet');
+  sh.hidden = false;
+  sh.dataset.mode = which;
+  // „Kto jest online” na szerokim ekranie: okienko pod ikoną zamiast arkusza na dole
+  const pop = which === 'people' && sheetWide.matches;
+  sh.classList.toggle('pop', pop);
+  if (pop) { const r = $('#btnPeople').getBoundingClientRect(); sh.style.setProperty('--pop-top', `${Math.round(r.bottom + 6)}px`); sh.style.setProperty('--pop-right', `${Math.max(8, Math.round(innerWidth - r.right))}px`); }
   $('#sheetSettings').hidden = which !== 'settings';
   $('#sheetPeople').hidden = which !== 'people';
   if (!splitOn()) $('#sheetPlan').hidden = which !== 'plan';
   $('#sheetTitle').textContent = { people: 'Kto jest online', plan: 'Plan nabożeństwa', settings: 'Ustawienia' }[which];
   if (which === 'people') renderPeople();
   else if (which === 'plan') renderPlanSheet();
-  else { renderSettings(); if (!$('#pcoAdmin').hidden) wsSend({ t: 'pcoPlans' }); }
+  else { renderSettings(); if (!$('#pcoAdmin').hidden) wsSend({ t: 'pcoPlans' }); showSetSec(); }
 }
+// ---- ustawienia w sekcjach ----
+function showSetSec(key) {
+  const nav = $('#setNav');
+  nav.querySelector('[data-sec="admin"]').hidden = $('#adminBox').hidden;
+  if (!key) { try { key = localStorage.getItem('ik-setsec') || ''; } catch {} }
+  if (!key || nav.querySelector(`[data-sec="${key}"]`)?.hidden) key = 'listen';
+  $$('#setBody .set-sec').forEach((x) => (x.hidden = x.dataset.sec !== key));
+  $$('#setNav button').forEach((b) => b.setAttribute('aria-current', b.dataset.sec === key ? 'true' : 'false'));
+  nav.querySelector('[data-sec="' + key + '"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  $('#setBody').scrollTop = 0;
+  try { localStorage.setItem('ik-setsec', key); } catch {}
+}
+$$('#setNav button').forEach((b) => (b.onclick = () => showSetSec(b.dataset.sec)));
 $('#btnSettings').onclick = () => openSheet('settings');
 $('#btnPeople').onclick = () => openSheet('people');
 function closeSheet() { $('#sheet').hidden = true; if (micRelease() && !S.pttOn) applyMicRelease(); } // podgląd mikrofonu w ustawieniach – zamknij
@@ -2111,6 +2132,98 @@ function openCall(u, row) {
 }
 
 const osoby = (n) => `${n} ${n === 1 ? 'osoba' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'osoby' : 'osób'}`;
+// ---- menu osoby: wezwij, napisz, moderacja, uprawnienia (administrator – to samo API co panel) ----
+const pm = { u: null, anchor: null };
+function closePersonMenu() { const m = $('#pmenu'); if (m) m.hidden = true; pm.u = null; pm.anchor?.classList.remove('pm-open'); pm.anchor = null; }
+function placePersonMenu() {
+  const m = $('#pmenu'), a = pm.anchor;
+  if (!a || m.hidden) return;
+  const r = a.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, pad = 8;
+  let x = r.right + 8, y = r.top;
+  if (x + w > innerWidth - pad) x = Math.max(pad, Math.min(r.left, innerWidth - w - pad)), y = r.bottom + 6; // brak miejsca z prawej → pod osobą
+  if (y + h > innerHeight - pad) y = Math.max(pad, innerHeight - h - pad);
+  m.style.left = `${Math.round(x)}px`; m.style.top = `${Math.round(y)}px`;
+}
+async function openPersonMenu(u, anchor) {
+  if (pm.u === u.id) return closePersonMenu(); // drugie kliknięcie zamyka
+  closePersonMenu();
+  pm.u = u.id; pm.anchor = anchor; anchor?.classList.add('pm-open');
+  const m = $('#pmenu');
+  const talk = S.talking.get(u.id), oc = chan(talk || u.target);
+  const status = talk ? `mówi · ${esc(chan(talk)?.name || '')}` : u.role !== 'listener' ? 'może mówić' : 'słucha / czyta';
+  const isAdmin = S.me.role === 'admin', canMod = !!S.perm?.moderate;
+  const chOpts = S.channels.map((c) => `<option value="${esc(c.id)}" ${c.id === (talk || u.target) ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  m.innerHTML = `<div class="pm-h">${avatar(u.pid, u.name)}<div class="pm-who"><b>${esc(u.name)}</b><span class="${talk ? 'live' : ''}">${status}${oc && !talk ? ` · ma otwarty: ${esc(oc.name)}` : ''}</span></div><button type="button" class="icon pm-x" aria-label="Zamknij">${icon('x')}</button></div>
+    <input class="pm-msg" maxlength="140" placeholder="Wiadomość (opcjonalnie), np. zbliżenie na mówcę" aria-label="Wiadomość do wezwania">
+    <div class="pm-row"><button type="button" class="primary pm-call">${icon('bell')} Wezwij</button><button type="button" class="pm-dm">${icon('message')} Napisz</button></div>
+    ${canMod ? `<div class="pm-sec"><div class="pm-l">Moderacja</div><div class="pm-row"><button type="button" class="pm-mute">${icon('volume-x')} Wycisz</button></div><div class="pm-row"><select class="pm-ch" aria-label="Kanał">${chOpts}</select><button type="button" class="pm-move">Przenieś</button></div></div>` : ''}
+    ${isAdmin ? `<div class="pm-sec" id="pmGrants"><div class="pm-l">Uprawnienia</div><p class="hint">Wczytuję…</p></div>` : ''}
+    ${isAdmin && S.session.stt ? `<div class="pm-row"><button type="button" class="pm-stt">${u.sttOff ? 'Włącz transkrypcję' : 'Wyłącz transkrypcję'}</button></div>` : ''}`;
+  m.hidden = false; placePersonMenu();
+  const inp = m.querySelector('.pm-msg');
+  const call = () => { unlockAudio(); wsSend({ t: 'call', to: u.id, text: inp.value }); toast({ channel: S.broadcast, fromName: 'Wezwanie', text: `wysłane do: ${u.name}`, plan: true }); closePersonMenu(); };
+  m.querySelector('.pm-x').onclick = closePersonMenu;
+  m.querySelector('.pm-call').onclick = call;
+  inp.onkeydown = (e) => { if (e.key === 'Enter') call(); };
+  m.querySelector('.pm-dm').onclick = () => {
+    ensureDm(u.key, u.name, u.pid); $('#sheet').hidden = true; setActive('dm:' + u.key);
+    if (inp.value.trim()) wsSend({ t: 'msg', channel: 'dm:' + u.key, text: inp.value.trim() });
+    closePersonMenu(); $('#msgInput').focus();
+  };
+  m.querySelector('.pm-mute')?.addEventListener('click', () => { wsSend({ t: 'modMute', to: u.id }); closePersonMenu(); });
+  m.querySelector('.pm-move')?.addEventListener('click', () => { wsSend({ t: 'modMove', to: u.id, channel: m.querySelector('.pm-ch').value }); closePersonMenu(); });
+  m.querySelector('.pm-stt')?.addEventListener('click', () => { wsSend({ t: 'sttUser', to: u.id, off: !u.sttOff }); closePersonMenu(); });
+  if (!isAdmin) return;
+  // uprawnienia: aktualne wartości z panelu administracyjnego
+  const box = m.querySelector('#pmGrants');
+  const api = async (method, url, body) => {
+    const r = await fetch(url, { method, headers: { authorization: 'Bearer ' + S.session.token, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Błąd serwera'); return j;
+  };
+  try {
+    const g = await api('GET', '/api/admin/users');
+    if (pm.u !== u.id) return;
+    const x = g.users.find((y) => y.id === u.id);
+    if (!x) { box.innerHTML = '<div class="pm-l">Uprawnienia</div><p class="hint">Ta osoba jest już offline.</p>'; return; }
+    const sel = (kind, v, auto, dis) => `<select data-kind="${kind}" ${dis ? 'disabled' : ''}><option value="" ${v.value === null ? 'selected' : ''}>Auto (${v.auto ? 'tak' : 'nie'})</option><option value="true" ${v.value === true ? 'selected' : ''}>Tak – zawsze</option><option value="false" ${v.value === false ? 'selected' : ''}>Nie – nigdy</option></select>`;
+    box.innerHTML = `<div class="pm-l">Uprawnienia</div>
+      <label class="pm-f">Administrator ${x.admin.viaPin ? '<span class="hint">PIN administratora</span>' : `<select data-kind="admin"><option value="false" ${x.admin.value ? '' : 'selected'}>Nie</option><option value="true" ${x.admin.value ? 'selected' : ''}>Tak${x.persistent ? ' – na stałe' : ''}</option></select>`}</label>
+      <label class="pm-f">Mówienie ${x.role === 'admin' ? '<span class="hint">administrator</span>' : sel('speak', x.speak)}</label>
+      <label class="pm-f">Sterowanie planem ${x.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('live', x.live, null, !g.liveEnabled)}</label>`;
+    box.querySelectorAll('select').forEach((el) => (el.onchange = async () => {
+      const v = el.value === 'true' ? true : el.value === 'false' ? false : null;
+      try { await api('POST', '/api/admin/grant', { userId: u.id, [el.dataset.kind]: v }); toast({ channel: S.broadcast, fromName: 'Uprawnienia', text: `zmienione: ${u.name}`, plan: true }); }
+      catch (e) { toast({ channel: S.broadcast, fromName: 'Uprawnienia', text: e.message, plan: true, urgent: true }); }
+    }));
+    placePersonMenu();
+  } catch (e) { box.innerHTML = `<div class="pm-l">Uprawnienia</div><p class="hint">${esc(e.message)}</p>`; }
+}
+document.addEventListener('pointerdown', (e) => { if (pm.u && !e.target.closest('#pmenu') && !e.target.closest('.pm-open')) closePersonMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pm.u) closePersonMenu(); });
+addEventListener('resize', () => placePersonMenu());
+// ---- lewa kolumna: podział kanały / osoby (domyślnie po równo, przeciągany, zapamiętany) ----
+(() => {
+  const rail = $('#rail'), h = $('#railSplit');
+  if (!rail || !h) return;
+  const clamp = (r) => Math.min(0.85, Math.max(0.15, r));
+  const apply = (r) => { rail.style.setProperty('--rs-a', `${clamp(r)}fr`); rail.style.setProperty('--rs-b', `${1 - clamp(r)}fr`); h.setAttribute('aria-valuenow', String(Math.round(clamp(r) * 100))); };
+  const save = (r) => { S.opt.railSplit = clamp(r); store.set('opt', S.opt); };
+  apply(Number(S.opt?.railSplit) || 0.5);
+  h.setAttribute('aria-valuemin', '15'); h.setAttribute('aria-valuemax', '85');
+  let drag = null;
+  h.addEventListener('pointerdown', (e) => {
+    const top = $('#tabs').getBoundingClientRect().top, bottom = rail.getBoundingClientRect().bottom - 12;
+    drag = { top, bottom }; h.setPointerCapture(e.pointerId); h.classList.add('drag'); e.preventDefault();
+  });
+  h.addEventListener('pointermove', (e) => { if (!drag) return; apply((e.clientY - drag.top) / (drag.bottom - drag.top)); });
+  const end = (e) => { if (!drag) return; const r = (e.clientY - drag.top) / (drag.bottom - drag.top); drag = null; h.classList.remove('drag'); apply(r); save(r); };
+  h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+  h.addEventListener('dblclick', () => { apply(0.5); save(0.5); });
+  h.addEventListener('keydown', (e) => {
+    const cur = Number(S.opt.railSplit) || 0.5, d = e.key === 'ArrowUp' ? -0.05 : e.key === 'ArrowDown' ? 0.05 : 0;
+    if (!d) return; e.preventDefault(); apply(cur + d); save(cur + d);
+  });
+})();
 // lewa kolumna (szeroki ekran): kto jest online, kto mówi i na którym kanale ma otwarte okno
 function renderRailPeople() {
   const box = $('#railPeople');
@@ -2128,7 +2241,7 @@ function renderRailPeople() {
     }).join('')}</ul>${all.length > MAX ? `<p class="rp-more">i ${all.length - MAX} więcej</p>` : ''}`;
   $('#railPeopleAll').onclick = () => $('#btnPeople').click();
   box.querySelectorAll('li.callable').forEach((li) => {
-    const go = () => { const u = S.users.get(li.dataset.uid); if (u) openCall(u, li); };
+    const go = () => { const u = S.users.get(li.dataset.uid); if (u) openPersonMenu(u, li); };
     li.onclick = go; li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
   });
 }
@@ -2161,7 +2274,7 @@ function renderPeople() {
       <ul class="people">${none.map((u) => row(u, { id: '', color: '#6b7280' })).join('')}</ul></section>`;
   box.innerHTML = html + `<p class="hint">Stuknij osobę, aby ją wezwać${S.perm?.moderate ? ', wyciszyć albo przenieść na inny kanał' : ''}.</p>`;
   $$('#peopleList .chstt').forEach((b) => (b.onclick = () => wsSend({ t: 'sttChan', channel: b.dataset.ch, off: !(S.session.sttOff || []).includes(b.dataset.ch) })));
-  $$('#peopleList li.callable').forEach((li) => (li.onclick = () => { const u = S.users.get(li.dataset.uid); if (u) openCall(u, li); }));
+  $$('#peopleList li.callable').forEach((li) => (li.onclick = () => { const u = S.users.get(li.dataset.uid); if (u) openPersonMenu(u, li); }));
 }
 
 // ================= KANAŁY (mogą się zmienić – np. nowe zespoły w Planning Center) =================

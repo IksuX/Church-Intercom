@@ -122,6 +122,7 @@
     <aside id="rail" class="rail" aria-label="Kanały i osoby">
       <div class="rail-h">Kanały</div>
       <nav id="tabs" class="tabs" role="tablist"></nav>
+      <div id="railSplit" class="rail-split" role="separator" aria-orientation="horizontal" aria-label="Podział: kanały i osoby" tabindex="0" title="Przeciągnij, żeby zmienić podział (dwuklik – po równo)"></div>
       <section id="railPeople" class="rail-people" aria-label="Osoby online"></section>
     </aside>
     <div class="commmain">
@@ -187,19 +188,25 @@
         <h2 id="sheetTitle">Ustawienia</h2>
         <button id="sheetClose" class="icon" aria-label="Zamknij"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
-      <div id="sheetSettings">
-        <p class="me" id="meLine"></p>
-        <p class="helplink"><a href="/pomoc" target="_blank" rel="noopener">📖 Instrukcja obsługi</a></p>
-        <div class="app-links web-only" id="appLinksSet" hidden></div>
-        <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
-          <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
-        <div class="row"><button type="button" id="btnMini">🪟 Okienko czatu – jeden kanał</button></div>
-        <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk z pinezką trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
-        <h3>Słucham kanałów</h3>
+      <div id="sheetSettings" class="set">
+        <!-- ustawienia podzielone na sekcje (jak w panelu administracyjnym): po lewej lista, po prawej treść -->
+        <nav class="set-nav" id="setNav" aria-label="Sekcje ustawień">
+          <button type="button" data-sec="listen"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg><span>Słuchanie</span></button>
+          <button type="button" data-sec="audio"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg><span>Dźwięk i mikrofon</span></button>
+          <button type="button" data-sec="view"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg><span>Widok i czytanie</span></button>
+          <button type="button" data-sec="notify"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><span>Powiadomienia</span></button>
+          <button type="button" data-sec="account"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><span>Konto</span></button>
+          <button type="button" data-sec="admin" hidden><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span>Administrator</span></button>
+        </nav>
+        <div class="set-body" id="setBody">
+        <section class="set-sec" data-sec="listen" data-title="Słuchanie" hidden>
+          <h3 class="set-h">Słuchanie</h3>
         <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną głośnika na zakładce kanału.</p>
         <div id="listenList" class="checklist"></div>
         <label class="switch"><input type="checkbox" id="optAutoListen" checked> Wejście na kanał włącza jego słuchanie</label>
-        <h3>Dźwięk</h3>
+        </section>
+        <section class="set-sec" data-sec="audio" data-title="Dźwięk i mikrofon" hidden>
+          <h3 class="set-h">Dźwięk i mikrofon</h3>
         <div id="audioBox">
           <div id="natBox" class="natbox" hidden>
             <p class="hint">📱 Aplikacja: rozmowy działają też przy zablokowanym ekranie i w kieszeni.</p>
@@ -239,7 +246,9 @@
           <div class="row"><button id="btnSpkTest" type="button"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Test głośnika</button><button id="btnDevRefresh" type="button">↻ Odśwież listę urządzeń</button></div>
           <p class="hint"><b>Mikser</b> u góry ekranu: głośność rozmów, dźwięku transmisji, komunikatów czytanych na głos i sygnałów – osobno, z wyciszaniem. <b>Dźwięk transmisji</b> włączasz przyciskiem z nutą – pojawia się, gdy realizator go nadaje.</p>
         </div>
-        <h3>Opcje</h3>
+        </section>
+        <section class="set-sec" data-sec="view" data-title="Widok i czytanie" hidden>
+          <h3 class="set-h">Widok i czytanie</h3>
         <label class="switch"><input type="checkbox" id="optVoice"> Odtwarzaj głos</label>
         <label class="switch"><input type="checkbox" id="optTts"> Czytaj wiadomości tekstowe na głos</label>
         <label class="field" id="optSttRow">Transkrypcja mowy (tekst pod wypowiedziami)
@@ -273,11 +282,10 @@
           <label class="switch"><input type="checkbox" id="optNotesAuto"> Automatycznie (moje zespoły)</label>
           <div id="optNoteCats" class="checklist"></div>
         </div>
-        <div id="elevateBox">
-          <h3>Uprawnienia</h3>
-          <p class="hint">Masz PIN mówiącego albo administratora? Wpisz go – zachowasz swoje logowanie i kanały.</p>
-          <div class="row"><input id="elevPin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"><button id="btnElevate" type="button">Zatwierdź</button></div>
-        </div>
+        <div class="row"><button id="btnTestTts" type="button">Test mowy</button></div>
+        </section>
+        <section class="set-sec" data-sec="notify" data-title="Powiadomienia" hidden>
+          <h3 class="set-h">Powiadomienia</h3>
         <h3 class="web-only">Powiadomienia na zablokowanym ekranie</h3>
         <p class="hint web-only" id="pushInfo"></p>
         <div class="row"><button id="btnPush" type="button" class="primary">🔔 Włącz powiadomienia</button><button id="btnPushTest" type="button" hidden>Wyślij test</button></div>
@@ -291,13 +299,30 @@
           <label><input type="checkbox" data-pp="stream"> 🔴 transmisji live (start, koniec, problemy)</label>
           <p class="hint" id="vibHint"></p>
         </div>
+        </section>
+        <section class="set-sec" data-sec="account" data-title="Konto" hidden>
+          <h3 class="set-h">Konto</h3>
+        <p class="me" id="meLine"></p>
+        <p class="helplink"><a href="/pomoc" target="_blank" rel="noopener">📖 Instrukcja obsługi</a></p>
+        <div class="app-links web-only" id="appLinksSet" hidden></div>
+        <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
+          <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks">Zapisz</button></span></label>
+        <div class="row"><button type="button" id="btnMini">🪟 Okienko czatu – jeden kanał</button></div>
+        <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk z pinezką trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
+        <div id="elevateBox">
+          <h3>Uprawnienia</h3>
+          <p class="hint">Masz PIN mówiącego albo administratora? Wpisz go – zachowasz swoje logowanie i kanały.</p>
+          <div class="row"><input id="elevPin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"><button id="btnElevate" type="button">Zatwierdź</button></div>
+        </div>
         <div class="row">
-          <button id="btnTestTts" type="button">Test mowy</button>
           <button id="btnLogout" type="button" class="danger">Wyloguj</button>
         </div>
         <button id="btnSrv" type="button" class="srvbtn" hidden>🔁 Zmień serwer</button>
+        <p class="hint">Instalacja certyfikatu (tylko tryb bez domeny): <a href="/ca.crt">pobierz certyfikat</a>. <span id="ver"></span></p>
+        </section>
+        <section class="set-sec" data-sec="admin" data-title="Administrator" hidden>
+          <h3 class="set-h">Administrator</h3>
         <div id="adminBox" hidden>
-          <h3>Administrator</h3>
           <p id="adminLink"><a href="/admin" target="_blank" class="adminlink">Otwórz panel administracyjny</a></p>
           <button id="btnClear" type="button" class="danger">Wyczyść czat (nowe nabożeństwo)</button>
           <div id="pcoAdmin" hidden>
@@ -307,7 +332,8 @@
             <div class="row"><button id="btnPcoRefresh" type="button">Odśwież dane z Planning Center</button></div>
           </div>
         </div>
-        <p class="hint">Instalacja certyfikatu (tylko tryb bez domeny): <a href="/ca.crt">pobierz certyfikat</a>. <span id="ver"></span></p>
+        </section>
+        </div>
       </div>
       <div id="sheetPlan" hidden>
         <!-- przypięte: bieżący i następny punkt, odliczanie, sterowanie -->
@@ -330,6 +356,9 @@
       </div>
     </div>
   </div>
+
+  <!-- menu osoby: wezwanie, wiadomość, moderacja, uprawnienia (administrator) -->
+  <div id="pmenu" class="pmenu" hidden role="dialog" aria-label="Osoba"></div>
 
   <script type="module" src="/app.js"></script>
 </body>

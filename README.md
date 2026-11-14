@@ -1,4 +1,4 @@
-# Interkom 0.47.0
+# Interkom 0.48.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.47.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.48.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.47.0.zip && cd interkom
+   unzip interkom-0.48.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,12 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.48.0
+- **Ustawienia w sekcjach.** Na tablecie i komputerze ustawienia otwierają się w oknie na środku ekranu (dopasowanym do jego wielkości), z listą sekcji po lewej – jak w panelu administracyjnym: Słuchanie, Dźwięk i mikrofon, Widok i czytanie, Powiadomienia, Konto oraz Administrator (tylko dla administratora). Na telefonie sekcje są zakładkami u góry. Ostatnio otwarta sekcja jest zapamiętywana.
+- **„Kto jest online” przy ikonie** – na szerokim ekranie lista wyskakuje jako okienko pod ikoną osób, zamiast arkusza na dole.
+- **Lewa kolumna: kanały i osoby po równo (50/50)**, podział można przeciągnąć (albo zmienić strzałkami z klawiatury; dwuklik przywraca po równo) – jest zapamiętywany.
+- **Menu osoby** – kliknięcie osoby w lewej kolumnie albo na liście „Kto jest online”: **Wezwij** (z opcjonalną wiadomością), **Napisz** (rozmowa prywatna), dla reżysera **wycisz / przenieś na kanał**, a dla administratora **uprawnienia**: Administrator, Mówienie i Sterowanie planem – te same ustawienia co w panelu administracyjnym.
 
 ## 0.47.0
 - **Nowy wygląd „Nocna nawa”.** Granatowa czerń i chabrowy kolor sygnału, czcionki Instrument Sans i DM Mono zapisane na serwerze (działają bez internetu), jeden zestaw ikon SVG zamiast emoji – w aplikacji, panelu administracyjnym, instrukcji i ekranach aplikacji mobilnej. Domyślny kolor przewodni to `#5ab9fc`; stary domyślny niebieski jest traktowany jak brak wyboru. Tekst na kolorze przewodnim jest ciemny albo biały – zależnie od tego, co daje lepszy kontrast.
