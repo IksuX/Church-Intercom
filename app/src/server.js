@@ -19,7 +19,7 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 
-const VERSION = '0.48.0';
+const VERSION = '0.49.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -730,8 +730,8 @@ function brandPublic() {
   return { accent: b.accent, logo: logoUrl(), logoColor: c, ratio: f ? logoRatio(f) : null, tintable: logoTintable(f) };
 }
 function brandCss() {
-  // #3b82f6 to stary domyślny kolor (sprzed wyglądu „Nocna nawa”) – traktujemy go jak brak wyboru
-  const a = !config.branding?.accent || config.branding.accent === '#3b82f6' ? '#5ab9fc' : config.branding.accent;
+  // #3b82f6 i #5ab9fc to dawne kolory domyślne – traktujemy je jak brak wyboru (domyślnie pomarańcz w stylu Intercom)
+  const a = !config.branding?.accent || ['#3b82f6', '#5ab9fc'].includes(config.branding.accent) ? '#ff5600' : config.branding.accent;
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   // tekst na kolorze przewodnim: ciemny albo biały – ten, który daje większy kontrast (próg WCAG ≈ 0,18)

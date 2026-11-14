@@ -3,11 +3,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Interkom – brak połączenia</title>
 <style>
-@font-face{font-family:"Instrument Sans";font-weight:400 700;font-display:swap;src:url(fonts/instrument-sans-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
-@font-face{font-family:"Instrument Sans";font-weight:400 700;font-display:swap;src:url(fonts/instrument-sans-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+A720-A7FF}
-:root { --bg:#0a0d14; --panel:#131824; --panel2:#182033; --line:#232b3b; --fg:#e9edf3; --muted:#8f99ab; --accent:#5ab9fc; --accent-fg:#0a0d14; --ok:#4ade80; --urgent:#ff5a5f; }
+@font-face{font-family:"Inter";font-weight:400 700;font-display:swap;src:url(fonts/inter-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"Inter";font-weight:400 700;font-display:swap;src:url(fonts/inter-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+A720-A7FF}
+:root { --bg:#000000; --panel:#141413; --panel2:#1f1f1e; --line:#2a2a28; --fg:#ffffff; --muted:#9c9fa5; --accent:#ffffff; --accent-fg:#000000; --ok:#4ade80; --urgent:#ff5a5f; }
 * { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); font:16px/1.45 "Instrument Sans",system-ui,-apple-system,sans-serif; }
+html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); font:16px/1.45 "Inter",system-ui,-apple-system,sans-serif; }
 body { padding: calc(env(safe-area-inset-top,0px) + 32px) 16px 24px; display:flex; justify-content:center; }
 main { width:100%; max-width:420px; display:grid; gap:14px; text-align:center; }
 .logo { font-size:44px; }
@@ -18,7 +18,7 @@ a.btn { display:block; text-decoration:none; color:var(--accent-fg); background:
 a.btn.sec { background:var(--panel); border:1px solid var(--line); color:var(--fg); font-weight:500; }
 </style></head>
 <body><main>
-  <div class="logo"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5ab9fc" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg></div>
+  <div class="logo"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ff5600" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg></div>
   <h1>Brak połączenia z serwerem</h1>
   <p id="srv"></p>
   <a class="btn" href="ikapp://retry">Spróbuj ponownie</a>

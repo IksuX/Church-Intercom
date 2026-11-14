@@ -299,8 +299,8 @@ function renderRemote() {
   }).catch(() => {});
 }
 // ---------- WYGLĄD ----------
-const BRAND_DEFAULT = '#5ab9fc';
-const BRAND_PRESETS = ['#5ab9fc', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#a3a3a3'];
+const BRAND_DEFAULT = '#ff5600';
+const BRAND_PRESETS = ['#ff5600', '#5ab9fc', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#a3a3a3'];
 function renderBrand() {
   cfg.branding ||= { accent: BRAND_DEFAULT, logo: '' };
   const set = (hex) => {

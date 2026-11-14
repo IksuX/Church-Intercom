@@ -1,35 +1,51 @@
-/* Wygląd „Nocna nawa”: granatowa czerń kościoła po zgaszeniu świateł, chabrowy sygnał witraży,
-   Instrument Sans (interfejs) + DM Mono (odczyty: zegary, kanał docelowy, stany). Fonty lokalnie – działa bez internetu. */
-@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans-latin-wght-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans-latin-ext-wght-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/dm-mono-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/dm-mono-latin-ext-400-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/dm-mono-latin-500-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/dm-mono-latin-ext-500-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* Wygląd w stylu Intercom (DESIGN.md): ciemny (domyślny) i jasny – przełączane w ustawieniach.
+   Krój Inter (zamiennik Saans zalecany w DESIGN.md), zapisany lokalnie – działa bez internetu.
+   Kolor przewodni (--accent) ustawia panel administracyjny (/branding.css); domyślnie pomarańcz Intercomu. */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/inter-latin-wght-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/inter-latin-ext-wght-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* ciemny – czerń i grafit Intercomu */
 :root {
-  --bg: #0a0d14; --panel: #131824; --panel2: #182033; --line: #232b3b; --line2: #2e3850;
-  --fg: #e9edf3; --fg2: #c3cad6; --muted: #8f99ab; --accent: #5ab9fc; --accent-fg: #0a0d14;
-  --accent-bg: #0f2235; --accent-line: #1e4466;
-  --ok: #4ade80; --ok-bg: #0f2a1c; --ok-line: #1f5c3a; --ok-fg: #062012;
+  --bg: #000000; --panel: #141413; --panel2: #1f1f1e; --line: #2a2a28; --line2: #3d3d3b;
+  --fg: #ffffff; --fg2: #d4d3cf; --muted: #9c9fa5; --accent: #ff5600; --accent-fg: #000000;
+  --primary: #ffffff; --primary-fg: #000000;
+  --accent-bg: color-mix(in srgb, var(--accent) 15%, var(--bg)); --accent-line: color-mix(in srgb, var(--accent) 50%, var(--bg));
+  --accent-text: color-mix(in srgb, var(--accent) 80%, #ffffff);
+  --ok: #3ddc7a; --ok-bg: #0d2617; --ok-line: #1d5a34; --ok-fg: #04140a;
   --warn: #fbbf24; --warn-bg: #2a2010; --warn-line: #5c4512;
-  --urgent: #ff5a5f; --urgent-bg: #2a1214; --urgent-line: #6b2226; --urgent-fg: #ffb4b6; --urgent-solid: #d92d34;
-  --info: #5ab9fc; --wait: #d6c7a1;
-  --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --r: 10px; --r2: 6px; --arch: 50% 36px;
-  --shadow: 0 10px 28px rgba(2, 6, 14, .55);
+  --urgent: #ff5a5f; --urgent-bg: #2a1012; --urgent-line: #6b2226; --urgent-fg: #ffb4b6; --urgent-solid: #d92d34;
+  --info: var(--accent-text); --wait: #c9c3b6;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: var(--font);
+  --r: 12px; --r2: 8px; --arch: 12px;
+  --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  --scrim: rgba(0, 0, 0, .7);
   --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
   color-scheme: dark;
+}
+/* jasny – kremowe tło, białe karty, czarne przyciski główne */
+:root[data-theme="light"] {
+  --bg: #f5f1ec; --panel: #ffffff; --panel2: #ebe7e1; --line: #d3cec6; --line2: #b9b3a9;
+  --fg: #111111; --fg2: #3b3b39; --muted: #626260; --accent-fg: #000000;
+  --primary: #111111; --primary-fg: #ffffff;
+  --accent-bg: color-mix(in srgb, var(--accent) 12%, #ffffff); --accent-line: color-mix(in srgb, var(--accent) 55%, #ffffff);
+  --accent-text: color-mix(in srgb, var(--accent) 70%, #000000);
+  --ok: #0a7a33; --ok-bg: #e2f2e7; --ok-line: #8fcaa4; --ok-fg: #ffffff;
+  --warn: #8a5300; --warn-bg: #fbefd9; --warn-line: #e3c07f;
+  --urgent: #c41c1c; --urgent-bg: #fbe9e9; --urgent-line: #e3a1a1; --urgent-fg: #a11616; --urgent-solid: #c41c1c;
+  --wait: #6f6450;
+  --shadow: 0 12px 32px rgba(40, 30, 20, .16);
+  --scrim: rgba(40, 32, 24, .35);
+  color-scheme: light;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 ::selection { background: var(--accent-line); color: var(--fg); }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); caret-color: var(--accent);
-  font: 16px/1.45 var(--font); overscroll-behavior: none; font-feature-settings: "ss01"; }
+  font: 16px/1.45 var(--font); overscroll-behavior: none; font-variant-numeric: tabular-nums; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; border: 1px solid var(--line); background: var(--panel2); border-radius: var(--r2); padding: 10px 14px; transition: background-color .15s, border-color .15s, transform .1s; }
 button:hover { border-color: var(--line2); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+button.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
 button.danger { border-color: var(--urgent-line); color: var(--urgent-fg); }
 button.icon { background: transparent; border: 0; padding: 6px 8px; font-size: 18px; color: var(--fg2); display: inline-flex; align-items: center; gap: 6px; }
 button.icon:hover { color: var(--fg); }
@@ -108,7 +124,7 @@ details label { margin-top: 8px; }
 .ptt-l1 { font-size: 18px; font-weight: 700; }
 .ptt-l2 { font-size: 13px; color: var(--muted); }
 .ptt.live { background: var(--ok-bg); border-color: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 35%, transparent); }
-.ptt.live .ptt-l2 { color: #bbf7d0; }
+.ptt.live .ptt-l2 { color: var(--fg); }
 .ptt:disabled { opacity: .5; }
 .pttlock { flex: none; width: 64px; border-radius: 16px; font-size: 22px; }
 .pttlock[aria-pressed="true"] { background: var(--ok-bg); border-color: var(--ok); }
@@ -567,9 +583,9 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 .pipnote .logo { font-size: 48px; }
 .pipnote p { font-size: 18px; margin: 8px 0; }
 .ptt.nomic { border-style: dashed; border-color: var(--warn); }
-.ptt.nomic .ptt-l1 { color: #fbbf24; font-size: 14px; }
+.ptt.nomic .ptt-l1 { color: var(--warn); font-size: 14px; }
 
-/* ===== Nocna nawa (0.47): wspólna warstwa komponentów ===== */
+/* ===== wspólna warstwa komponentów (od 0.47; styl Intercom od 0.49) ===== */
 /* przewijanie i drobne powierzchnie przeglądarki */
 * { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .top { background: var(--bg); border-bottom-color: var(--line); }
@@ -641,24 +657,24 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 /* plan: odczyty w mono, karta „Teraz” zwieńczona łukiem okna */
 .planbar { background: var(--panel); }
 .planbar .pl-lbl { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
-.planbar .pl-cd { font-family: var(--mono); font-weight: 500; color: var(--accent); background: var(--bg); border: 1px solid var(--line); }
+.planbar .pl-cd { font-family: var(--mono); font-weight: 600; color: var(--accent-text); background: var(--bg); border: 1px solid var(--line); }
 .pcard { border-radius: var(--r); }
 .pcard .pc-lbl { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
 .pcard.now { border-color: var(--accent-line); background: var(--accent-bg); border-top-left-radius: var(--arch); border-top-right-radius: var(--arch); padding-top: 22px; }
-.pc-cd .cd-big { font-family: var(--mono); font-weight: 500; color: var(--accent); background: var(--bg); border-radius: var(--r2); }
+.pc-cd .cd-big { font-family: var(--mono); font-weight: 600; color: var(--accent-text); background: var(--bg); border-radius: var(--r2); }
 .planlist li { border-radius: var(--r2); }
 .planlist li.cur { background: var(--accent-bg); border: 1px solid var(--accent-line); }
 .pp-head { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
 
 /* arkusze i okienka */
-.sheet { background: rgba(4, 6, 12, .72); }
+.sheet { background: var(--scrim); }
 .sheet-body { border-radius: 14px 14px 0 0; background: var(--panel); }
 .sheet h2 { font-weight: 600; letter-spacing: -.01em; }
 .sheet h3 { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
 .progbox { border-radius: var(--r); box-shadow: var(--shadow); }
 .card { border-radius: var(--r); }
 .card h1 { font-weight: 600; letter-spacing: -.01em; }
-.logo .ic { width: 44px; height: 44px; stroke-width: 1.4; color: var(--accent); }
+.logo .ic { width: 44px; height: 44px; stroke-width: 1.4; color: var(--accent-text); }
 .pbadge { border-radius: var(--r2); font-family: var(--mono); font-size: 11px; letter-spacing: .03em; }
 .live-badge { border-radius: var(--r2); font-family: var(--mono); font-weight: 500; letter-spacing: .06em; }
 .mx-ic .ic { width: 20px; height: 20px; }
@@ -669,7 +685,7 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 }
 .quickrow .quick { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 
-/* ===== Nocna nawa: układ (0.47) =====
+/* ===== układ (0.47) =====
    telefon / tablet pionowo: karta planu u góry, zakładki kanałów, czat, dół z przyciskami
    tablet poziomo / komputer (≥1024px): lewa kolumna z kanałami i osobami | czat (kolumny) | plan po prawej */
 .rail, .commmain { display: contents; }
@@ -710,7 +726,7 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
   .rail-split:hover::after, .rail-split.drag::after, .rail-split:focus-visible::after { background: var(--accent); }
   .rail-people li.pm-open { background: var(--panel2); }
   .rail-ph { width: 100%; background: none; border: 0; border-radius: var(--r2); cursor: pointer; }
-  .rail-ph span { text-transform: none; letter-spacing: 0; font-family: var(--font); font-size: 12px; color: var(--accent); }
+  .rail-ph span { text-transform: none; letter-spacing: 0; font-family: var(--font); font-size: 12px; color: var(--accent-text); }
   .rail-ph:hover { background: var(--panel); }
   .rail-people ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 1px; }
   .rail-people li { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--r2); font-size: 14px; min-width: 0; }
@@ -733,7 +749,7 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
   .bottom { padding-left: 14px; padding-right: 14px; }
 }
 .msg.plan { background: var(--accent-bg); border-color: var(--accent-line); }
-.msg.plan .pl-tag { color: var(--accent); font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
+.msg.plan .pl-tag { color: var(--accent-text); font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
 .colhead .xx { display: inline-flex; align-items: center; justify-content: center; color: var(--fg2); }
 .colhead .xx .ic { width: 16px; height: 16px; }
 .msg.voice .vline .ic, .callform .ic { width: 16px; height: 16px; }
@@ -789,3 +805,41 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 .pm-f { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--fg2); }
 .pm-f select { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r2); padding: 6px 8px; max-width: 60%; }
 .people li.pm-open { outline: 1px solid var(--accent-line); }
+
+/* ===== styl Intercom (0.49): pigułki, główny przycisk, spokojne powierzchnie – działa w obu motywach ===== */
+.top, .tabs, .bottom, .rail, .a-top { background: var(--bg); }
+.tab { border-radius: 999px; padding: 8px 14px; font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+.tab[aria-selected="true"] .li, .tab[aria-selected="true"] .dmclose { color: inherit; }
+.tab[aria-selected="true"]::before { box-shadow: 0 0 0 2px var(--primary-fg); }
+@media (min-width: 1024px) {
+  .rail .tab { border-radius: var(--r2); font-weight: 500; }
+  .rail .tab[aria-selected="true"] { background: var(--panel2); border-color: var(--line); color: var(--fg); }
+  .rail .tab[aria-selected="true"]::before { box-shadow: none; }
+}
+.tab .badge { background: var(--accent); color: var(--accent-fg); border-radius: 999px; font-weight: 600; }
+/* mówienie = główna akcja ekranu */
+.ptt { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+.ptt .ptt-l2 { color: var(--primary-fg); opacity: .8; }
+.ptt.live { background: var(--ok-bg); border-color: var(--ok); color: var(--fg); }
+.ptt.nomic { background: var(--panel2); color: var(--fg); }
+.ptt-ch { background: var(--bg); color: var(--fg); border-color: color-mix(in srgb, var(--c, var(--muted)) 70%, transparent); font-family: var(--font); font-weight: 600; }
+.ptt-ch::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--muted)); margin-right: 6px; vertical-align: 1px; }
+.msg { border-radius: var(--r); }
+.msg.mine { background: var(--panel2); border-color: var(--line); }
+.msg .meta, .msg .who { letter-spacing: 0; }
+.quick button { border-radius: var(--r2); }
+.planbar { background: var(--panel); border-color: var(--line); }
+.pcard.now { background: var(--panel); border-color: var(--accent-line); }
+.planlist li.cur { background: var(--accent-bg); border-color: var(--accent-line); }
+.sheet-body, .progbox, .pmenu { background: var(--panel); }
+.set-nav button[aria-current="true"] { background: var(--panel2); border-color: var(--line); }
+.pbadge.can { color: var(--fg2); border-color: var(--line2); }
+.mention, .people .nk { color: var(--accent-text); }
+.linkbtn, .hint a, .roster .you { color: var(--accent-text); }
+.top .dot { font-family: var(--font); font-weight: 600; letter-spacing: .04em; }
+/* jasny motyw: drobiazgi zapisane wcześniej na stałe dla ciemnego */
+:root[data-theme="light"] .mx-knob { background: linear-gradient(#ffffff, #d9d4cc); border-color: #0003; box-shadow: 0 2px 6px #0002; }
+:root[data-theme="light"] .callbox { background: #c41c1cee; }
+:root[data-theme="light"] .app-badge { background: #111111; border-color: #111111; }
+:root[data-theme="light"] .rail-people li.talking .av { box-shadow: 0 0 0 2px var(--ok); }

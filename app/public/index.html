@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0a0d14">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,6 +11,12 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon-192.png">
+  <script>
+    // motyw ustawiony przed wczytaniem stylów (bez mrugnięcia): ciemny domyślnie, jasny albo jak w systemie
+    (() => { let t = 'dark'; try { t = (JSON.parse(localStorage.getItem('ik.opt') || '{}').theme) || 'dark'; } catch {}
+      if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.dataset.theme = t; })();
+  </script>
   <link rel="stylesheet" href="/app.css">
   <link rel="stylesheet" href="/branding.css">
 </head>
@@ -35,6 +41,8 @@
     <symbol id="i-broadcast" viewBox="0 0 24 24"><path d="M3 10v4h4l7 5V5L7 10H3zM18 8a5 5 0 0 1 0 8"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
     <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
   </svg>
   <!-- LOGOWANIE -->
@@ -88,6 +96,7 @@
       <button id="miniFontDn" class="icon mini-only" type="button" title="Mniejsza czcionka">A−</button>
       <button id="miniFontUp" class="icon mini-only" type="button" title="Większa czcionka">A+</button>
       <button id="miniPip" class="icon mini-only" type="button" title="Okienko zawsze na wierzchu (nad innymi programami)" hidden><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></button>
+      <button id="btnTheme" class="icon" type="button" aria-label="Jasny motyw" title="Jasny / ciemny motyw"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></button>
       <button id="btnSettings" class="icon" aria-label="Ustawienia" title="Ustawienia"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
       <button id="miniExit" class="icon mini-only" type="button" title="Pełny widok interkomu" aria-label="Pełny widok interkomu"><svg class="ic" aria-hidden="true"><use href="#i-expand"/></svg></button>
       <div id="mixBox" class="progbox mixbox" hidden role="dialog" aria-label="Mikser">
@@ -249,6 +258,12 @@
         </section>
         <section class="set-sec" data-sec="view" data-title="Widok i czytanie" hidden>
           <h3 class="set-h">Widok i czytanie</h3>
+        <label class="field">Motyw
+          <select id="optTheme">
+            <option value="dark">Ciemny (domyślny)</option>
+            <option value="light">Jasny</option>
+            <option value="system">Jak w systemie</option>
+          </select></label>
         <label class="switch"><input type="checkbox" id="optVoice"> Odtwarzaj głos</label>
         <label class="switch"><input type="checkbox" id="optTts"> Czytaj wiadomości tekstowe na głos</label>
         <label class="field" id="optSttRow">Transkrypcja mowy (tekst pod wypowiedziami)

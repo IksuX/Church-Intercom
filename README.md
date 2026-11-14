@@ -1,4 +1,4 @@
-# Interkom 0.48.0
+# Interkom 0.49.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.48.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.49.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.48.0.zip && cd interkom
+   unzip interkom-0.49.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,11 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.49.0
+- **Wygląd w stylu Intercom** zamiast „Nocnej nawy”: czerń i grafit w motywie ciemnym, kremowe tło i białe karty w jasnym, czarne/białe przyciski główne, zakładki kanałów w kształcie pigułek, krój Inter (zapisany na serwerze – działa bez internetu). Domyślny kolor przewodni to pomarańcz `#ff5600`; dawne kolory domyślne (`#3b82f6`, `#5ab9fc`) są traktowane jak brak wyboru. Własny kolor ustawiony w panelu (Ogólne → Wygląd) działa jak dotąd.
+- **Motyw ciemny albo jasny – do wyboru przez każdego**: ⚙️ → Widok i czytanie → Motyw (Ciemny – domyślny, Jasny, Jak w systemie) albo ikoną słońca / księżyca w nagłówku. Wybór jest zapamiętany na tym urządzeniu; panel administracyjny używa tego samego motywu.
+- Przycisk mówienia jest główną akcją ekranu (biały w ciemnym motywie, czarny w jasnym); PILNE! zostaje czerwone w obu motywach.
 
 ## 0.48.0
 - **Ustawienia w sekcjach.** Na tablecie i komputerze ustawienia otwierają się w oknie na środku ekranu (dopasowanym do jego wielkości), z listą sekcji po lewej – jak w panelu administracyjnym: Słuchanie, Dźwięk i mikrofon, Widok i czytanie, Powiadomienia, Konto oraz Administrator (tylko dla administratora). Na telefonie sekcje są zakładkami u góry. Ostatnio otwarta sekcja jest zapamiętywana.

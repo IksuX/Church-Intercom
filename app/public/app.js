@@ -2014,6 +2014,22 @@ function showSetSec(key) {
   try { localStorage.setItem('ik-setsec', key); } catch {}
 }
 $$('#setNav button').forEach((b) => (b.onclick = () => showSetSec(b.dataset.sec)));
+// ---- motyw: ciemny (domyślny), jasny albo jak w systemie; zapamiętany na tym urządzeniu ----
+const sysLight = window.matchMedia('(prefers-color-scheme: light)');
+const themeNow = () => { const t = S.opt.theme || 'dark'; return t === 'system' ? (sysLight.matches ? 'light' : 'dark') : t; };
+function applyTheme() {
+  const t = themeNow();
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'light' ? '#f5f1ec' : '#000000');
+  const b = $('#btnTheme');
+  if (b) { b.innerHTML = icon(t === 'light' ? 'moon' : 'sun'); b.setAttribute('aria-label', t === 'light' ? 'Ciemny motyw' : 'Jasny motyw'); }
+  if ($('#optTheme')) $('#optTheme').value = S.opt.theme || 'dark';
+}
+function setTheme(v) { S.opt.theme = v; store.set('opt', S.opt); applyTheme(); }
+$('#optTheme').onchange = (e) => setTheme(e.target.value);
+$('#btnTheme').onclick = () => setTheme(themeNow() === 'light' ? 'dark' : 'light');
+sysLight.addEventListener?.('change', () => { if (S.opt.theme === 'system') applyTheme(); });
+applyTheme();
 $('#btnSettings').onclick = () => openSheet('settings');
 $('#btnPeople').onclick = () => openSheet('people');
 function closeSheet() { $('#sheet').hidden = true; if (micRelease() && !S.pttOn) applyMicRelease(); } // podgląd mikrofonu w ustawieniach – zamknij
