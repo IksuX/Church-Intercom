@@ -1,4 +1,4 @@
-# Interkom 0.49.1
+# Interkom 0.50.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.49.1.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.50.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.49.1.zip && cd interkom
+   unzip interkom-0.50.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,12 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.50.0
+- **Panel → Osoby i uprawnienia** (nowa zakładka): wszystkie osoby z Planning Center Services – także te, które jeszcze się nie logowały i nie są w bieżącym planie. Filtry: wyszukiwanie po imieniu i nazwisku, zespół (albo „bez zespołu”) oraz „Pokaż”: z nadanymi uprawnieniami, administratorzy, mogą mówić, sterują planem, liderzy zespołów, w bieżącym planie, teraz online.
+- Dla każdej osoby: **Administrator**, **Mówienie** i **Sterowanie planem** (zmiana punktów) – Auto (według grafiku), Tak – zawsze, Nie – nigdy. Zapisywane na stałe w konfiguracji (razem z imieniem i nazwiskiem), działają po zalogowaniu kontem Planning Center. To te same ustawienia co w tabeli „Osoby online” na zakładce Stan.
+- **Zmiana grupowa**: jedno uprawnienie dla wszystkich osób z bieżącej listy (np. mówienie dla całego zespołu), z potwierdzeniem.
+- Lista osób i zespołów jest pobierana z Planning Center i trzymana 10 minut; przycisk „Odśwież z Planning Center” pobiera ją od nowa.
 
 ## 0.49.1
 - **Spójne przyciski w ustawieniach.** Jedna zasada w całej aplikacji: przycisk główny (biały w ciemnym motywie, czarny w jasnym) tylko dla głównej akcji – mówienie, wyślij, dołącz, „Idę”, „Wezwij”, „Następny”; wszystkie przyciski w ustawieniach są zwykłe (obramowane) i zawsze mają ikonę po lewej; czerwone – tylko „Wyloguj” i „Wyczyść czat”.

@@ -202,3 +202,16 @@ body.admin { overflow-y: auto; }
 .sys-t { border-radius: var(--r2); }
 .sys-v { font-family: var(--mono); font-weight: 500; }
 .sys-svc span { border-radius: var(--r2); font-family: var(--mono); font-size: 12px; }
+
+/* Osoby i uprawnienia */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pp-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pp-filters .pp-search { flex: 1 1 240px; }
+.pp-filters input, .pp-filters select, .pp-bulk select { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r2); padding: 10px; font: inherit; width: 100%; }
+.pp-filters label:not(.pp-search) { flex: 0 1 220px; }
+.pp-filters button, .pp-bulk button { display: inline-flex; align-items: center; gap: 8px; }
+.pp-filters button .ic { width: 17px; height: 17px; }
+.pp-bulk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel2); font-size: 14px; }
+.pp-bulk select { width: auto; padding: 8px; }
+.pp-confirm { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pp-table td:first-child { min-width: 180px; }

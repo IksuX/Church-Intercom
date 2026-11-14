@@ -76,6 +76,7 @@ function showTab(tab) {
   if (tab === 'stt') { loadStt(); loadRecent(); }
   if (tab === 'server') { loadSystem(); loadUpdate(true); }
   if (tab === 'audio') loadProgram();
+  if (tab === 'people') loadPeople();
   if (tab === 'streams') { renderStreams(); loadStreams(); loadPlatforms(); }
   window.scrollTo(0, 0);
 }
@@ -1039,3 +1040,79 @@ $('#pgKey').onclick = async () => {
 };
 $('#pgCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#pgLink').textContent); toast('Skopiowano link.'); } catch { toast('Zaznacz link i skopiuj ręcznie.', 'err'); } };
 setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="audio"]').hidden) loadProgram(); }, 3000);
+
+
+// ---------- OSOBY I UPRAWNIENIA: wszystkie osoby z Planning Center, filtry, nadawanie (także grupowo) ----------
+const PP = { all: [], teams: [], liveEnabled: false, shown: 100, list: [] };
+const ppNorm = (x) => String(x || '').toLocaleLowerCase('pl').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
+async function loadPeople(refresh) {
+  $('#ppSum').textContent = refresh ? 'Pobieram z Planning Center…' : 'Wczytuję listę osób…';
+  try {
+    const j = await api('GET', '/api/admin/pco/people' + (refresh ? '?refresh=1' : ''));
+    PP.all = j.people; PP.teams = j.teams; PP.liveEnabled = j.liveEnabled; PP.at = j.fetchedAt;
+    const sel = $('#ppTeam'), cur = sel.value;
+    sel.innerHTML = '<option value="">Wszystkie zespoły</option><option value="-">Bez zespołu</option>'
+      + [...new Set(j.teams.map((t) => t.name))].sort((a, b) => a.localeCompare(b, 'pl')).map((n) => `<option>${esc(n)}</option>`).join('');
+    sel.value = cur;
+    renderPeople();
+  } catch (e) { $('#ppSum').textContent = e.message; $('#ppRows').innerHTML = ''; $('#ppBulk').hidden = true; }
+}
+function ppFilter() {
+  const q = ppNorm($('#ppSearch').value.trim()), team = $('#ppTeam').value, show = $('#ppShow').value;
+  return PP.all.filter((p) => {
+    if (q && !ppNorm(p.name).includes(q)) return false;
+    if (team === '-' && p.teams.length) return false;
+    if (team && team !== '-' && !p.teams.includes(team)) return false;
+    const g = p.grant;
+    if (show === 'grants' && !(g.admin || g.speak !== null || g.live !== null)) return false;
+    if (show === 'admin' && !g.admin) return false;
+    if (show === 'speak' && !(g.admin || g.speak === true || (g.speak === null && p.autoSpeak))) return false;
+    if (show === 'live' && !(g.admin || g.live === true)) return false;
+    if (show === 'leader' && !p.leader) return false;
+    if (show === 'inPlan' && !p.inPlan) return false;
+    if (show === 'online' && !p.online) return false;
+    return true;
+  });
+}
+function renderPeople() {
+  const list = PP.list = ppFilter();
+  const ago = PP.at ? Math.max(0, Math.round((Date.now() - PP.at) / 60000)) : 0;
+  $('#ppSum').textContent = `${list.length} z ${PP.all.length} osób · dane z Planning Center sprzed ${ago ? ago + ' min' : 'chwili'}`;
+  $('#ppBulk').hidden = !list.length; $('#ppBulkN').textContent = list.length; $('#ppConfirm').hidden = true;
+  const sel3 = (kind, v, autoTxt, dis) => `<select data-kind="${kind}" ${dis ? 'disabled title="Włącz sterowanie Live w zakładce Planning Center"' : ''} class="${v === true ? 'on' : ''}">
+      <option value="" ${v === null ? 'selected' : ''}>${autoTxt}</option><option value="true" ${v === true ? 'selected' : ''}>Tak – zawsze</option><option value="false" ${v === false ? 'selected' : ''}>Nie – nigdy</option></select>`;
+  const tags = (p) => [p.online && '<span class="ok-t">● online</span>', p.inPlan && 'w planie', p.leader && 'lider', p.missing && 'brak w Planning Center'].filter(Boolean).join(' · ');
+  $('#ppRows').innerHTML = list.slice(0, PP.shown).map((p) => `<tr data-pid="${esc(p.pid)}">
+      <td><b>${esc(p.name)}</b>${tags(p) ? `<div class="hint">${tags(p)}</div>` : ''}</td>
+      <td data-l="Zespoły"><span class="hint">${esc(p.teams.join(', ')) || '—'}</span></td>
+      <td data-l="Administrator"><select data-kind="admin" class="${p.grant.admin ? 'on' : ''}"><option value="false" ${p.grant.admin ? '' : 'selected'}>Nie</option><option value="true" ${p.grant.admin ? 'selected' : ''}>Tak</option></select></td>
+      <td data-l="Mówienie">${p.grant.admin ? '<span class="hint">administrator</span>' : sel3('speak', p.grant.speak, `Auto (${p.autoSpeak ? 'tak' : 'nie'})`)}</td>
+      <td data-l="Sterowanie planem">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('live', p.grant.live, 'Auto', !PP.liveEnabled)}</td></tr>`).join('')
+    || '<tr><td colspan="5" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
+  $('#ppMoreRow').hidden = list.length <= PP.shown;
+  $$('#ppRows select').forEach((el) => (el.onchange = async () => {
+    const p = PP.all.find((x) => x.pid === el.closest('tr').dataset.pid);
+    await ppSet(p, el.dataset.kind, el.value);
+    renderPeople();
+  }));
+}
+async function ppSet(p, kind, value, quiet) {
+  const v = value === 'true' ? true : value === 'false' ? false : null;
+  await api('POST', '/api/admin/grant', { pid: p.pid, name: p.name, [kind]: v });
+  if (kind === 'admin') p.grant.admin = v === true; else p.grant[kind] = v;
+  if (!quiet) toast(`Uprawnienia zmienione: ${p.name}`);
+}
+$('#ppSearch').oninput = () => { PP.shown = 100; renderPeople(); };
+$('#ppTeam').onchange = $('#ppShow').onchange = () => { PP.shown = 100; renderPeople(); };
+$('#ppMore').onclick = () => { PP.shown += 100; renderPeople(); };
+$('#ppRefresh').onclick = () => loadPeople(true);
+$('#ppBulkGo').onclick = () => { $('#ppConfirmN').textContent = PP.list.length; $('#ppConfirm').hidden = false; };
+$('#ppConfirmNo').onclick = () => { $('#ppConfirm').hidden = true; };
+$('#ppConfirmYes').onclick = async () => {
+  const kind = $('#ppBulkKind').value, val = $('#ppBulkVal').value, list = [...PP.list];
+  $('#ppConfirm').hidden = true;
+  let ok = 0;
+  for (const p of list) { try { await ppSet(p, kind, kind === 'admin' && val === '' ? 'false' : val, true); ok++; } catch (e) { toast(`${p.name}: ${e.message}`, 'err'); } }
+  toast(`Zmieniono uprawnienia ${ok} z ${list.length} osób.`);
+  renderPeople();
+};

@@ -20,6 +20,8 @@
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="i-status" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12A9 9 0 0 1 18.5 5.8M21 4v5h-5M3 20v-5h5"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></symbol>
     <symbol id="i-broadcast" viewBox="0 0 24 24"><path d="M3 10v4h4l7 5V5L7 10H3zM18 8a5 5 0 0 1 0 8"/></symbol>
     <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
@@ -55,6 +57,7 @@
       <button data-tab="status" aria-selected="true"><svg class="ic" aria-hidden="true"><use href="#i-status"/></svg>Stan</button>
       <button data-tab="general"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg>Ogólne</button>
       <button data-tab="access"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>Dostęp i PIN-y</button>
+      <button data-tab="people"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>Osoby i uprawnienia</button>
       <button data-tab="channels"><svg class="ic" aria-hidden="true"><use href="#i-broadcast"/></svg>Kanały i przyciski</button>
       <button data-tab="audio"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg>Dźwięk transmisji</button>
       <button data-tab="stt"><svg class="ic" aria-hidden="true"><use href="#i-text"/></svg>Transkrypcja</button>
@@ -155,6 +158,39 @@
           </details>
         </div>
         <p class="hint a-lead">Logowanie kontem Planning Center (i kto może mówić według grafiku) ustawisz w zakładce <b>Planning Center</b>. Uprawnienia poszczególnych osób zmienisz w zakładce <b>Stan</b>.</p>
+      </section>
+
+      <!-- OSOBY I UPRAWNIENIA (Planning Center) -->
+      <section data-panel="people" hidden>
+        <div class="a-card">
+          <h2>Osoby z Planning Center</h2>
+          <p class="hint">Wszystkie osoby z Planning Center Services – także te, których nie ma w bieżącym planie i które jeszcze się nie logowały. Nadane tu uprawnienia działają po zalogowaniu kontem Planning Center i są zapisane na stałe. „Auto” = według grafiku i ustawień z zakładki Planning Center.</p>
+          <div class="pp-filters">
+            <label class="pp-search"><span class="sr">Szukaj osoby</span><input id="ppSearch" type="search" placeholder="Szukaj po imieniu lub nazwisku" autocomplete="off"></label>
+            <label><span class="sr">Zespół</span><select id="ppTeam"><option value="">Wszystkie zespoły</option><option value="-">Bez zespołu</option></select></label>
+            <label><span class="sr">Pokaż</span><select id="ppShow">
+              <option value="">Wszyscy</option>
+              <option value="grants">Z nadanymi uprawnieniami</option>
+              <option value="admin">Administratorzy</option>
+              <option value="speak">Mogą mówić</option>
+              <option value="live">Sterują planem</option>
+              <option value="leader">Liderzy zespołów</option>
+              <option value="inPlan">W bieżącym planie</option>
+              <option value="online">Teraz online</option>
+            </select></label>
+            <button type="button" id="ppRefresh"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg> Odśwież z Planning Center</button>
+          </div>
+          <p class="hint" id="ppSum">Wczytuję listę osób…</p>
+          <div class="pp-bulk" id="ppBulk" hidden>
+            <span>Dla wszystkich z listy (<b id="ppBulkN">0</b>):</span>
+            <select id="ppBulkKind" aria-label="Uprawnienie"><option value="speak">Mówienie</option><option value="live">Sterowanie planem</option><option value="admin">Administrator</option></select>
+            <select id="ppBulkVal" aria-label="Wartość"><option value="true">Tak – zawsze</option><option value="false">Nie – nigdy</option><option value="">Auto (według grafiku)</option></select>
+            <button type="button" id="ppBulkGo">Zastosuj</button>
+            <span class="pp-confirm" id="ppConfirm" hidden>Na pewno zmienić <b id="ppConfirmN"></b> osobom? <button type="button" id="ppConfirmYes" class="danger">Tak, zmień</button><button type="button" id="ppConfirmNo">Anuluj</button></span>
+          </div>
+          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th></tr></thead><tbody id="ppRows"></tbody></table></div>
+          <div class="row" id="ppMoreRow" hidden><button type="button" id="ppMore">Pokaż więcej</button></div>
+        </div>
       </section>
 
       <!-- KANAŁY I PRZYCISKI -->

@@ -19,7 +19,7 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 
-const VERSION = '0.49.1';
+const VERSION = '0.50.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -1059,6 +1059,35 @@ function adminUserInfo(u) {
     live: { value: g.live ?? null, auto: autoLive(u), effective: canControlLive(u), enabled: !!config.planningCenter?.liveControl?.enabled },
   };
 }
+// Osoby z Planning Center (także offline i spoza planu) z uprawnieniami nadanymi w panelu
+app.get('/api/admin/pco/people', requireAdmin, async (req, res) => {
+  if (!pco) return res.status(409).json({ error: 'Planning Center nie jest połączony – ustaw go w zakładce Planning Center.' });
+  try {
+    const dir = await pco.directory(req.query.refresh === '1');
+    const teamName = new Map((pco.state.teams || []).map((t) => [t.id, t.name]));
+    const roster = new Map((pco.state.roster || []).map((r) => [String(r.personId), r]));
+    const online = new Set([...users.values()].filter((u) => u.sockets.size && u.pid).map((u) => String(u.pid)));
+    const leaders = pco.state.leaders || new Set();
+    const known = new Set(dir.people.map((p) => p.pid));
+    // osoby z nadanymi uprawnieniami, których nie ma już w katalogu (np. zarchiwizowane) – też do wglądu
+    const extra = Object.entries(config.grants || {}).filter(([pid]) => !known.has(pid)).map(([pid, g]) => ({ pid, name: g.name || pid, photo: null, teams: [], missing: true }));
+    res.json({
+      fetchedAt: dir.at,
+      liveEnabled: !!config.planningCenter?.liveControl?.enabled,
+      teams: (pco.state.teams || []).map((t) => ({ id: t.id, name: t.name })),
+      people: [...dir.people, ...extra].map((p) => {
+        const g = config.grants?.[p.pid] || {}, r = roster.get(p.pid);
+        return {
+          pid: p.pid, name: p.name, photo: p.photo, missing: !!p.missing,
+          teams: p.teams.map((t) => teamName.get(t) || t),
+          leader: leaders.has(p.pid), inPlan: !!r, online: online.has(p.pid),
+          autoSpeak: !!r?.canSpeak,
+          grant: { admin: g.admin === true, speak: g.speak ?? null, live: g.live ?? null },
+        };
+      }),
+    });
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
   res.json({
     users: [...users.values()].filter((u) => u.sockets.size > 0).map(adminUserInfo),
@@ -1081,7 +1110,7 @@ app.post('/api/admin/grant', requireAdmin, (req, res) => {
     const g = merge(next.grants?.[pid] || {});
     next.grants ||= {};
     if (g.speak === undefined && g.live === undefined && !g.admin) delete next.grants[pid];
-    else next.grants[pid] = { ...g, name: g.name || u?.name || pid };
+    else next.grants[pid] = { ...g, name: g.name || u?.name || String(req.body?.name || '').trim().slice(0, 60) || pid };
     config = validateConfig(next);
     saveJson(CONFIG_PATH, config);
   } else {

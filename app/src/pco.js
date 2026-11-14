@@ -94,6 +94,39 @@ export class PlanningCenter {
     this.state.noteCategories = [...cats];
   }
 
+  // ---------- katalog osób (panel → Osoby i uprawnienia) ----------
+  // Wszystkie osoby z Planning Center Services, także nieprzypisane do żadnego planu; zespoły z Services.
+  // Buforowane 10 minut – lista ma setki osób, a Planning Center ogranicza liczbę zapytań.
+  async directory(force = false) {
+    if (!force && this.dir && Date.now() - this.dir.at < 10 * 60 * 1000) return this.dir;
+    if (this.dirLoading) return this.dirLoading;
+    this.dirLoading = (async () => {
+      const people = new Map();
+      const add = (id, a = {}) => {
+        const pid = String(id);
+        if (!people.has(pid)) people.set(pid, { pid, name: '', photo: null, archived: false, teams: [] });
+        const p = people.get(pid);
+        const name = a.full_name || a.name || [a.first_name, a.last_name].filter(Boolean).join(' ');
+        if (name && !p.name) p.name = name;
+        if (a.photo_thumbnail_url && !p.photo) p.photo = a.photo_thumbnail_url;
+        if (a.archived) p.archived = true;
+        return p;
+      };
+      const all = await this.all('/people');
+      for (const x of all.data) add(x.id, x.attributes);
+      for (const t of this.state.teams || []) {
+        try {
+          const tp = await this.all(`/teams/${t.id}/people`);
+          for (const x of tp.data) { const p = add(x.id, x.attributes); if (!p.teams.includes(t.id)) p.teams.push(t.id); }
+        } catch { /* brak dostępu do członków zespołu – pomijamy */ }
+      }
+      const list = [...people.values()].filter((p) => p.name && !p.archived).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+      this.dir = { at: Date.now(), people: list };
+      return this.dir;
+    })();
+    try { return await this.dirLoading; } finally { this.dirLoading = null; }
+  }
+
   // Kanały z zespołów: łączone z istniejącymi po nazwie lub według teamChannelMap.
   // teamChannelMap: { "Nazwa zespołu": "id-kanału" | "Nazwa kanału" } – nieistniejąca nazwa tworzy nowy kanał,
   // więc kilka zespołów może trafić do jednego wspólnego kanału (np. „Muzycy”).
