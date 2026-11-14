@@ -93,7 +93,7 @@ function renderAppLinks(apps) {
   for (const id of ['#appLinks', '#appLinksSet']) {
     const box = $(id); if (!box) continue;
     box.hidden = NAT != null || !list.length;
-    box.innerHTML = list.length ? `<p class="al-h">📱 Aplikacja na telefon – rozmowy także przy zablokowanym ekranie</p><div class="al-row">${list.map(([k, u]) => appBadge(u, k)).join('')}</div>` : '';
+    box.innerHTML = list.length ? `<p class="al-h">Aplikacja na telefon – rozmowy także przy zablokowanym ekranie</p><div class="al-row">${list.map(([k, u]) => appBadge(u, k)).join('')}</div>` : '';
   }
 }
 // wygląd ustawiony przez administratora: kolor przewodni (też z /branding.css) i logo
@@ -231,20 +231,20 @@ function onWs(m) {
       break;
     }
     case 'call': showCall(m); break;
-    case 'modDone': toast({ channel: S.broadcast, fromName: m.ok ? '✔' : '⚠️', text: m.text, plan: true, urgent: !m.ok }); if (!$('#sheetPeople').hidden) renderPeople(); break;
+    case 'modDone': toast({ channel: S.broadcast, fromName: m.ok ? 'Gotowe' : 'Uwaga', text: m.text, plan: true, urgent: !m.ok }); if (!$('#sheetPeople').hidden) renderPeople(); break;
     case 'modMuted': onModMuted(m.by); break;
     case 'modMoved': onModMoved(m.channel, m.by, m.wasTalking); break;
-    case 'callStatus': toast({ channel: S.broadcast, fromName: m.ok ? '📣 Wezwanie' : '⚠️', text: m.ok ? `wysłane do: ${m.to}` : m.error, plan: true, urgent: !m.ok }); break;
+    case 'callStatus': toast({ channel: S.broadcast, fromName: m.ok ? 'Wezwanie' : 'Uwaga', text: m.ok ? `wysłane do: ${m.to}` : m.error, plan: true, urgent: !m.ok }); break;
     case 'callReply': toast({ channel: S.broadcast, fromName: m.answer === 'yes' ? '✓ ' + m.from.name : '✗ ' + m.from.name, text: m.answer === 'yes' ? 'idzie' : 'nie może teraz', plan: true, urgent: m.answer !== 'yes' }); vibrate(m.answer === 'yes' ? 60 : [200, 100, 200]); break;
     case 'perm': S.perm = m; renderPlanBar(); if (!$('#sheetPlan').hidden) renderPlanSheet(); break;
-    case 'liveError': liveDone(); toast({ channel: S.broadcast, fromName: '⚠️ Plan', text: m.error, plan: true, urgent: true }); break;
+    case 'liveError': liveDone(); toast({ channel: S.broadcast, fromName: 'Plan', text: m.error, plan: true, urgent: true }); break;
     case 'msgUpdate': updateMsg(m.m); break;
     case 'msg': addMsg(m.m, true); break;
     case 'nicks': $('#optNicks').value = (m.nicks || []).join(', '); sysMsg(m.nicks?.length ? `Twoje ksywki: ${m.nicks.map((n) => '@' + n).join(', ')}` : 'Usunięto ksywki.'); break;
     case 'timer':
       if (!S.pushPrefs?.timer) break;
       vibrate(m.kind === 'over' ? [250, 120, 250, 120, 700] : [250, 120, 250]);
-      toast({ channel: S.broadcast, fromName: m.kind === 'over' ? '⏰ Przekroczony czas' : '⏳ Ostatnia minuta', text: m.title, plan: true, urgent: m.kind === 'over' });
+      toast({ channel: S.broadcast, fromName: m.kind === 'over' ? 'Przekroczony czas' : 'Ostatnia minuta', text: m.title, plan: true, urgent: m.kind === 'over' });
       if (S.opt.planTts !== false && m.kind === 'minute') say('Ostatnia minuta.');
       break;
     case 'streams': setStreams(m.list || []); break;
@@ -416,8 +416,8 @@ function renderMemberGroup(g) {
   for (const [n, k] of g._mg.who) by[k]?.push(n);
   const many = (arr, one, more) => `<b>${arr.map(esc).join(', ')}</b> ${arr.length > 1 ? more : one}`;
   const parts = [
-    by.join.length && `➕ ${many(by.join, 'dołączył(a)', 'dołączyli')}`,
-    by.leave.length && `➖ ${many(by.leave, 'opuścił(a) kanał', 'opuścili kanał')}`,
+    by.join.length && `+ ${many(by.join, 'dołączył(a)', 'dołączyli')}`,
+    by.leave.length && `– ${many(by.leave, 'opuścił(a) kanał', 'opuścili kanał')}`,
     by.gone.length && `⏏ ${many(by.gone, 'rozłączył(a) się', 'rozłączyli się')}`,
   ].filter(Boolean);
   g.hidden = !parts.length;
@@ -443,7 +443,7 @@ function msgEl(m) {
   el.className = `msg ${m.type} ${mine ? 'mine' : ''} ${m.urgent ? 'urgent' : ''} ${m.tone ? 'tone-' + m.tone : ''}`;
   if (m.type === 'system') el.textContent = m.text;
   else if (m.type === 'stream') { el.classList.add('k-' + m.kind); el.innerHTML = `${esc(m.text)} <span class="st-time">· ${fmtTime(m.ts)}</span>`; }
-  else if (m.type === 'member') el.innerHTML = `${{ join: '➕', leave: '➖', gone: '⏏' }[m.kind] || '•'} <b>${esc(m.fromName)}</b> ${esc(m.text)} · ${fmtTime(m.ts)}`;
+  else if (m.type === 'member') el.innerHTML = `${{ join: '+', leave: '–', gone: '×' }[m.kind] || '•'} <b>${esc(m.fromName)}</b> ${esc(m.text)} · ${fmtTime(m.ts)}`;
   else if (m.type === 'plan') {
     el.innerHTML = `<div class="pl-now2"><span class="pl-tag">▶ TERAZ</span> <b>${esc(m.nowTitle)}</b>${m.nowMeta ? ` <span class="pm">${esc(m.nowMeta)}</span>` : ''}</div>`
       + (m.nextTitle ? `<div class="pl-next2">Następnie: ${esc(m.nextTitle)}${m.nextMeta ? ` · ${esc(m.nextMeta)}` : ''}</div>` : '')
@@ -1740,7 +1740,7 @@ async function openPip() {
   try {
     const w = await window.documentPictureInPicture.requestWindow({ width: 400, height: 600 });
     enterPip(w);
-  } catch (err) { toast({ channel: S.active, fromName: '📌', text: 'Nie udało się otworzyć okienka na wierzchu: ' + (err?.message || err) }); }
+  } catch (err) { toast({ channel: S.active, fromName: 'Okienko', text: 'Nie udało się otworzyć okienka na wierzchu: ' + (err?.message || err) }); }
 }
 function enterPip(w) { // osobna funkcja – w testach zamiast okienka PiP można podać zwykłe okno
   pipWin = w; const d = w.document;
@@ -1822,7 +1822,7 @@ $('#optBoom').onchange = (e) => {
   if (!S.opt.boom && boom.talk) { boom.talk = false; if (!S.pttLocked) stopTalk(); }
   applyMicRelease(); boomEnsure(); renderBoom(); renderPttLabel();
   if (S.opt.boom && boom.state === 'down') boomSet('down'); // pałąk już opuszczony w chwili włączenia
-  if (S.opt.boom && !Number.isFinite(S.opt.boomThr)) sysMsg('Pałąk: skalibruj słuchawki (⚙️ → Mikrofon → 📏 Kalibruj), żeby apka pewnie rozpoznawała jego położenie.');
+  if (S.opt.boom && !Number.isFinite(S.opt.boomThr)) sysMsg('Pałąk: skalibruj słuchawki (Ustawienia → Dźwięk i mikrofon → Kalibruj słuchawki), żeby apka pewnie rozpoznawała jego położenie.');
 };
 $('#boomCal').onclick = async () => {
   unlockAudio();
@@ -1972,8 +1972,8 @@ function onModMoved(ch, by, wasTalking) {
   if (keep) startTalk();
   beep(); vibrate([200, 100, 200]);
   const text = `${by} przeniósł(a) Cię na kanał ${c.name}${wasTalking && !keep ? ' – mówiłeś na innym kanale. Naciśnij ponownie, żeby mówić' : ''}.`;
-  toast({ channel: ch, fromName: '↪ Zmiana kanału', text, plan: true, urgent: true });
-  sysMsg('↪ ' + text);
+  toast({ channel: ch, fromName: 'Zmiana kanału', text, plan: true, urgent: true });
+  sysMsg(text);
   say(`Przeniesiono Cię na kanał ${c.name}.`);
 }
 function sysMsg(text) {
@@ -2086,7 +2086,7 @@ $('#btnLogout').onclick = async () => {
 if (NAT && typeof NAT.getServer === 'function') {
   const host = location.host;
   for (const id of ['#btnSrv', '#btnSrvLogin']) {
-    const b = $(id); b.hidden = false; b.textContent = `🔁 Zmień serwer (${host})`;
+    const b = $(id); b.hidden = false; b.innerHTML = `${icon('server')} Zmień serwer (${esc(host)})`;
     b.onclick = async () => { try { await NAT.disconnect(); } catch {} location.href = 'ikapp://reset'; };
   }
 }
@@ -2127,7 +2127,7 @@ function openCall(u, row) {
     mod.className = 'callform modform';
     const chOpts = S.channels.map((c) => `<option value="${esc(c.id)}" ${c.id === (S.talking.get(u.id) || u.target) ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
     mod.innerHTML = (S.perm?.moderate ? `<button type="button" class="m-mute">${icon('volume-x')} Wycisz</button><select class="m-ch" aria-label="Kanał">${chOpts}</select><button type="button" class="m-move">↪ Przenieś</button>` : '')
-      + (S.me.role === 'admin' && S.session.stt ? `<button type="button" class="m-stt">${u.sttOff ? '📝 Włącz transkrypcję' : '📝 Wyłącz transkrypcję'}</button>` : '');
+      + (S.me.role === 'admin' && S.session.stt ? `<button type="button" class="m-stt">${u.sttOff ? 'Włącz transkrypcję' : 'Wyłącz transkrypcję'}</button>` : '');
     f.after(mod);
     mod.querySelector('.m-mute')?.addEventListener('click', () => { wsSend({ t: 'modMute', to: u.id }); mod.remove(); f.remove(); });
     mod.querySelector('.m-move')?.addEventListener('click', () => { wsSend({ t: 'modMove', to: u.id, channel: mod.querySelector('.m-ch').value }); mod.remove(); f.remove(); });
@@ -2271,7 +2271,7 @@ function renderPeople() {
       : u.role !== 'listener' ? '<span class="pbadge can">może mówić</span>'
       : '<span class="pbadge">słucha / czyta</span>';
     const here = u.target === c.id ? '<span class="here">ma otwarty ten kanał</span>' : '';
-    return `<li style="--c:${c.color}" data-uid="${esc(u.id)}" class="${u.id === S.me.id ? '' : 'callable'}">${avatar(u.pid, u.name)}<span class="nm"><span class="nm1">${esc(u.name)}${u.id === S.me.id ? ' (Ty)' : ''}${u.sttOff && S.session.stt ? ' <span class="here" title="Bez transkrypcji">📝✕</span>' : ''}</span>${u.nicks?.length ? `<span class="here nk">${u.nicks.map((n) => '@' + esc(n)).join(' ')}</span>` : ''}${here}</span>${badge}</li>`;
+    return `<li style="--c:${c.color}" data-uid="${esc(u.id)}" class="${u.id === S.me.id ? '' : 'callable'}">${avatar(u.pid, u.name)}<span class="nm"><span class="nm1">${esc(u.name)}${u.id === S.me.id ? ' (Ty)' : ''}${u.sttOff && S.session.stt ? ' <span class="here" title="Bez transkrypcji">bez transkrypcji</span>' : ''}</span>${u.nicks?.length ? `<span class="here nk">${u.nicks.map((n) => '@' + esc(n)).join(' ')}</span>` : ''}${here}</span>${badge}</li>`;
   };
   const byName = (a, b) => (b.role !== 'listener') - (a.role !== 'listener') || a.name.localeCompare(b.name, 'pl');
   let html = `<p class="people-sum">Online: <b>${all.length}</b> · mogą mówić: <b>${speakers}</b></p>`;
@@ -2280,7 +2280,7 @@ function renderPeople() {
     const members = all.filter((u) => u.listen.includes(c.id)).sort(byName);
     if (!members.length) { empty.push(c); continue; }
     const sp = members.filter((u) => u.role !== 'listener').length;
-    const sttBtn = S.me.role === 'admin' && S.session.stt ? `<button type="button" class="chstt" data-ch="${esc(c.id)}" title="Transkrypcja na tym kanale">${(S.session.sttOff || []).includes(c.id) ? '📝 wył.' : '📝 wł.'}</button>` : '';
+    const sttBtn = S.me.role === 'admin' && S.session.stt ? `<button type="button" class="chstt" data-ch="${esc(c.id)}" title="Transkrypcja na tym kanale">${(S.session.sttOff || []).includes(c.id) ? icon('text') + ' wył.' : icon('text') + ' wł.'}</button>` : '';
     html += `<section class="pgroup" style="--c:${c.color}"><h4>${esc(c.name)}${sttBtn}<small>${osoby(members.length)}${sp ? ` · mówi: ${sp}` : ''}</small></h4>
       <ul class="people">${members.map((u) => row(u, c)).join('')}</ul></section>`;
   }
@@ -2370,7 +2370,7 @@ function renderPlanBar() {
   const bar = $('#planBar');
   if (!S.session?.pco || splitOn()) { bar.hidden = true; return; }
   bar.hidden = false;
-  if (!S.plan) { bar.innerHTML = `<div class="pl-main"><span class="pl-muted">${S.planError ? '⚠️ Planning Center: ' + esc(S.planError) : 'Brak wydarzenia w Planning Center'}</span></div>`; bindBar(); return; }
+  if (!S.plan) { bar.innerHTML = `<div class="pl-main"><span class="pl-muted">${S.planError ? 'Planning Center: ' + esc(S.planError) : 'Brak wydarzenia w Planning Center'}</span></div>`; bindBar(); return; }
   const { cur, next } = planPos();
   const ctl = S.perm.liveControl ? `<div class="pl-ctl" title="Także strzałki ← → na klawiaturze"><button type="button" data-dir="-1" aria-label="Poprzedni punkt">◀</button><button type="button" data-dir="1" aria-label="Następny punkt">▶</button></div>` : '';
   const hasNotes = (it) => it.notes?.length || it.arrangementNotes;
@@ -2395,11 +2395,11 @@ function liveSent(btn) {
   clearTimeout(liveWait?.t);
   liveWait?.btn && (liveWait.btn.disabled = false, liveWait.btn.classList.remove('busy'));
   if (btn) { btn.disabled = true; btn.classList.add('busy'); }
-  liveWait = { btn, t: setTimeout(() => { liveDone(); toast({ channel: S.broadcast, fromName: '⚠️ Plan', text: 'Planning Center nie odpowiedział – sprawdź połączenie i spróbuj ponownie.', plan: true, urgent: true }); }, 12000) };
+  liveWait = { btn, t: setTimeout(() => { liveDone(); toast({ channel: S.broadcast, fromName: 'Plan', text: 'Planning Center nie odpowiedział – sprawdź połączenie i spróbuj ponownie.', plan: true, urgent: true }); }, 12000) };
 }
 function liveDone() { if (!liveWait) return; clearTimeout(liveWait.t); if (liveWait.btn) { liveWait.btn.disabled = false; liveWait.btn.classList.remove('busy'); } liveWait = null; }
 function liveStep(dir, btn) { if (!wsSend({ t: 'liveStep', dir })) return liveOffline(); liveSent(btn); vibrate(20); }
-function liveOffline() { toast({ channel: S.broadcast, fromName: '⚠️ Plan', text: 'Brak połączenia z serwerem – punktu nie przełączono.', plan: true, urgent: true }); }
+function liveOffline() { toast({ channel: S.broadcast, fromName: 'Plan', text: 'Brak połączenia z serwerem – punktu nie przełączono.', plan: true, urgent: true }); }
 $$('#planCtl button').forEach((b) => (b.onclick = () => liveStep(Number(b.dataset.dir), b)));
 // ---- widok podzielony: plan Planning Center obok okna komunikacji ----
 const wide = window.matchMedia('(min-width: 900px)');
@@ -2465,7 +2465,7 @@ function renderPlanSheet() {
     if (it.type === 'header') return `<li class="ph">${esc(it.title)}</li>`;
     const cls = [it.id === p.currentItemId ? 'cur' : '', next && it.id === next.id ? 'nxt' : '', S.planOpen.has(it.id) ? 'open' : ''].join(' ');
     const meta = [it.key && esc(it.key), fmtLen(it.length)].filter(Boolean).join(' · ');
-    const goBtn = can && it.id !== p.currentItemId ? `<button type="button" class="pgo" data-go="${esc(it.id)}">${S.perm.liveControl ? '▶ Przełącz Live na ten punkt' : '▶ Ustaw jako bieżący'}</button>` : '';
+    const goBtn = can && it.id !== p.currentItemId ? `<button type="button" class="pgo" data-go="${esc(it.id)}">${S.perm.liveControl ? icon('play') + ' Przełącz Live na ten punkt' : '▶ Ustaw jako bieżący'}</button>` : '';
     return `<li class="${cls}" data-iid="${esc(it.id)}"><div class="prow"><span class="pt1">${esc(it.title)}</span>${hasDet(it) ? '<span class="pdot" title="Notatki / szczegóły">•</span>' : ''}<span class="pm">${meta}</span></div>`
       + `<div class="pdet">${itemMeta(it) ? `<div class="pd">${itemMeta(it)}</div>` : ''}${itemDetails(it)}${goBtn}</div></li>`;
   }).join('');
@@ -2489,7 +2489,7 @@ $('#planList').addEventListener('click', (e) => {
     e.stopPropagation();
     const ok = S.perm.liveControl ? wsSend({ t: 'liveGoto', itemId: go.dataset.go }) : wsSend({ t: 'planCurrent', itemId: go.dataset.go });
     if (!ok) return liveOffline();
-    if (S.perm.liveControl) { go.textContent = '⏳ Przełączam w Planning Center…'; liveSent(go); }
+    if (S.perm.liveControl) { go.textContent = 'Przełączam w Planning Center…'; liveSent(go); }
     vibrate(20); return;
   }
   const li = el.closest('li[data-iid]'); if (!li) return;

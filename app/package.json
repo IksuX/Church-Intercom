@@ -1,6 +1,6 @@
 {
   "name": "interkom",
-  "version": "0.49.0",
+  "version": "0.49.1",
   "description": "Hybrydowy interkom głos + tekst dla ekip nabożeństwa (self-hosted)",
   "type": "module",
   "main": "src/server.js",

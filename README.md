@@ -1,4 +1,4 @@
-# Interkom 0.49.0
+# Interkom 0.49.1
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -23,11 +23,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.49.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.49.1.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.49.0.zip && cd interkom
+   unzip interkom-0.49.1.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +685,10 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## 0.49.1
+- **Spójne przyciski w ustawieniach.** Jedna zasada w całej aplikacji: przycisk główny (biały w ciemnym motywie, czarny w jasnym) tylko dla głównej akcji – mówienie, wyślij, dołącz, „Idę”, „Wezwij”, „Następny”; wszystkie przyciski w ustawieniach są zwykłe (obramowane) i zawsze mają ikonę po lewej; czerwone – tylko „Wyloguj” i „Wyczyść czat”.
+- Emoji w przyciskach, etykietach i podpowiedziach zastąpione ikonami z tego samego zestawu co na ekranie głównym (albo usunięte z etykiet pól wyboru); w komunikatach systemowych zamiast emoji jest tekst.
 
 ## 0.49.0
 - **Wygląd w stylu Intercom** zamiast „Nocnej nawy”: czerń i grafit w motywie ciemnym, kremowe tło i białe karty w jasnym, czarne/białe przyciski główne, zakładki kanałów w kształcie pigułek, krój Inter (zapisany na serwerze – działa bez internetu). Domyślny kolor przewodni to pomarańcz `#ff5600`; dawne kolory domyślne (`#3b82f6`, `#5ab9fc`) są traktowane jak brak wyboru. Własny kolor ustawiony w panelu (Ogólne → Wygląd) działa jak dotąd.

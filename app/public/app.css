@@ -843,3 +843,21 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 :root[data-theme="light"] .callbox { background: #c41c1cee; }
 :root[data-theme="light"] .app-badge { background: #111111; border-color: #111111; }
 :root[data-theme="light"] .rail-people li.talking .av { box-shadow: 0 0 0 2px var(--ok); }
+
+/* ===== jeden system przycisków (0.50) =====
+   główny (biały / czarny): tylko główna akcja – mówienie, wyślij, dołącz, Idę, Wezwij, Następny
+   zwykły (obramowany, zawsze z ikoną po lewej): wszystkie przyciski w ustawieniach
+   niebezpieczny (czerwony napis): wyloguj, wyczyść czat */
+.set-body button:not(.icon), #sheetPeople button, #sheetPlan button, .callbox button, .planctl button, .adminlink, .pmenu .pm-row button, .row > button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
+.set-body button:not(.icon):not(.primary):not(.danger), #sheetPlan button:not(.primary):not(.danger), .row > button:not(.primary):not(.danger) {
+  background: var(--panel2); border-color: var(--line); color: var(--fg); }
+.set-body button:not(.icon):not(.primary):not(.danger):hover { border-color: var(--line2); }
+.set-body button .ic, #sheetPlan button .ic, .callbox button .ic, .planctl button .ic, .adminlink .ic, .helplink .ic { width: 18px; height: 18px; flex: none; }
+.set-body button.danger { background: transparent; border-color: var(--urgent-line); color: var(--urgent); }
+.set-body button.primary, .planctl button.primary, .callbox button.primary { font-weight: 600; }
+.adminlink { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r2); font-weight: 500; }
+.helplink a { display: inline-flex; align-items: center; gap: 8px; color: var(--accent-text); }
+.srvbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.sheet .row { flex-wrap: wrap; }
+.chstt .ic, .pgo .ic { width: 15px; height: 15px; vertical-align: -3px; }
