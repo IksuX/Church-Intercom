@@ -98,11 +98,11 @@
       <div id="progBox" class="progbox" hidden role="dialog" aria-label="Dźwięk transmisji">
         <div class="pb-h"><b id="progName">Dźwięk transmisji</b><span id="progState" class="pb-st"></span></div>
         <label class="pb-sw"><input type="checkbox" id="progOn"> <span>Słucham</span></label>
-        <div class="pb-vol"><span aria-hidden="true">🔈</span><input type="range" id="progVol" min="0" max="100" step="1" aria-label="Głośność dźwięku transmisji"><span id="progVolVal">50%</span></div>
+        <div class="pb-vol"><span aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></span><input type="range" id="progVol" min="0" max="100" step="1" aria-label="Głośność dźwięku transmisji"><span id="progVolVal">50%</span></div>
         <label class="pb-ck"><input type="checkbox" id="progDuck"> Ściszaj, gdy ktoś mówi przez interkom</label>
         <div class="pb-ultra" id="progNatRow" hidden>
           <label class="pb-ck" id="progStereoRow"><input type="checkbox" id="progStereo"> Stereo (zalecane)</label>
-          <label class="pb-ck"><input type="checkbox" id="progHiFi"> 🎧 Jakość muzyczna (gdy słuchasz w słuchawkach)</label>
+          <label class="pb-ck"><input type="checkbox" id="progHiFi"> Jakość muzyczna (gdy słuchasz w słuchawkach)</label>
         </div>
         <div class="pb-ultra" id="progUltraRow" hidden>
           <label class="pb-ck"><input type="checkbox" id="progFast"> ⚡ Tryb ultra (w sieci kościoła)</label>
@@ -118,11 +118,17 @@
       <div class="pp-head">Plan nabożeństwa</div>
     </aside>
     <div class="comm">
+    <!-- lewa kolumna (tablet poziomo / komputer): kanały i osoby online; na telefonie same zakładki u góry -->
+    <aside id="rail" class="rail" aria-label="Kanały i osoby">
+      <div class="rail-h">Kanały</div>
+      <nav id="tabs" class="tabs" role="tablist"></nav>
+      <section id="railPeople" class="rail-people" aria-label="Osoby online"></section>
+    </aside>
+    <div class="commmain">
     <div id="planBar" class="planbar" hidden></div>
     <div id="audioBlocked" class="banner warn" hidden><svg class="ic" aria-hidden="true"><use href="#i-volume-x"/></svg> Dotknij tutaj, aby włączyć dźwięk</div>
     <div id="toast" class="toast" hidden></div>
 
-    <nav id="tabs" class="tabs" role="tablist"></nav>
     <div id="listenBar" class="listenbar" hidden>
       <span><svg class="ic" aria-hidden="true"><use href="#i-volume-x"/></svg> Nie słuchasz kanału <b id="listenBarName"></b> – nie usłyszysz z niego głosu ani powiadomień.</span>
       <button type="button" id="listenBarOn" class="primary"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Słuchaj</button>
@@ -149,6 +155,7 @@
         <button id="pttLock" class="pttlock" type="button" aria-pressed="false" title="Mikrofon włączony na stałe" aria-label="Mikrofon włączony na stałe"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg></button>
       </div>
     </footer>
+    </div>
     </div>
     </div>
   </section>
@@ -189,7 +196,7 @@
         <div class="row"><button type="button" id="btnMini">🪟 Okienko czatu – jeden kanał</button></div>
         <p class="hint">Mały widok tylko z wybranym kanałem: wiadomości, pisanie i przycisk mówienia – np. obok ProPresentera. Przycisk z pinezką trzyma je na wierzchu nad innymi programami (Chrome / Edge na komputerze).</p>
         <h3>Słucham kanałów</h3>
-        <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną 🔊 / 🔇 na zakładce kanału.</p>
+        <p class="hint">Słyszysz głos i dostajesz powiadomienia tylko z zaznaczonych kanałów. To samo przełączysz ikoną głośnika na zakładce kanału.</p>
         <div id="listenList" class="checklist"></div>
         <label class="switch"><input type="checkbox" id="optAutoListen" checked> Wejście na kanał włącza jego słuchanie</label>
         <h3>Dźwięk</h3>
@@ -211,7 +218,7 @@
             <label class="switch" id="micRelRow"><input type="checkbox" id="optMicRel"> Otwieraj mikrofon dopiero przy mówieniu</label>
             <p class="hint" id="micRelHint">Otwarty mikrofon przełącza komputer w tryb rozmowy, który ścisza muzykę i filmy w innych programach. Z tą opcją mikrofon włącza się tylko na czas mówienia (start ok. 0,3 s później). Zalecane na komputerze.</p>
             <div class="boom" id="boomBox">
-              <label class="switch"><input type="checkbox" id="optBoom"> 🎧 Mów, gdy pałąk słuchawek jest opuszczony</label>
+              <label class="switch"><input type="checkbox" id="optBoom"> Mów, gdy pałąk słuchawek jest opuszczony</label>
               <p class="hint" id="boomState"></p>
               <div class="row"><button type="button" id="boomCal">📏 Kalibruj słuchawki</button></div>
               <p class="hint" id="boomHint">Dla słuchawek, które wyciszają mikrofon po podniesieniu pałąka: apka rozpoznaje to po zaniku sygnału i sama włącza i wyłącza mówienie. Najpierw skalibruj (opuść / podnieś pałąk). Działa najlepiej z wyłączoną redukcją szumów i automatycznym wzmocnieniem.</p>
@@ -229,7 +236,7 @@
           <div class="row" id="devMoreRow" hidden><button type="button" id="devMore">🔓 Pokaż wszystkie urządzenia</button><button type="button" id="spkPick" hidden>Wybierz inne wyjście…</button></div>
           <p class="hint" id="devMoreHint" hidden>Przeglądarka pokazuje pełną listę mikrofonów i wyjść dopiero po zgodzie na mikrofon. Kliknij przycisk i zezwól (mikrofon zostanie od razu zamknięty). Najlepiej wybierz „Zezwalaj zawsze” – wtedy lista będzie pełna od razu.</p>
           <p class="hint" id="spkHint" hidden>Na iPhonie i iPadzie wyjście dźwięku wybierasz w Centrum sterowania (ikona AirPlay) – przeglądarka nie może go zmienić.</p>
-          <div class="row"><button id="btnSpkTest" type="button">🔊 Test głośnika</button><button id="btnDevRefresh" type="button">↻ Odśwież listę urządzeń</button></div>
+          <div class="row"><button id="btnSpkTest" type="button"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Test głośnika</button><button id="btnDevRefresh" type="button">↻ Odśwież listę urządzeń</button></div>
           <p class="hint"><b>Mikser</b> u góry ekranu: głośność rozmów, dźwięku transmisji, komunikatów czytanych na głos i sygnałów – osobno, z wyciszaniem. <b>Dźwięk transmisji</b> włączasz przyciskiem z nutą – pojawia się, gdy realizator go nadaje.</p>
         </div>
         <h3>Opcje</h3>
@@ -278,7 +285,7 @@
           <p class="hint">Wezwania i PILNE! przychodzą zawsze. Dodatkowo powiadamiaj mnie o:</p>
           <label><input type="checkbox" data-pp="mentions"> @ oznaczeniu mnie w wiadomości</label>
           <label><input type="checkbox" data-pp="dm"> 💬 wiadomościach prywatnych</label>
-          <label><input type="checkbox" data-pp="channels"> 📢 wiadomościach i wypowiedziach na kanałach, których słucham</label>
+          <label><input type="checkbox" data-pp="channels"> wiadomościach i wypowiedziach na kanałach, których słucham</label>
           <label><input type="checkbox" data-pp="plan"> ▶ zmianie punktu planu</label>
           <label><input type="checkbox" data-pp="timer"> ⏳ końcu czasu punktu (ostatnia minuta, przekroczenie)</label>
           <label><input type="checkbox" data-pp="stream"> 🔴 transmisji live (start, koniec, problemy)</label>

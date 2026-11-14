@@ -668,3 +668,69 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
   .urgentbtn.arming::after { transition: height .6s linear !important; }
 }
 .quickrow .quick { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+
+/* ===== Nocna nawa: układ (0.47) =====
+   telefon / tablet pionowo: karta planu u góry, zakładki kanałów, czat, dół z przyciskami
+   tablet poziomo / komputer (≥1024px): lewa kolumna z kanałami i osobami | czat (kolumny) | plan po prawej */
+.rail, .commmain { display: contents; }
+.rail-h, .rail-people { display: none; }
+.comm > .rail > .tabs { order: 2; }
+.commmain > .planbar, .commmain > .banner, .commmain > .toast { order: 1; }
+.commmain > .listenbar { order: 3; }
+.commmain > .feeds { order: 4; }
+.commmain > .bottom { order: 5; }
+
+/* karta planu na telefonie zamiast paska */
+.planbar { margin: 8px 10px 0; width: auto; border: 1px solid var(--accent-line); background: var(--accent-bg); border-radius: var(--r); border-top-left-radius: var(--arch); border-top-right-radius: var(--arch); overflow: hidden; }
+.planbar .pl-main { padding: 14px 12px 8px; }
+.planbar .pl-now { font-size: 16px; font-weight: 600; }
+.planbar .pl-cd { font-size: 20px; padding: 4px 9px; }
+.planbar .pl-ctl { border-left-color: var(--accent-line); }
+.planbar .pl-ctl button { background: transparent; color: var(--fg); border-radius: 0; }
+
+@media (min-width: 1024px) {
+  .comm { flex-direction: row; }
+  .rail { display: flex; flex-direction: column; width: 248px; flex: none; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); padding: 12px 10px; gap: 4px; }
+  .commmain { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+  .rail-h { display: flex; align-items: center; justify-content: space-between; padding: 2px 10px 6px; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .comm > .rail > .tabs { order: 0; }
+  .rail .tabs { flex-direction: column; flex: 0 1 auto; overflow-x: hidden; overflow-y: auto; padding: 0; border: 0; background: none; gap: 3px; min-height: 0; }
+  .rail .tab { display: flex; align-items: center; width: 100%; text-align: left; padding: 9px 10px; border-color: transparent; color: var(--fg2); }
+  .rail .tab.muted { color: var(--muted); }
+  .rail .tab:hover { background: var(--panel); }
+  .rail .tab[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-bg); color: var(--fg); }
+  .rail .tab .badge { margin-left: auto; }
+  .rail .tab .li { margin-left: auto; margin-right: 0; }
+  .rail .tab .badge + .li { margin-left: 6px; }
+  .rail .tab.dmtab .dmclose { margin-left: auto; }
+  .rail-people { display: flex; flex-direction: column; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); min-height: 0; max-height: 52%; }
+  .rail-ph { width: 100%; background: none; border: 0; border-radius: var(--r2); cursor: pointer; }
+  .rail-ph span { text-transform: none; letter-spacing: 0; font-family: var(--font); font-size: 12px; color: var(--accent); }
+  .rail-ph:hover { background: var(--panel); }
+  .rail-people ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 1px; }
+  .rail-people li { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--r2); font-size: 14px; min-width: 0; }
+  .rail-people li.callable { cursor: pointer; }
+  .rail-people li.callable:hover { background: var(--panel); }
+  .rail-people .av { width: 24px; height: 24px; }
+  .rail-people .rp-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rail-people .rp-st { flex: none; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 11px/1.3 var(--mono); color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .rail-people .rp-st .ic { width: 13px; height: 13px; }
+  .rail-people .rp-st.live { color: var(--ok); }
+  .rail-people li.talking .av { box-shadow: 0 0 0 2px var(--ok); }
+  .rail-people .rp-more { margin: 4px 10px 0; font-size: 12px; color: var(--muted); }
+  .rail-people .callform { flex-wrap: wrap; padding: 4px 10px 8px; }
+  .rail-people .callform input { flex: 1 1 100%; }
+  .rail-people .callform button { flex: 1; padding: 8px; }
+  /* plan po prawej: duże odliczanie */
+  .planpane { width: min(30%, 380px); background: var(--bg); }
+  .planpane .pc-cd .cd-big { font-size: 40px; padding: 4px 10px; }
+  .planpane .pcard.now .pt { font-size: 18px; }
+  .bottom { padding-left: 14px; padding-right: 14px; }
+}
+.msg.plan { background: var(--accent-bg); border-color: var(--accent-line); }
+.msg.plan .pl-tag { color: var(--accent); font: 500 11px/1.4 var(--mono); letter-spacing: .1em; }
+.colhead .xx { display: inline-flex; align-items: center; justify-content: center; color: var(--fg2); }
+.colhead .xx .ic { width: 16px; height: 16px; }
+.msg.voice .vline .ic, .callform .ic { width: 16px; height: 16px; }
+.planbar .pl-row:first-child { flex-wrap: wrap; row-gap: 2px; }
+.planbar .pl-now { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; flex: 1 1 60%; }

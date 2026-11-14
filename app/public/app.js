@@ -316,7 +316,7 @@ function updateMsg(m) {
   if (i >= 0) arr[i] = m; else { arr.push(m); S.msgs.set(m.channel, arr); }
   $$(`[data-mid="${CSS.escape(m.id)}"]`).forEach((el) => el.replaceWith(msgEl(m))); // także w kolumnach
   if (m.stt === 'done' && showStt() && m.from !== S.me.id && listening(m.channel) && (m.channel !== S.active || document.hidden)) {
-    toast({ ...m, text: '🎙 ' + m.text });
+    toast({ ...m, text: m.text });
   }
 }
 
@@ -364,13 +364,13 @@ function renderCols() {
   document.body.classList.toggle('cols', extra.length > 0);
   const head = $('#mainHead');
   head.hidden = !extra.length;
-  if (extra.length) { const c = chan(S.active); head.style.setProperty('--c', c?.color || '#38bdf8'); head.innerHTML = `<b>${esc(c?.name || '')}</b> · mówisz tutaj${!isDm(S.active) && !S.listen.has(S.active) ? ' · 🔇 nie słuchasz' : ''}`; }
+  if (extra.length) { const c = chan(S.active); head.style.setProperty('--c', c?.color || '#38bdf8'); head.innerHTML = `<b>${esc(c?.name || '')}</b> · mówisz tutaj${!isDm(S.active) && !S.listen.has(S.active) ? ' · nie słuchasz' : ''}`; }
   box.querySelectorAll('.fcol.extra').forEach((el) => el.remove());
   extra.forEach((ch, i) => {
     const col = document.createElement('section');
     col.className = 'fcol extra';
     const c = chan(ch);
-    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select>${isDm(ch) || ch === S.broadcast ? '' : `<button type="button" class="xx li ${S.listen.has(ch) ? '' : 'off'}" title="${S.listen.has(ch) ? 'Słuchasz – kliknij, żeby wyciszyć' : 'Nie słuchasz – kliknij, żeby słuchać'}">${S.listen.has(ch) ? '🔊' : '🔇'}</button>`}<button type="button" class="xx" title="Mów na tym kanale">🎙</button><button type="button" class="xx" title="Zamknij kolumnę">✕</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
+    col.innerHTML = `<div class="colhead" style="--c:${esc(c?.color || '#38bdf8')}"><select aria-label="Kanał w kolumnie ${i + 2}">${colChoices().map((o) => `<option value="${esc(o.id)}" ${o.id === ch ? 'selected' : ''} ${o.id === S.active ? 'disabled' : ''}>${esc(o.name)}</option>`).join('')}</select>${isDm(ch) || ch === S.broadcast ? '' : `<button type="button" class="xx li ${S.listen.has(ch) ? '' : 'off'}" title="${S.listen.has(ch) ? 'Słuchasz – kliknij, żeby wyciszyć' : 'Nie słuchasz – kliknij, żeby słuchać'}" aria-label="${S.listen.has(ch) ? 'Słuchasz' : 'Nie słuchasz'}">${icon(S.listen.has(ch) ? 'volume' : 'volume-x')}</button>`}<button type="button" class="xx" title="Mów na tym kanale" aria-label="Mów na tym kanale">${icon('mic')}</button><button type="button" class="xx" title="Zamknij kolumnę" aria-label="Zamknij kolumnę">${icon('x')}</button></div><div class="feed xfeed" data-ch="${esc(ch)}" aria-live="polite"></div>`;
     const lb = col.querySelector('.li'); if (lb) lb.onclick = () => setListen(ch, !S.listen.has(ch));
     const [sel, talk, close] = [col.querySelector('select'), ...col.querySelectorAll('button:not(.li)')];
     sel.onchange = () => { const list = colChannels(); list[i] = sel.value; S.opt.colCh = list; store.set('opt', S.opt); S.unread.delete(sel.value); renderCols(); renderTabs(); };
@@ -459,7 +459,7 @@ function msgEl(m) {
       : m.stt === 'pending' && Date.now() - m.ts < 125000 ? '<div class="stt">transkrypcja…</div>'
       : m.stt === 'empty' ? '<div class="stt">(nie rozpoznano słów)</div>'
       : m.stt === 'failed' ? `<div class="stt">(transkrypcja nieudana${m.sttError ? ': ' + esc(m.sttError) : ''})</div>` : '';
-    el.innerHTML = `<div class="vline">${avatar(m.fromPid, m.fromName)}<span>🎙 <b>${esc(m.fromName)}</b> mówił(a) ${sec} s${m.part ? ' (fragment)' : ''} · ${fmtTime(m.ts)}</span></div>${tr}`;
+    el.innerHTML = `<div class="vline">${avatar(m.fromPid, m.fromName)}<span>${icon('mic')} <b>${esc(m.fromName)}</b> mówił(a) ${sec} s${m.part ? ' (fragment)' : ''} · ${fmtTime(m.ts)}</span></div>${tr}`;
   } else {
     el.innerHTML = `<div class="meta">${mine ? '' : avatar(m.fromPid, m.fromName)}<span class="who">${esc(m.fromName)}</span><span>${fmtTime(m.ts)}</span></div><div class="text">${fmtMentions(m.text)}</div>`;
   }
@@ -550,6 +550,7 @@ function renderTabs() {
     tabs.appendChild(b);
   }
   tabs.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  renderRailPeople();
   markColTalking();
   renderListenBar();
   renderMini();
@@ -989,7 +990,7 @@ async function prepareMic() {
     }
     if (isPermErr(err)) {
       micDenied = true; $('#ptt').disabled = false; renderPttLabel(); // naciśnięcie „mów” zapyta o zgodę jeszcze raz
-      micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
+      micMsg('Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
     } else {
       $('#ptt').disabled = true;
       micMsg('Brak dostępu do mikrofonu (' + (err?.message || err) + '). Sprawdź, czy mikrofon jest podłączony i czy strona ma zgodę.');
@@ -1559,7 +1560,7 @@ function reviveMic(why, byUser) {
     } catch (err) {
       if (isPermErr(err)) {
         micDenied = true; renderPttLabel();
-        micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
+        micMsg('Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe) – potem naciśnij „mów”.');
       } else micMsg('Mikrofon przestał odpowiadać (' + (err?.message || err) + '). Jeśli mówienie nie działa, odśwież stronę.');
       return false;
     }
@@ -1597,7 +1598,7 @@ function startTalk() {
   // mikrofon zamknięty między wypowiedziami (micRelease): LiveKit otwiera go sam przy odciszeniu
   const unmuted = (healthy || micRelease() ? Promise.resolve(S.micPub.unmute()) : reviveMic('naciśnięcie mów', true).then(() => S.micPub?.unmute()))
     .then(() => { if (micDenied) { micDenied = false; renderPttLabel(); } })
-    .catch((err) => { if (isPermErr(err)) { micDenied = true; renderPttLabel(); micMsg('🎙 Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe).'); } });
+    .catch((err) => { if (isPermErr(err)) { micDenied = true; renderPttLabel(); micMsg('Brak zgody na mikrofon. Kliknij kłódkę obok adresu strony i ustaw mikrofon na „Zezwalaj” (na stałe).'); } });
   // mikrofon „żyje”, ale daje cyfrową ciszę (Safari) – po chwili pobierz go od nowa, mówienie trwa dalej
   if (healthy) setTimeout(() => {
     if (S.pttOn && S.talkId === talkId && capLive() && Date.now() - (cap.sound || 0) > 1500) reviveMic('cisza z mikrofonu', true).then((ok) => { if (ok && S.pttOn && S.talkId === talkId) S.micPub?.unmute(); });
@@ -1959,8 +1960,8 @@ function onModMuted(by) {
   renderPttLabel();
   beep(); vibrate([300, 100, 300]);
   const text = `${by} wyciszył(a) Twój mikrofon – był włączony. Aby mówić, naciśnij przycisk ponownie.`;
-  toast({ channel: S.broadcast, fromName: '🔇 Wyciszono', text, plan: true, urgent: true });
-  sysMsg('🔇 ' + text);
+  toast({ channel: S.broadcast, fromName: 'Wyciszono', text, plan: true, urgent: true });
+  sysMsg(text);
   say(`${by} wyciszył Twój mikrofon.`);
 }
 function onModMoved(ch, by, wasTalking) {
@@ -2082,13 +2083,13 @@ function openCall(u, row) {
   if (!row) return;
   const f = document.createElement('div');
   f.className = 'callform';
-  f.innerHTML = `<input maxlength="140" placeholder="Wiadomość (opcjonalnie), np. zbliżenie na mówcę"><button type="button" class="primary">📣 Wezwij</button><button type="button" class="dmbtn">💬 Napisz</button>`;
+  f.innerHTML = `<input maxlength="140" placeholder="Wiadomość (opcjonalnie), np. zbliżenie na mówcę"><button type="button" class="primary">Wezwij</button><button type="button" class="dmbtn">Napisz</button>`;
   row.after(f);
   if (S.perm?.moderate || S.me.role === 'admin') { // reżyser / administrator: wyciszenie, przeniesienie, transkrypcja
     const mod = document.createElement('div');
     mod.className = 'callform modform';
     const chOpts = S.channels.map((c) => `<option value="${esc(c.id)}" ${c.id === (S.talking.get(u.id) || u.target) ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-    mod.innerHTML = (S.perm?.moderate ? `<button type="button" class="m-mute">🔇 Wycisz</button><select class="m-ch" aria-label="Kanał">${chOpts}</select><button type="button" class="m-move">↪ Przenieś</button>` : '')
+    mod.innerHTML = (S.perm?.moderate ? `<button type="button" class="m-mute">${icon('volume-x')} Wycisz</button><select class="m-ch" aria-label="Kanał">${chOpts}</select><button type="button" class="m-move">↪ Przenieś</button>` : '')
       + (S.me.role === 'admin' && S.session.stt ? `<button type="button" class="m-stt">${u.sttOff ? '📝 Włącz transkrypcję' : '📝 Wyłącz transkrypcję'}</button>` : '');
     f.after(mod);
     mod.querySelector('.m-mute')?.addEventListener('click', () => { wsSend({ t: 'modMute', to: u.id }); mod.remove(); f.remove(); });
@@ -2110,15 +2111,36 @@ function openCall(u, row) {
 }
 
 const osoby = (n) => `${n} ${n === 1 ? 'osoba' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'osoby' : 'osób'}`;
+// lewa kolumna (szeroki ekran): kto jest online, kto mówi i na którym kanale ma otwarte okno
+function renderRailPeople() {
+  const box = $('#railPeople');
+  if (!box || !S.me) return;
+  const all = [...S.users.values()];
+  const rank = (u) => (S.talking.has(u.id) ? 0 : u.role !== 'listener' ? 1 : 2);
+  all.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'pl'));
+  const MAX = 14, shown = all.slice(0, MAX);
+  box.innerHTML = `<button type="button" class="rail-h rail-ph" id="railPeopleAll" title="Pokaż wszystkich – według kanałów">Online · ${all.length}<span>wszyscy ›</span></button>`
+    + `<ul>${shown.map((u) => {
+      const talk = S.talking.get(u.id), tc = talk && chan(talk), oc = chan(u.target);
+      const st = talk ? `<span class="rp-st live">${icon('mic')}${esc(tc?.name || 'mówi')}</span>`
+        : `<span class="rp-st">${esc(oc?.name || '')}</span>`;
+      return `<li data-uid="${esc(u.id)}" class="${u.id === S.me.id ? 'me' : 'callable'}${talk ? ' talking' : ''}" ${u.id === S.me.id ? '' : 'tabindex="0" role="button"'} title="${u.id === S.me.id ? 'To Ty' : 'Wezwij ' + esc(u.name)}">${avatar(u.pid, u.name)}<span class="rp-nm">${esc(u.name)}${u.id === S.me.id ? ' (Ty)' : ''}</span>${st}</li>`;
+    }).join('')}</ul>${all.length > MAX ? `<p class="rp-more">i ${all.length - MAX} więcej</p>` : ''}`;
+  $('#railPeopleAll').onclick = () => $('#btnPeople').click();
+  box.querySelectorAll('li.callable').forEach((li) => {
+    const go = () => { const u = S.users.get(li.dataset.uid); if (u) openCall(u, li); };
+    li.onclick = go; li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+}
 function renderPeople() {
   const box = $('#peopleList');
   const all = [...S.users.values()];
   const speakers = all.filter((u) => u.role !== 'listener').length;
   const row = (u, c) => {
     const talk = S.talking.get(u.id);
-    const badge = talk === c.id ? '<span class="pbadge live">🎙 MÓWI</span>'
-      : u.role !== 'listener' ? '<span class="pbadge can">🎙 może mówić</span>'
-      : '<span class="pbadge">👂 słucha / czyta</span>';
+    const badge = talk === c.id ? '<span class="pbadge live">MÓWI</span>'
+      : u.role !== 'listener' ? '<span class="pbadge can">może mówić</span>'
+      : '<span class="pbadge">słucha / czyta</span>';
     const here = u.target === c.id ? '<span class="here">ma otwarty ten kanał</span>' : '';
     return `<li style="--c:${c.color}" data-uid="${esc(u.id)}" class="${u.id === S.me.id ? '' : 'callable'}">${avatar(u.pid, u.name)}<span class="nm"><span class="nm1">${esc(u.name)}${u.id === S.me.id ? ' (Ty)' : ''}${u.sttOff && S.session.stt ? ' <span class="here" title="Bez transkrypcji">📝✕</span>' : ''}</span>${u.nicks?.length ? `<span class="here nk">${u.nicks.map((n) => '@' + esc(n)).join(' ')}</span>` : ''}${here}</span>${badge}</li>`;
   };
@@ -2257,7 +2279,7 @@ function applyLayout() {
   $('#optLayoutRow').hidden = !S.session?.pco;
   const split = !!S.session?.pco && (mode === 'left' || mode === 'right' || (mode === 'auto' && wide.matches));
   document.body.classList.toggle('split-on', split);
-  document.body.classList.toggle('plan-right', split && mode === 'right');
+  document.body.classList.toggle('plan-right', split && mode !== 'left'); // „auto” = plan po prawej
   const sp = $('#sheetPlan'), pane = $('#planPane');
   pane.hidden = !split;
   if (split && sp.parentElement !== pane) { pane.appendChild(sp); sp.hidden = false; renderPlanSheet(); }
