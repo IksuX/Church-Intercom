@@ -28,6 +28,7 @@ services:
     restart: unless-stopped
     environment:
       WHISPER_MODEL: ${WHISPER_MODEL:-auto}
+      WHISPER_CMD_MODEL: ${WHISPER_CMD_MODEL:-base}  # komendy głosowe Reżyserii (szybki model); „off” = przez model główny
     volumes:
       - ./data/stt-models:/models
 

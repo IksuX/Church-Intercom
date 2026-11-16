@@ -6,6 +6,9 @@ GET  /health  -> stan, model, jakość, procesor, statystyki szybkości
 POST /model   body {"name": "small"}  -> zmiana modelu w locie (ładuje w tle, stary działa do końca)
 POST /settings body {"quality": "fast|balanced|accurate"}
 POST /bench   -> ponowna transkrypcja ostatniego nagrania bieżącymi ustawieniami (test szybkości)
+POST /command?lang=pl&prompt=...&hotwords=...  body: krótkie nagranie -> {"text", "seconds", "confidence"}
+  Komendy głosowe Reżyserii (mikser wideo): osobny, lekki model (WHISPER_CMD_MODEL, domyślnie base) z własną blokadą –
+  komenda nie czeka w kolejce za długą transkrypcją czatu. Szybkie dekodowanie: 1 wariant, bez detektora mowy.
 GET  /recent  -> ostatnie nagrania z transkrypcjami (tylko w pamięci, do strojenia jakości)
 GET  /recent/<id>/audio ; POST /recent/<id>/redo -> odsłuch / ponowna transkrypcja bieżącymi ustawieniami
 
@@ -92,6 +95,9 @@ def quality():
 
 
 state = {"model": None, "name": None, "loading": None, "ready": False, "error": None}
+CMD_MODEL = os.environ.get("WHISPER_CMD_MODEL", "base")  # "off" = komendy przez model główny
+cmd = {"model": None, "name": None, "ready": False, "error": None, "stats": deque(maxlen=20)}
+cmd_lock = threading.Lock()
 stats = deque(maxlen=20)
 recent = deque(maxlen=20)  # ostatnie nagrania (tylko w pamięci) – odsłuch i porównanie w panelu
 lock = threading.Lock()
@@ -118,6 +124,55 @@ def load_model(name):
         print(f"[stt] BŁĄD ładowania modelu {name}: {e}", flush=True)
     finally:
         state["loading"] = None
+
+
+def load_cmd_model():
+    """Model do komend Reżyserii – ładowany po głównym, żeby nie opóźnić startu transkrypcji."""
+    if CMD_MODEL not in MODELS:
+        return
+    for _ in range(600):  # najpierw model główny (pobieranie mogłoby się zdublować)
+        if state["ready"] or state["error"]:
+            break
+        time.sleep(1)
+    try:
+        if FAKE:
+            cmd.update(model="fake", name=CMD_MODEL, ready=True)
+            return
+        if CMD_MODEL == state["name"] and state["model"] is not None:
+            cmd.update(model=state["model"], name=CMD_MODEL, ready=True, shared=True)  # ten sam model – bez drugiej kopii w pamięci
+            return
+        from faster_whisper import WhisperModel
+
+        t = time.time()
+        m = WhisperModel(CMD_MODEL, device="cpu", compute_type="int8", cpu_threads=THREADS)
+        cmd.update(model=m, name=CMD_MODEL, ready=True, error=None)
+        print(f"[stt] Model komend '{CMD_MODEL}' gotowy w {time.time() - t:.1f} s", flush=True)
+    except Exception as e:  # noqa: BLE001
+        cmd["error"] = f"{CMD_MODEL}: {e}"
+        print(f"[stt] BŁĄD ładowania modelu komend {CMD_MODEL}: {e} – komendy pójdą przez model główny", flush=True)
+
+
+def command(data: bytes, lang: str, prompt, hotwords, own=True):
+    """Krótka komenda: bez detektora mowy i powtórek, jeden wariant dekodowania – liczy się czas."""
+    audio = decode(data)
+    dur = len(audio) / 16000
+    if dur < 0.2:
+        raise AudioError(f"nagranie puste ({dur:.2f} s dźwięku)")
+    if FAKE:
+        return "Przygotuj dwa", dur, 0.9
+    audio, _voiced = prepare(audio)
+    if audio is None:
+        return "", dur, 0.0
+    model = cmd["model"] if own and cmd["ready"] and cmd["model"] is not None else state["model"]
+    segments, _info = model.transcribe(
+        audio, language=lang, beam_size=1, temperature=0.0, condition_on_previous_text=False, without_timestamps=True,
+        vad_filter=False, initial_prompt=(prompt or "").strip()[:160] or None, hotwords=(hotwords or "").strip()[:200] or None,
+        max_new_tokens=32, no_speech_threshold=0.6, log_prob_threshold=-1.0)
+    segs = [s for s in segments if segment_ok(s)]
+    text = " ".join(s.text for s in segs)
+    total = sum(max(len(s.text), 1) for s in segs)
+    conf = sum(math.exp(s.avg_logprob) * max(len(s.text), 1) for s in segs) / total if total else 0.0
+    return clean(text), dur, conf
 
 
 def clean(text: str) -> str:
@@ -310,6 +365,8 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True, "model": state["name"], "ready": state["ready"], "loading": state["loading"],
                 "error": state["error"], "models": MODELS, "auto": auto_model(), "quality": quality(),
                 "cpu": {"cores": CORES, "threads": THREADS, "avx2": AVX2}, "stats": summary(),
+                "command": {"model": cmd["name"] or CMD_MODEL, "ready": cmd["ready"], "error": cmd["error"],
+                            "last": cmd["stats"][-1] if cmd["stats"] else None},
             })
         if u.path == "/recent":
             return self._json(200, {"items": [{k: v for k, v in r.items() if k != "data"} for r in reversed(recent)]})
@@ -350,6 +407,9 @@ class Handler(BaseHTTPRequestHandler):
             write_settings({"quality": body["quality"]})
             stats.clear()
             return self._json(200, {"ok": True, "quality": quality()})
+
+        if u.path == "/command":
+            return self._command(q)
 
         redo = re.fullmatch(r"/recent/([a-z0-9]+)/redo", u.path)
         entry = None
@@ -400,6 +460,30 @@ class Handler(BaseHTTPRequestHandler):
                            "prompt": prompt, "hotwords": hotwords, **res})
         self._json(200, res)
 
+    def _command(self, q):
+        data = self._body()
+        if not data or len(data) > 2 * 1024 * 1024:
+            return self._json(413, {"error": "zły rozmiar nagrania komendy"})
+        # ?model=main – druga próba dokładniejszym modelem głównym (gdy szybki dał niejasny wynik)
+        own = cmd["ready"] and cmd["model"] is not None and not cmd.get("shared") and (q.get("model") or [""])[0] != "main"
+        if not own and not state["ready"]:
+            return self._json(503, {"error": "model się ładuje"})
+        lang = (q.get("lang") or ["pl"])[0]
+        t = time.time()
+        try:
+            with (cmd_lock if own else lock):  # osobny model = osobna kolejka (komenda nie czeka za czatem)
+                text, dur, conf = command(data, lang, (q.get("prompt") or [""])[0], (q.get("hotwords") or [""])[0], own)
+        except AudioError as e:
+            return self._json(422, {"error": f"złe nagranie: {e}"})
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            return self._json(500, {"error": f"błąd modelu: {type(e).__name__}: {str(e)[:120]}"})
+        dt = time.time() - t
+        name = cmd["name"] if own else state["name"]
+        cmd["stats"].append({"audio": round(dur, 1), "seconds": round(dt, 2), "model": name})
+        print(f"[stt] komenda ({name}): {dur:.1f} s → {dt:.2f} s (pewność {conf:.2f}): {text!r}", flush=True)
+        self._json(200, {"text": text, "seconds": round(dt, 2), "audio": round(dur, 1), "confidence": round(conf, 2), "model": name})
+
     def log_message(self, *_):
         pass
 
@@ -407,5 +491,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     name = wanted_model()
     threading.Thread(target=load_model, args=(name,), daemon=True).start()
+    threading.Thread(target=load_cmd_model, daemon=True).start()
     print(f"[stt] Nasłuchuję na http://{HOST}:{PORT} (model: {name}, jakość: {quality()}, rdzenie: {CORES}, AVX2: {AVX2})", flush=True)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

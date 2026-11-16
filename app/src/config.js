@@ -93,8 +93,8 @@ export function validateConfig(input) {
   // ręczne uprawnienia osób z Planning Center: { "<personId>": { name, speak: true|false, live: true|false } }
   const tri = (v) => (v === true || v === false ? v : undefined);
   c.grants = Object.fromEntries(Object.entries(c.grants && typeof c.grants === 'object' ? c.grants : {})
-    .map(([pid, g]) => [str(pid, 32), { name: str(g?.name, 60), speak: tri(g?.speak), live: tri(g?.live), admin: g?.admin === true ? true : undefined }])
-    .filter(([pid, g]) => pid && (g.speak !== undefined || g.live !== undefined || g.admin)));
+    .map(([pid, g]) => [str(pid, 32), { name: str(g?.name, 60), speak: tri(g?.speak), live: tri(g?.live), director: tri(g?.director), admin: g?.admin === true ? true : undefined }])
+    .filter(([pid, g]) => pid && (g.speak !== undefined || g.live !== undefined || g.director !== undefined || g.admin)));
   // transmisje live (Blackmagic Web Presenter)
   const sm = c.streams && typeof c.streams === 'object' ? c.streams : {};
   const devIds = new Set();
@@ -124,6 +124,18 @@ export function validateConfig(input) {
     endTimer: str(pp.endTimer, 40),
   };
   if (c.propresenter.enabled && !c.propresenter.host) fail('ProPresenter: podaj adres IP komputera z ProPresenterem.');
+  // Reżyseria – mikser wideo Blackmagic ATEM (połączenie po stronie serwera); dostęp ma rola „Reżyser”
+  const mx = c.mixer && typeof c.mixer === 'object' ? c.mixer : {};
+  c.mixer = {
+    enabled: !!mx.enabled,
+    host: /^[a-zA-Z0-9.:_-]{1,64}$/.test(str(mx.host, 64)) ? str(mx.host, 64) : '',
+    me: Number.isInteger(Number(mx.me)) ? Math.min(7, Math.max(0, Number(mx.me))) : 0,
+    simulation: !!mx.simulation, // fałszywy mikser do prób bez sprzętu
+    // rola Reżyser automatycznie dla osób z obsady Planning Center na tych stanowiskach / w tych zespołach
+    directorPositions: Array.isArray(mx.directorPositions) ? strList(mx.directorPositions) : ['Reżyser'],
+    directorTeams: strList(mx.directorTeams, 60),
+  };
+  if (c.mixer.enabled && !c.mixer.simulation && !c.mixer.host) fail('Mikser wideo: podaj adres IP miksera ATEM.');
   // dźwięk transmisji (mix z konsolety) – nadawany z komputera w kościele, każdy słucha u siebie z własną głośnością
   const pg = c.program && typeof c.program === 'object' ? c.program : {};
   c.program = {

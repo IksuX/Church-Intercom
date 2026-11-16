@@ -1,5 +1,6 @@
 // Interkom – klient (PWA). Tekst + szybkie przyciski przez WebSocket, głos przez LiveKit (WebRTC).
 import { Room, RoomEvent, Track } from '/vendor/livekit-client.esm.mjs';
+import { createDirector } from '/mixer.js';
 
 // okienko czatu „na wierzchu” (Document Picture-in-Picture) przenosi część strony do osobnego dokumentu – szukamy w obu
 let pipDoc = null;
@@ -24,6 +25,8 @@ const S = {
   ws: null, wsTries: 0, room: null, micPub: null, pttOn: false, pttLocked: false,
 };
 const canTalk = () => S.me && (S.me.role === 'speaker' || S.me.role === 'admin');
+// Reżyseria (mikser wideo) – widok i polecenia tylko dla roli Reżyser; uprawnienia sprawdza serwer
+const director = createDirector({ token: () => S.session?.token });
 // Rozmowy prywatne to pseudo-kanały „dm:<klucz osoby>”
 const isDm = (id) => typeof id === 'string' && id.startsWith('dm:');
 S.dms = new Map(); S.wtarget = new Set();
@@ -236,7 +239,8 @@ function onWs(m) {
     case 'modMoved': onModMoved(m.channel, m.by, m.wasTalking); break;
     case 'callStatus': toast({ channel: S.broadcast, fromName: m.ok ? 'Wezwanie' : 'Uwaga', text: m.ok ? `wysłane do: ${m.to}` : m.error, plan: true, urgent: !m.ok }); break;
     case 'callReply': toast({ channel: S.broadcast, fromName: m.answer === 'yes' ? '✓ ' + m.from.name : '✗ ' + m.from.name, text: m.answer === 'yes' ? 'idzie' : 'nie może teraz', plan: true, urgent: m.answer !== 'yes' }); vibrate(m.answer === 'yes' ? 60 : [200, 100, 200]); break;
-    case 'perm': S.perm = m; renderPlanBar(); if (!$('#sheetPlan').hidden) renderPlanSheet(); break;
+    case 'perm': S.perm = m; director.perm({ ...m, canTalk: canTalk() }); renderPlanBar(); if (!$('#sheetPlan').hidden) renderPlanSheet(); break;
+    case 'mixer': director.state(m.state); break;
     case 'liveError': liveDone(); toast({ channel: S.broadcast, fromName: 'Plan', text: m.error, plan: true, urgent: true }); break;
     case 'msgUpdate': updateMsg(m.m); break;
     case 'msg': addMsg(m.m, true); break;
@@ -1451,7 +1455,8 @@ function newSeg(talkId, withPreroll) {
 }
 
 async function startRecording(talkId) {
-  if (!S.session.stt || !sttOnFor(S.active)) return;
+  // nagrywamy, gdy na kanale jest transkrypcja – albo gdy Reżyser ma włączone sterowanie głosem (komendy dla miksera)
+  if (!S.session.stt || !(sttOnFor(S.active) || director.voiceOn())) return;
   const noRec = noRecFor(talkId);
   if (!(await ensureCapture())) { setTimeout(() => noRec('brak dostępu do mikrofonu do nagrania'), 800); return; }
   if (!S.pttOn || S.talkId !== talkId) return;

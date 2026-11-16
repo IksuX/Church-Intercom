@@ -18,8 +18,10 @@ import * as pcoOauth from './pco-oauth.js';
 import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
+import { MixerModule } from './mixer/index.js';
+import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.50.1';
+const VERSION = '0.51.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -43,6 +45,7 @@ const STARTED = Date.now();
 let config = loadConfig(CONFIG_PATH);
 const avatars = new Avatars(DATA_DIR);
 const push = new Push(DATA_DIR);
+const mixer = new MixerModule({ dataDir: DATA_DIR }); // Reżyseria – mikser wideo ATEM (połączenie po stronie serwera)
 const pendingCalls = new Map(); // klucz osoby -> wezwanie czekające na powrót aplikacji z tła
 // Kanały: z config.json + (opcjonalnie) z zespołów Planning Center – lista może się zmieniać w trakcie pracy.
 let channels = config.channels;
@@ -140,6 +143,7 @@ function applyConfig(next) {
   nativeHearSoon();
   if (config.program.enabled && config.program.source === 'server' && !programKey()) saveJson(SECRETS_PATH, { ...readJson(SECRETS_PATH, {}), programKey: crypto.randomBytes(18).toString('base64url') }); // klucz dla usługi audio
   broadcast({ t: 'config', org: config.orgName, brand: brandPublic(), quick: config.quick, broadcastChannel: broadcastId, sttOff: config.sttOff || [], sttDm: config.sttDm !== false, program: publicProgram() });
+  mixer.applyConfig(config.mixer).catch((e) => console.warn('[reżyseria]', e.message));
   applyGrants(); // zmienione zasady (np. stanowiska mówiące) działają od razu; wysyła też uprawnienia
 }
 
@@ -188,12 +192,47 @@ function autoLive(u) {
 function perms(u) {
   const lc = !!config.planningCenter?.liveControl?.enabled;
   return { liveControl: canControlLive(u), manualPlan: !lc && (u.role === 'speaker' || u.role === 'admin'),
-    moderate: canModerate(u), stt: !sttUserOff(u) };
+    moderate: canModerate(u), stt: !sttUserOff(u), director: canDirect(u), mixer: !!config.mixer?.enabled };
 }
+// Rola „Reżyser” (moduł Reżyseria – mikser wideo): administrator, nadanie w panelu (tak / nie / automatycznie)
+// albo – automatycznie – osoba z obsady Planning Center na wskazanym stanowisku lub w zespole.
+function autoDirector(u) {
+  const mc = config.mixer;
+  if (!pco || !mc || !u.pid) return false;
+  const person = pco.state.roster.find((x) => String(x.personId) === String(u.pid));
+  if (!person) return false;
+  const low = (v) => String(v).toLocaleLowerCase('pl');
+  return person.positions.some((p) => mc.directorPositions.some((r) => low(p).includes(low(r))))
+    || person.teamNames.some((t) => mc.directorTeams.some((r) => low(r) === low(t)));
+}
+function canDirect(u) {
+  if (u.role === 'admin') return true;
+  const g = u.sess ? grantFor(u.sess) : {};
+  if (g.director === true || g.director === false) return g.director;
+  return autoDirector(u);
+}
+// Osoba z sesji – także bez otwartej strony (np. zapytanie z aplikacji natywnej)
+function userOfSession(s) {
+  const u = users.get(s.id);
+  if (u?.sess) return u;
+  return { id: s.id, sess: s, name: s.name, role: effectiveRole(s), pid: s.pid || null, sockets: new Set() };
+}
+// Stan miksera idzie przez WebSocket wyłącznie do Reżyserów; kto stracił rolę, dostaje jednorazowo „null”.
+function sendMixerTo(u) {
+  const ok = !!config.mixer?.enabled && canDirect(u);
+  for (const ws of u.sockets) {
+    if (ok) send(ws, { t: 'mixer', state: { ...mixer.state(pk(u)), stt: !!STT_URL } });
+    else if (ws._mixer) send(ws, { t: 'mixer', state: null });
+    ws._mixer = ok;
+  }
+}
+function broadcastMixer() { for (const u of users.values()) if (u.sockets.size) sendMixerTo(u); }
+mixer.on('change', broadcastMixer);
 // Kto może przenosić i wyciszać innych: administrator oraz osoby sterujące planem (reżyser, prowadzący – Planning Center)
 function canModerate(u) { return u.role === 'admin' || canControlLive(u); }
 function sendPerms() {
   for (const u of users.values()) for (const ws of u.sockets) send(ws, { t: 'perm', ...perms(u) });
+  broadcastMixer();
 }
 // Zastosowanie zmian uprawnień w locie: rola w aplikacji + prawo nadawania w LiveKit
 const lkAdmin = new RoomServiceClient(process.env.LIVEKIT_INTERNAL_URL || 'http://127.0.0.1:7880', LK_KEY, LK_SECRET);
@@ -595,6 +634,11 @@ app.post('/api/stt/:talkId', express.raw({ type: () => true, limit: '8mb' }), as
   if (!s) return res.status(401).json({ error: 'Sesja wygasła.' });
   if (!STT_URL) return res.status(404).json({ error: 'Transkrypcja wyłączona.' });
   if (!/^[a-z0-9]{4,32}$/i.test(req.params.talkId)) return res.status(400).end();
+  // Reżyser z włączonym sterowaniem głosem: komenda idzie od razu do szybkiego rozpoznawania (przed transkrypcją do czatu)
+  const du = userOfSession(s);
+  if (config.mixer?.enabled && !req.query.error && req.body?.length && mixer.voiceEnabledFor(pk(du)) && canDirect(du)) {
+    mixerVoice(du, req.body, req.get('content-type'));
+  }
   const id = voiceMsgId(s.id, req.params.talkId);
   // wpis o wypowiedzi powstaje po sygnale „koniec mówienia” – daj mu chwilę
   let m = history.get(id) || dmFind(id);
@@ -624,6 +668,110 @@ app.post('/api/stt/:talkId', express.raw({ type: () => true, limit: '8mb' }), as
     if (m.channel) notifyChannel(sessionKey(s), m.channel, `🎙 ${s.name}`, `mówił(a) ${Math.round((m.durationMs || 0) / 1000)} s`);
   }
 });
+
+// ================= REŻYSERIA (mikser wideo Blackmagic ATEM) =================
+// Każde zapytanie sprawdza rolę „Reżyser” na serwerze – ukrycie menu w aplikacji to tylko wygoda.
+function requireDirector(req, res, next) {
+  const s = sessionFrom(req);
+  if (!s) return res.status(401).json({ ok: false, error: 'Sesja wygasła – zaloguj się ponownie.' });
+  const u = userOfSession(s);
+  if (!canDirect(u)) {
+    console.warn(`[reżyseria] odmowa dostępu: ${s.name} (${req.method} ${req.path})`);
+    return res.status(403).json({ ok: false, error: 'Brak uprawnień – Reżyseria jest dostępna tylko dla roli Reżyser.' });
+  }
+  if (!config.mixer?.enabled) return res.status(409).json({ ok: false, error: 'Mikser wideo jest wyłączony w panelu administratora.' });
+  req.director = u;
+  next();
+}
+const who = (req) => req.director?.name || 'Stream Deck';
+async function mixerReply(res, fn) {
+  try {
+    const r = (await fn()) || { ok: true };
+    if (r.ok === false) return res.status(400).json({ ok: false, error: r.message || r.error || 'Nie udało się.' });
+    res.json({ ...r, ok: true, message: r.message });
+  } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+}
+const inputArg = (v) => (v === undefined || v === null || v === '' ? undefined : Number.isInteger(Number(v)) ? Number(v) : NaN);
+function mixerAction(action, body, by) {
+  const input = inputArg(body?.input);
+  if (Number.isNaN(input)) throw new Error('Nieprawidłowy numer kamery.');
+  switch (action) {
+    case 'preview': if (input === undefined) throw new Error('Podaj numer kamery.'); return mixer.setPreview(input, by);
+    case 'program': if (input === undefined) throw new Error('Podaj numer kamery.'); return mixer.take(body?.kind === 'mix' ? 'mix' : 'cut', input, by);
+    case 'cut': return mixer.take('cut', input, by);
+    case 'fade': return mixer.take('mix', input, by);
+    case 'start': return mixer.start();
+    case 'stop': return mixer.stop();
+    case 'pause': return mixer.pause();
+    case 'resume': return mixer.resume();
+    case 'toggle': return mixer.toggle();
+    case 'next': return mixer.next();
+    default: throw new Error('Nieznane polecenie.');
+  }
+}
+app.get('/api/mixer/state', requireDirector, (req, res) => res.json({ ...mixer.state(pk(req.director)), stt: !!STT_URL }));
+const MIXER_ACTIONS = new Set(['preview', 'program', 'cut', 'fade', 'start', 'stop', 'pause', 'resume', 'toggle', 'next']);
+app.post('/api/mixer/:action', requireDirector, (req, res, next) => {
+  if (!MIXER_ACTIONS.has(req.params.action)) return next();
+  mixerReply(res, () => mixerAction(req.params.action, req.body, who(req)));
+});
+app.put('/api/mixer/settings', requireDirector, (req, res) => mixerReply(res, () => mixer.setSettings(req.body?.settings ?? req.body)));
+app.put('/api/mixer/voice', requireDirector, (req, res) => mixerReply(res, () => {
+  const b = req.body || {};
+  if ('on' in b) mixer.setVoice(pk(req.director), !!b.on);
+  const opts = {};
+  for (const k of ['minConfidence', 'programTake', 'fadeFrames']) if (k in b) opts[k] = b[k];
+  if (Object.keys(opts).length) mixer.setVoiceOptions(opts);
+  return { ok: true, on: mixer.voiceEnabledFor(pk(req.director)) };
+}));
+app.post('/api/mixer/presets', requireDirector, (req, res) => mixerReply(res, () => mixer.savePreset(req.body?.name)));
+app.post('/api/mixer/presets/:name/load', requireDirector, (req, res) => mixerReply(res, () => mixer.loadPreset(req.params.name)));
+app.delete('/api/mixer/presets/:name', requireDirector, (req, res) => mixerReply(res, () => mixer.deletePreset(req.params.name)));
+app.post('/api/mixer/sim/program', requireDirector, (req, res) => mixerReply(res, () => mixer.simProgram(req.body?.input)));
+app.post('/api/mixer/sim/drop', requireDirector, (req, res) => mixerReply(res, () => mixer.simDrop(req.body?.seconds)));
+
+// Stream Deck: GET albo POST z kluczem wygenerowanym w panelu administratora (domyślnie brak klucza = wyłączone).
+// /api/mixer/deck/<polecenie>?key=…  polecenia: start stop pause resume toggle next cut fade preview program, preset
+app.all('/api/mixer/deck/:action', (req, res) => {
+  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
+  const key = String(req.query.key || req.get('x-deck-key') || '');
+  if (!mixer.deckKeyOk(key)) { console.warn(`[reżyseria] Stream Deck: zły klucz (${req.ip})`); return res.status(403).json({ ok: false, error: 'Zły klucz Stream Decka.' }); }
+  if (!config.mixer?.enabled) return res.status(409).json({ ok: false, error: 'Mikser wideo jest wyłączony.' });
+  const body = { ...req.query, ...(req.body || {}) };
+  if (req.params.action === 'preset') return mixerReply(res, () => mixer.loadPreset(String(body.name || '')));
+  mixerReply(res, () => mixerAction(req.params.action, body, 'Stream Deck'));
+});
+
+// Panel administratora: stan połączenia i klucz Stream Decka (adres, M/E i włączenie – w konfiguracji, sekcja „mixer”)
+app.get('/api/admin/mixer', requireAdmin, (_req, res) => res.json(mixer.adminInfo()));
+app.post('/api/admin/mixer/deck-key', requireAdmin, (req, res) => {
+  if (req.body?.clear) { mixer.clearDeckKey(); return res.json({ ok: true, key: '' }); }
+  res.json({ ok: true, key: mixer.newDeckKey() });
+});
+
+// Komenda głosowa: szybkie rozpoznawanie (osobny, lekki model w usłudze STT), potem parser i mikser.
+async function mixerVoice(u, body, ctype) {
+  const t0 = Date.now();
+  const q = `lang=pl&prompt=${encodeURIComponent(VOICE_PROMPT)}&hotwords=${encodeURIComponent(VOICE_HOTWORDS)}&who=${encodeURIComponent(u.name || '')}`;
+  try {
+    let r = await fetch(`${STT_URL}/command?${q}`, { method: 'POST', body, headers: { 'content-type': ctype || 'audio/wav' }, signal: AbortSignal.timeout(8000) });
+    if (r.status === 404) r = await fetch(`${STT_URL}/transcribe?${q}`, { method: 'POST', body, headers: { 'content-type': ctype || 'audio/wav' }, signal: AbortSignal.timeout(15000) }); // starsza usługa STT
+    let j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `STT ${r.status}`);
+    // Szybki model (ok. 0,3 s) czasem przekręca liczebniki. Gdy wyszła „prawie komenda” (jest słowo komendy, ale coś
+    // nie pasuje) – druga próba dokładniejszym modelem głównym. Zwykła rozmowa (bez słów komendy) nie kosztuje nic więcej.
+    const first = parseCommand(String(j.text || ''));
+    if (first && !first.ok) {
+      const r2 = await fetch(`${STT_URL}/command?${q}&model=main`, { method: 'POST', body, headers: { 'content-type': ctype || 'audio/wav' }, signal: AbortSignal.timeout(8000) }).catch(() => null);
+      const j2 = r2?.ok ? await r2.json().catch(() => null) : null;
+      if (j2?.text) j = { ...j2, seconds: (j.seconds || 0) + (j2.seconds || 0) };
+    }
+    await mixer.voiceCommand({ text: String(j.text || ''), confidence: typeof j.confidence === 'number' ? j.confidence : null, who: u.name, sttMs: Math.round((j.seconds || 0) * 1000), startedAt: t0 });
+  } catch (e) {
+    const why = e.name === 'TimeoutError' ? 'rozpoznawanie trwało za długo' : e.cause?.code === 'ECONNREFUSED' || e.message === 'fetch failed' ? 'usługa rozpoznawania mowy nie działa' : e.message;
+    mixer.voiceFailed(u.name, `${why} – nic nie wykonano`);
+  }
+}
 
 // ================= MOSTEK TRANSMISJI (serwer w chmurze, urządzenia w sieci kościoła) =================
 function requireBridge(req, res, next) {
@@ -1058,6 +1206,7 @@ function adminUserInfo(u) {
     admin: { value: g.admin === true, viaPin: u.sess?.role === 'admin' },
     speak: { value: g.speak ?? null, auto: autoR === 'speaker' || autoR === 'admin', effective: u.role === 'speaker' || u.role === 'admin' },
     live: { value: g.live ?? null, auto: autoLive(u), effective: canControlLive(u), enabled: !!config.planningCenter?.liveControl?.enabled },
+    director: { value: g.director ?? null, auto: u.role === 'admin' || autoDirector(u), effective: canDirect(u), enabled: !!config.mixer?.enabled },
   };
 }
 // Osoby z Planning Center (także offline i spoza planu) z uprawnieniami nadanymi w panelu
@@ -1075,6 +1224,7 @@ app.get('/api/admin/pco/people', requireAdmin, async (req, res) => {
     res.json({
       fetchedAt: dir.at,
       liveEnabled: !!config.planningCenter?.liveControl?.enabled,
+      mixerEnabled: !!config.mixer?.enabled,
       teams: (pco.state.teams || []).map((t) => ({ id: t.id, name: t.name })),
       people: [...dir.people, ...extra].map((p) => {
         const g = config.grants?.[p.pid] || {}, r = roster.get(p.pid);
@@ -1083,7 +1233,8 @@ app.get('/api/admin/pco/people', requireAdmin, async (req, res) => {
           teams: p.teams.map((t) => teamName.get(t) || t),
           leader: leaders.has(p.pid), inPlan: !!r, online: online.has(p.pid),
           autoSpeak: !!r?.canSpeak,
-          grant: { admin: g.admin === true, speak: g.speak ?? null, live: g.live ?? null },
+          grant: { admin: g.admin === true, speak: g.speak ?? null, live: g.live ?? null, director: g.director ?? null },
+          autoDirector: autoDirector({ pid: p.pid, role: 'listener' }),
         };
       }),
     });
@@ -1094,6 +1245,7 @@ app.get('/api/admin/users', requireAdmin, (_req, res) => {
     users: [...users.values()].filter((u) => u.sockets.size > 0).map(adminUserInfo),
     grants: Object.entries(config.grants || {}).map(([pid, g]) => ({ pid, ...g, online: [...users.values()].some((u) => u.pid === pid && u.sockets.size) })),
     liveEnabled: !!config.planningCenter?.liveControl?.enabled && !!pco,
+    mixerEnabled: !!config.mixer?.enabled,
   });
 });
 app.post('/api/admin/grant', requireAdmin, (req, res) => {
@@ -1103,20 +1255,20 @@ app.post('/api/admin/grant', requireAdmin, (req, res) => {
   const pid = pidIn ? String(pidIn) : u?.sess?.pid || null;
   if (!u && !pid) return res.status(404).json({ error: 'Nie ma takiej osoby online.' });
   const patch = {};
-  for (const k of ['speak', 'live', 'admin']) if (k in (req.body || {})) patch[k] = norm(req.body[k]);
+  for (const k of ['speak', 'live', 'director', 'admin']) if (k in (req.body || {})) patch[k] = norm(req.body[k]);
   if (patch.admin === false) patch.admin = null; // „nie” = brak nadania (PIN administratora działa nadal)
   const merge = (g) => { const x = { ...g }; for (const [k, v] of Object.entries(patch)) { if (v === null) delete x[k]; else x[k] = v; } return x; };
   if (pid) {
     const next = structuredClone(config);
     const g = merge(next.grants?.[pid] || {});
     next.grants ||= {};
-    if (g.speak === undefined && g.live === undefined && !g.admin) delete next.grants[pid];
+    if (g.speak === undefined && g.live === undefined && g.director === undefined && !g.admin) delete next.grants[pid];
     else next.grants[pid] = { ...g, name: g.name || u?.name || String(req.body?.name || '').trim().slice(0, 60) || pid };
     config = validateConfig(next);
     saveJson(CONFIG_PATH, config);
   } else {
     const g = merge(sessionGrants.get(u.id) || {});
-    if (g.speak === undefined && g.live === undefined && !g.admin) sessionGrants.delete(u.id); else sessionGrants.set(u.id, g);
+    if (g.speak === undefined && g.live === undefined && g.director === undefined && !g.admin) sessionGrants.delete(u.id); else sessionGrants.set(u.id, g);
   }
   applyGrants();
   console.log(`[admin] uprawnienia ${u?.name || pid}: ${JSON.stringify(patch)}`);
@@ -1457,6 +1609,7 @@ wss.on('connection', (ws, req) => {
   ws.on('pong', () => { ws.isAlive = true; });
 
   send(ws, { t: 'perm', ...perms(u) });
+  sendMixerTo(u);
   for (const x of users.values()) if (x.wPeer === pk(u) && x.sockets.size) send(ws, { t: 'wtarget', user: x.id, on: true });
   send(ws, { t: 'hello', users: presence(), history: [...history.all(), ...dmHistoryFor(u)], you: publicUser(u), channels, plan: pco ? pco.publicPlan() : null, streams: streams.list(), program: publicProgram() });
   const pend = pendingCalls.get(pk(u));
@@ -1768,6 +1921,7 @@ setInterval(() => {
   else if (left <= 60 && left > 0 && cur.length > 120 && cur.length - left > 15) fire('minute', '⏳ Ostatnia minuta punktu'); // nie przy punkcie dopiero co rozpoczętym
 }, 2000);
 
+mixer.applyConfig(config.mixer).catch((e) => console.warn('[reżyseria]', e.message));
 server.listen(PORT, HOST, () => {
   console.log(`Interkom ${VERSION} nasłuchuje na http://${HOST}:${PORT} (kanały: ${[...channelIds].join(', ')})`);
 });

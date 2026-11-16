@@ -73,6 +73,7 @@ function showTab(tab) {
   try { sessionStorage.setItem('ik.adminTab', tab); } catch {}
   if (tab === 'status') { loadStatus(); loadNicks(); }
   if (tab === 'pco') { loadMeta(); loadPP(); }
+  if (tab === 'mixer') loadMixer();
   if (tab === 'stt') { loadStt(); loadRecent(); }
   if (tab === 'server') { loadSystem(); loadUpdate(true); }
   if (tab === 'audio') loadProgram();
@@ -101,7 +102,7 @@ window.addEventListener('beforeunload', (e) => { if (cfg && dirty()) { e.prevent
 
 function renderAll() {
   $('#aOrg').textContent = cfg.orgName;
-  renderGeneral(); renderChannels(); renderQuick(); renderPco(); renderStreams(); renderPP(); renderProgram();
+  renderGeneral(); renderChannels(); renderQuick(); renderPco(); renderStreams(); renderPP(); renderProgram(); renderMixer();
   dirty();
 }
 
@@ -123,9 +124,9 @@ async function loadStatus() {
     $('#stOnlineN').textContent = s.users.length;
     if (document.activeElement?.closest?.('#stUsers, #stGrants')) return; // nie przerywaj wyboru
     const g = await api('GET', '/api/admin/users');
-    const sel = (kind, x, disabled) => {
+    const sel = (kind, x, disabled, why = 'Włącz sterowanie Live w zakładce Planning Center') => {
       const autoTxt = `Auto (${x.auto ? 'tak' : 'nie'})`;
-      return `<select data-kind="${kind}" ${disabled ? 'disabled title="Włącz sterowanie Live w zakładce Planning Center"' : ''} class="${x.effective ? 'on' : ''}">
+      return `<select data-kind="${kind}" ${disabled ? `disabled title="${why}"` : ''} class="${x.effective ? 'on' : ''}">
         <option value="" ${x.value === null ? 'selected' : ''}>${autoTxt}</option>
         <option value="true" ${x.value === true ? 'selected' : ''}>Tak – zawsze</option>
         <option value="false" ${x.value === false ? 'selected' : ''}>Nie – nigdy</option></select>`;
@@ -136,19 +137,20 @@ async function loadStatus() {
         <td data-l="Słucha">${esc(u.listen.map(chName).join(', ')) || '—'}</td>
         <td data-l="Administrator">${u.admin.viaPin ? '<span class="hint">PIN admina</span>' : `<select data-kind="admin" class="${u.admin.value ? 'on' : ''}"><option value="false" ${u.admin.value ? '' : 'selected'}>Nie</option><option value="true" ${u.admin.value ? 'selected' : ''}>Tak${u.persistent ? ' – na stałe' : ''}</option></select>`}</td>
         <td data-l="Mówienie">${u.role === 'admin' ? '<span class="hint">administrator</span>' : sel('speak', u.speak)}</td>
-        <td data-l="Sterowanie planem">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('live', u.live, !g.liveEnabled)}</td></tr>`).join('')
-      || '<tr><td colspan="5" class="hint">Nikogo nie ma online.</td></tr>';
+        <td data-l="Sterowanie planem">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('live', u.live, !g.liveEnabled)}</td>
+        <td data-l="Reżyser">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('director', u.director, !g.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td></tr>`).join('')
+      || '<tr><td colspan="6" class="hint">Nikogo nie ma online.</td></tr>';
     $$('#stUsers select').forEach((el) => (el.onchange = () => setGrant({ userId: el.closest('tr').dataset.uid }, el.dataset.kind, el.value)));
     const lbl = (v) => (v === true ? 'Tak – zawsze' : v === false ? 'Nie – nigdy' : 'Auto');
     $('#stGrantsCard').hidden = !g.grants.length;
-    $('#stGrants').innerHTML = g.grants.map((x) => `<tr data-pid="${esc(x.pid)}"><td>${esc(x.name)}${x.online ? ' <span class="ok-t">● online</span>' : ''}</td><td data-l="Administrator">${x.admin ? 'Tak' : '—'}</td><td data-l="Mówienie">${lbl(x.speak)}</td><td data-l="Sterowanie planem">${lbl(x.live)}</td>
+    $('#stGrants').innerHTML = g.grants.map((x) => `<tr data-pid="${esc(x.pid)}"><td>${esc(x.name)}${x.online ? ' <span class="ok-t">● online</span>' : ''}</td><td data-l="Administrator">${x.admin ? 'Tak' : '—'}</td><td data-l="Mówienie">${lbl(x.speak)}</td><td data-l="Sterowanie planem">${lbl(x.live)}</td><td data-l="Reżyser">${lbl(x.director)}</td>
         <td><button type="button" data-reset>↺ Przywróć auto</button></td></tr>`).join('');
     $$('#stGrants [data-reset]').forEach((b) => (b.onclick = () => setGrant({ pid: b.closest('tr').dataset.pid }, null, null)));
   } catch (e) { toast(e.message, 'err'); }
 }
 async function setGrant(who, kind, value) {
   const v = value === 'true' ? true : value === 'false' ? false : null;
-  const body = kind ? { ...who, [kind]: v } : { ...who, speak: null, live: null, admin: null };
+  const body = kind ? { ...who, [kind]: v } : { ...who, speak: null, live: null, director: null, admin: null };
   try { await api('POST', '/api/admin/grant', body); toast('Uprawnienia zmienione.'); } catch (e) { toast(e.message, 'err'); }
   document.activeElement?.blur?.();
   loadStatus();
@@ -895,6 +897,37 @@ async function loadPP() {
 $('#ppSync').onclick = async () => { try { const r = await api('POST', '/api/admin/propresenter/sync'); toast(r.via === 'bridge' ? 'Wysłano do mostka.' : r.ok ? 'Zegar zsynchronizowany.' : r.error || 'Brak połączenia', r.ok || r.via ? 'ok' : 'err'); setTimeout(loadPP, 1500); } catch (e) { toast(e.message, 'err'); } };
 setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="pco"]').hidden) loadPP(); }, 3000);
 
+// ---------- Reżyseria (mikser wideo ATEM) ----------
+function renderMixer() {
+  const c = (cfg.mixer ||= { enabled: false, host: '', me: 0, simulation: false, directorPositions: ['Reżyser'], directorTeams: [] });
+  const list = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
+  const h = $('#mxHost'); h.value = c.host || ''; h.oninput = () => { c.host = h.value.trim(); dirty(); };
+  const me = $('#mxMe'); me.value = String(c.me || 0); me.onchange = () => { c.me = Number(me.value); dirty(); };
+  const pos = $('#mxPositions'); pos.value = (c.directorPositions || []).join(', '); pos.oninput = () => { c.directorPositions = list(pos.value); dirty(); };
+  const tm = $('#mxTeams'); tm.value = (c.directorTeams || []).join(', '); tm.oninput = () => { c.directorTeams = list(tm.value); dirty(); };
+  const en = $('#mxEnabled'); en.checked = !!c.enabled; en.onchange = () => { c.enabled = en.checked; dirty(); };
+  const sim = $('#mxSim'); sim.checked = !!c.simulation; sim.onchange = () => { c.simulation = sim.checked; h.disabled = sim.checked; dirty(); };
+  h.disabled = !!c.simulation;
+}
+async function loadMixer() {
+  try {
+    const r = await api('GET', '/api/admin/mixer');
+    const st = { connected: ['ok-t', 'Połączono'], connecting: ['', 'Łączenie…'], reconnecting: ['bad-t', 'Brak połączenia – łączę ponownie'], disconnected: ['', 'Rozłączono'] }[r.status] || ['', r.status];
+    $('#mxState').innerHTML = !r.enabled ? '<span class="hint">Wyłączone (albo niezapisane).</span>'
+      : `<span class="${st[0]}">● ${esc(st[1])}</span>${r.model ? ` <span class="hint">${esc(r.model)} · ${r.inputs} źródeł · M/E: ${r.meCount}</span>` : ''}${r.simulation ? ' <span class="hint">(symulacja)</span>' : ''}`;
+    $('#mxDeck').innerHTML = r.deckKey ? `Klucz aktywny (kończy się na <b>${esc(r.deckKey.slice(-4))}</b>). Pełny klucz widać tylko zaraz po wygenerowaniu.` : '<span class="hint">Brak klucza – sterowanie ze Stream Decka wyłączone.</span>';
+  } catch (e) { $('#mxState').textContent = e.message; }
+}
+$('#mxDeckNew').onclick = async () => {
+  try {
+    const r = await api('POST', '/api/admin/mixer/deck-key', {});
+    await loadMixer();
+    $('#mxDeck').innerHTML = `Nowy klucz: <code>${esc(r.key)}</code><br><span class="hint">Skopiuj go teraz, np. <code>${esc(location.origin)}/api/mixer/deck/cut?key=${esc(r.key)}</code>. Stary klucz przestał działać.</span>`;
+  } catch (e) { toast(e.message, 'err'); }
+};
+$('#mxDeckClear').onclick = async () => { try { await api('POST', '/api/admin/mixer/deck-key', { clear: true }); toast('Sterowanie ze Stream Decka wyłączone.'); loadMixer(); } catch (e) { toast(e.message, 'err'); } };
+setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="mixer"]').hidden) loadMixer(); }, 3000);
+
 // ---------- kopia ustawień ----------
 $('#bkDownload').addEventListener('click', async () => {
   try {
@@ -1049,7 +1082,7 @@ async function loadPeople(refresh) {
   $('#ppSum').textContent = refresh ? 'Pobieram z Planning Center…' : 'Wczytuję listę osób…';
   try {
     const j = await api('GET', '/api/admin/pco/people' + (refresh ? '?refresh=1' : ''));
-    PP.all = j.people; PP.teams = j.teams; PP.liveEnabled = j.liveEnabled; PP.at = j.fetchedAt;
+    PP.all = j.people; PP.teams = j.teams; PP.liveEnabled = j.liveEnabled; PP.mixerEnabled = j.mixerEnabled; PP.at = j.fetchedAt;
     const sel = $('#ppTeam'), cur = sel.value;
     sel.innerHTML = '<option value="">Wszystkie zespoły</option><option value="-">Bez zespołu</option>'
       + [...new Set(j.teams.map((t) => t.name))].sort((a, b) => a.localeCompare(b, 'pl')).map((n) => `<option>${esc(n)}</option>`).join('');
@@ -1064,7 +1097,8 @@ function ppFilter() {
     if (team === '-' && p.teams.length) return false;
     if (team && team !== '-' && !p.teams.includes(team)) return false;
     const g = p.grant;
-    if (show === 'grants' && !(g.admin || g.speak !== null || g.live !== null)) return false;
+    if (show === 'grants' && !(g.admin || g.speak !== null || g.live !== null || g.director !== null)) return false;
+    if (show === 'director' && !(g.admin || g.director === true || (g.director === null && p.autoDirector))) return false;
     if (show === 'admin' && !g.admin) return false;
     if (show === 'speak' && !(g.admin || g.speak === true || (g.speak === null && p.autoSpeak))) return false;
     if (show === 'live' && !(g.admin || g.live === true)) return false;
@@ -1079,7 +1113,7 @@ function renderPeople() {
   const ago = PP.at ? Math.max(0, Math.round((Date.now() - PP.at) / 60000)) : 0;
   $('#ppSum').textContent = `${list.length} z ${PP.all.length} osób · dane z Planning Center sprzed ${ago ? ago + ' min' : 'chwili'}`;
   $('#ppBulk').hidden = !list.length; $('#ppBulkN').textContent = list.length; $('#ppConfirm').hidden = true;
-  const sel3 = (kind, v, autoTxt, dis) => `<select data-kind="${kind}" ${dis ? 'disabled title="Włącz sterowanie Live w zakładce Planning Center"' : ''} class="${v === true ? 'on' : ''}">
+  const sel3 = (kind, v, autoTxt, dis, why = 'Włącz sterowanie Live w zakładce Planning Center') => `<select data-kind="${kind}" ${dis ? `disabled title="${why}"` : ''} class="${v === true ? 'on' : ''}">
       <option value="" ${v === null ? 'selected' : ''}>${autoTxt}</option><option value="true" ${v === true ? 'selected' : ''}>Tak – zawsze</option><option value="false" ${v === false ? 'selected' : ''}>Nie – nigdy</option></select>`;
   const tags = (p) => [p.online && '<span class="ok-t">● online</span>', p.inPlan && 'w planie', p.leader && 'lider', p.missing && 'brak w Planning Center'].filter(Boolean).join(' · ');
   $('#ppRows').innerHTML = list.slice(0, PP.shown).map((p) => `<tr data-pid="${esc(p.pid)}">
@@ -1087,8 +1121,9 @@ function renderPeople() {
       <td data-l="Zespoły"><span class="hint">${esc(p.teams.join(', ')) || '—'}</span></td>
       <td data-l="Administrator"><select data-kind="admin" class="${p.grant.admin ? 'on' : ''}"><option value="false" ${p.grant.admin ? '' : 'selected'}>Nie</option><option value="true" ${p.grant.admin ? 'selected' : ''}>Tak</option></select></td>
       <td data-l="Mówienie">${p.grant.admin ? '<span class="hint">administrator</span>' : sel3('speak', p.grant.speak, `Auto (${p.autoSpeak ? 'tak' : 'nie'})`)}</td>
-      <td data-l="Sterowanie planem">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('live', p.grant.live, 'Auto', !PP.liveEnabled)}</td></tr>`).join('')
-    || '<tr><td colspan="5" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
+      <td data-l="Sterowanie planem">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('live', p.grant.live, 'Auto', !PP.liveEnabled)}</td>
+      <td data-l="Reżyser">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('director', p.grant.director, `Auto (${p.autoDirector ? 'tak' : 'nie'})`, !PP.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
   $('#ppMoreRow').hidden = list.length <= PP.shown;
   $$('#ppRows select').forEach((el) => (el.onchange = async () => {
     const p = PP.all.find((x) => x.pid === el.closest('tr').dataset.pid);

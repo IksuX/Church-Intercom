@@ -85,5 +85,15 @@
     "livePollSeconds": 5,
     "refreshSeconds": 120
   },
-  "sttPrompt": ""
+  "sttPrompt": "",
+  "mixer": {
+    "enabled": false,
+    "host": "",
+    "me": 0,
+    "simulation": false,
+    "directorPositions": [
+      "Reżyser"
+    ],
+    "directorTeams": []
+  }
 }

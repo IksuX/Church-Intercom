@@ -28,6 +28,7 @@
     <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
     <symbol id="i-signal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></symbol>
     <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 7h.01M7 17h.01"/></symbol>
   </svg>
   <!-- logowanie -->
@@ -63,6 +64,7 @@
       <button data-tab="stt"><svg class="ic" aria-hidden="true"><use href="#i-text"/></svg>Transkrypcja</button>
       <button data-tab="pco"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Planning Center</button>
       <button data-tab="streams"><svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg>Transmisja live</button>
+      <button data-tab="mixer"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg>Reżyseria</button>
       <button data-tab="server"><svg class="ic" aria-hidden="true"><use href="#i-server"/></svg>Serwer</button>
     </nav>
 
@@ -73,11 +75,11 @@
         <div class="a-card">
           <h2>Osoby online <span class="a-count" id="stOnlineN"></span></h2>
           <p class="hint">Uprawnienia: <b>Auto</b> = według grafiku Planning Center / PIN-u. Zmiana działa od razu. Dla osób z Planning Center zapisuje się na stałe, dla zalogowanych PIN-em – do wylogowania.</p>
-          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th></tr></thead><tbody id="stUsers"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th></tr></thead><tbody id="stUsers"></tbody></table></div>
         </div>
         <div class="a-card" id="stGrantsCard" hidden>
           <h2>Zapisane uprawnienia (osoby z Planning Center)</h2>
-          <table class="a-table"><thead><tr><th>Osoba</th><th>Admin</th><th>Mówienie</th><th>Sterowanie planem</th><th></th></tr></thead><tbody id="stGrants"></tbody></table>
+          <table class="a-table"><thead><tr><th>Osoba</th><th>Admin</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th></th></tr></thead><tbody id="stGrants"></tbody></table>
         </div>
         <div class="a-card">
           <h2>Ksywki <span class="a-count" id="nkN"></span></h2>
@@ -174,6 +176,7 @@
               <option value="admin">Administratorzy</option>
               <option value="speak">Mogą mówić</option>
               <option value="live">Sterują planem</option>
+              <option value="director">Reżyserzy</option>
               <option value="leader">Liderzy zespołów</option>
               <option value="inPlan">W bieżącym planie</option>
               <option value="online">Teraz online</option>
@@ -183,12 +186,12 @@
           <p class="hint" id="ppSum">Wczytuję listę osób…</p>
           <div class="pp-bulk" id="ppBulk" hidden>
             <span>Dla wszystkich z listy (<b id="ppBulkN">0</b>):</span>
-            <select id="ppBulkKind" aria-label="Uprawnienie"><option value="speak">Mówienie</option><option value="live">Sterowanie planem</option><option value="admin">Administrator</option></select>
+            <select id="ppBulkKind" aria-label="Uprawnienie"><option value="speak">Mówienie</option><option value="live">Sterowanie planem</option><option value="director">Reżyser</option><option value="admin">Administrator</option></select>
             <select id="ppBulkVal" aria-label="Wartość"><option value="true">Tak – zawsze</option><option value="false">Nie – nigdy</option><option value="">Auto (według grafiku)</option></select>
             <button type="button" id="ppBulkGo">Zastosuj</button>
             <span class="pp-confirm" id="ppConfirm" hidden>Na pewno zmienić <b id="ppConfirmN"></b> osobom? <button type="button" id="ppConfirmYes" class="danger">Tak, zmień</button><button type="button" id="ppConfirmNo">Anuluj</button></span>
           </div>
-          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th></tr></thead><tbody id="ppRows"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th></tr></thead><tbody id="ppRows"></tbody></table></div>
           <div class="row" id="ppMoreRow" hidden><button type="button" id="ppMore">Pokaż więcej</button></div>
         </div>
       </section>
@@ -524,6 +527,27 @@
       </section>
 
       <!-- SERWER -->
+      <!-- REŻYSERIA (mikser wideo ATEM) -->
+      <section data-panel="mixer" hidden>
+        <div class="a-card">
+          <h2>Mikser wideo Blackmagic ATEM</h2>
+          <p class="hint">Serwer interkomu łączy się z mikserem ATEM w sieci kościoła. Osoby z rolą <b>Reżyser</b> widzą w aplikacji ikonę kamery: podgląd Program / Preview, ręczne przełączanie, autopilot i sterowanie głosem. Rolę nadasz w zakładce <b>Stan</b> (osoby online) albo <b>Osoby i uprawnienia</b>. Działa tylko wtedy, gdy serwer jest w tej samej sieci co mikser (nie na VPS).</p>
+          <label class="switch"><input type="checkbox" id="mxEnabled"> Włącz Reżyserię</label>
+          <label class="switch"><input type="checkbox" id="mxSim"> Tryb symulacji (fałszywy mikser – do prób bez sprzętu)</label>
+          <div class="a-inline"><label class="a-field" style="flex:2">Adres IP miksera<input id="mxHost" placeholder="np. 192.168.10.240" autocomplete="off" inputmode="decimal"></label>
+            <label class="a-field" style="flex:1">M/E<select id="mxMe" class="a-select"><option value="0">M/E 1</option><option value="1">M/E 2</option><option value="2">M/E 3</option><option value="3">M/E 4</option></select></label></div>
+          <label class="a-field">Rola Reżyser automatycznie dla stanowisk w Planning Center (po przecinku)<input id="mxPositions" placeholder="np. Reżyser, Realizator wizji" autocomplete="off"></label>
+          <label class="a-field">… i dla zespołów (po przecinku, pełne nazwy)<input id="mxTeams" placeholder="np. Wizja" autocomplete="off"></label>
+          <p id="mxState" class="a-status"></p>
+        </div>
+        <div class="a-card">
+          <h2>Stream Deck</h2>
+          <p class="hint">Przyciski Stream Decka mogą wysyłać polecenia do Reżyserii (np. wtyczką „API Ninja” albo „Web Requests”). Każde zapytanie musi zawierać klucz – bez wygenerowanego klucza ta możliwość jest wyłączona. Kto zna klucz, steruje mikserem jak Reżyser, więc nie udostępniaj go poza ekipą.</p>
+          <p id="mxDeck" class="a-status"></p>
+          <div class="row-btns"><button id="mxDeckNew" type="button">Wygeneruj nowy klucz</button><button id="mxDeckClear" type="button" class="danger">Wyłącz (usuń klucz)</button></div>
+          <p class="hint">Adresy (GET albo POST): <code>/api/mixer/deck/&lt;polecenie&gt;?key=KLUCZ</code>, polecenia: <code>cut</code>, <code>fade</code>, <code>preview?input=2</code>, <code>program?input=3</code>, <code>start</code>, <code>stop</code>, <code>pause</code>, <code>toggle</code>, <code>next</code>, <code>preset?name=Nazwa</code>.</p>
+        </div>
+      </section>
       <section data-panel="server" hidden>
         <div class="a-card" id="sysCard">
           <h2>Serwer <span class="a-count" id="sysHost"></span></h2>

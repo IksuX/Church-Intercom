@@ -1,4 +1,4 @@
-# Interkom 0.50.1
+# Interkom 0.51.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -12,6 +12,7 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 - **Transkrypcja mowy (nowość w 0.2):** po każdej wypowiedzi w czacie pojawia się wpis „🎙 Anna mówiła 4 s”, a 1–3 s później jego treść jako tekst. Głos na żywo idzie osobnym torem i transkrypcja go nie opóźnia. Rozpoznawanie działa lokalnie (Whisper), nagrania nie opuszczają serwera.
 - **Czytanie wiadomości na głos (TTS)** przez syntezę mowy wbudowaną w telefon lub komputer. Włączasz je w ⚙️.
 - **Ekran nie gaśnie** w trakcie pracy. Aplikacja sama łączy się ponownie po utracie Wi-Fi.
+- **Reżyseria** (od 0.51): sterowanie mikserem wideo Blackmagic ATEM z interkomu – Program i Preview, ręczne przełączanie, autopilot i komendy głosowe („Przygotuj dwa”, „Cut wchodzisz”) – tylko dla roli Reżyser. Opis niżej.
 - **Administrator** może wyczyścić czat przed kolejnym nabożeństwem. Historia każdego dnia zapisuje się w `data/app/log/`.
 
 ## Wymagania
@@ -23,11 +24,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.50.1.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.51.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.50.1.zip && cd interkom
+   unzip interkom-0.51.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -685,6 +686,76 @@ Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo pub
 ## 0.39.1
 
 - Poprawka instalatora: po zmianie konfiguracji głosu albo HTTPS (np. `--remote`, zmiana domeny lub adresu IP) instalator sam uruchamia ponownie LiveKit i Caddy. Wcześniej te usługi działały dalej ze starymi ustawieniami, bo ich obraz się nie zmieniał. Przez to telefony spoza sieci łączyły się z tekstem, ale bez głosu.
+
+## Reżyseria: mikser wideo ATEM i komendy głosowe (od 0.51.0)
+
+Moduł do sterowania mikserem wizyjnym **Blackmagic ATEM** (ATEM Mini i większe). Z mikserem łączy się **serwer interkomu**, a aplikacja tylko pokazuje stan i wysyła polecenia. Korzystać z niego może wyłącznie osoba z rolą **Reżyser**.
+
+**Włączenie (panel → Reżyseria):**
+- zaznacz „Włącz Reżyserię”, wpisz adres IP miksera i wybierz M/E (przy mikserach z kilkoma M/E),
+- „Tryb symulacji” uruchamia fałszywy mikser z 6 kamerami, do prób bez sprzętu,
+- działa tylko na serwerze w tej samej sieci co mikser. Na VPS mikser jest nieosiągalny.
+
+**Rola Reżyser** – nadajesz ją tak jak inne uprawnienia:
+- w zakładce **Stan** (osoby online) albo **Osoby i uprawnienia** (osoby z Planning Center), kolumna **Reżyser**: Auto / Tak – zawsze / Nie – nigdy,
+- „Auto” = stanowiska i zespoły z Planning Center wpisane w zakładce Reżyseria (domyślnie stanowisko „Reżyser”),
+- administrator ma dostęp zawsze.
+
+Uprawnienia sprawdza serwer przy każdym poleceniu. Osoba bez roli dostaje odmowę także przy wywołaniu API wprost. Stan miksera przez WebSocket trafia tylko do Reżyserów. Odebranie roli działa od razu.
+
+**Widok Reżyserii** (ikona kamery w pasku u góry, tylko dla Reżysera; strona, więc działa tak samo w przeglądarce, na iPhonie i na Androidzie):
+- **Program** (czerwony) i **Preview** (zielony) z nazwami wejść pobranymi z miksera,
+- dotknięcie kamery ustawia ją na Preview, a **CUT** i **FADE** przenoszą Preview na Program,
+- przejścia zawsze idą przez Preview (Cut albo Auto z wybranym stylem), nigdy przez bezpośrednią zmianę Programu,
+- **autopilot**: zmiana kamer co zadany czas (stały, losowy z zakresu, osobny dla kamery), po kolei albo losowo, przejścia Cut/Mix/Dip/Wipe, presety. Ręczne przełączenie (na mikserze, w Reżyserii albo głosem) zeruje odliczanie, a autopilot nie wraca do „swojej” kamery. Bez połączenia autopilot czeka i nie wysyła potem zaległych zmian,
+- pasek „Mów” zostaje widoczny, więc Reżyser może mówić do ekipy, patrząc na Program i Preview.
+
+**Komendy głosowe** – włącznik „Sterowanie głosem” w widoku Reżyserii. Komendy wypowiada się zwykłym przyciskiem **Mów** (na dowolnym kanale), więc ekipa je słyszy, a mikser wykonuje:
+
+| Komenda | Co robi |
+|---|---|
+| „Przygotuj 2” / „Przygotuj dwójkę” / „Kamera dwa, przygotuj” | kamera 2 na Preview |
+| „Wchodzisz 3” | kamera 3 na Program (Cut; w ustawieniach komend można zmienić na Fade) |
+| „Cut wchodzisz” / „Fade wchodzisz” | kamera z Preview na Program cięciem / przejściem Mix |
+| „Cut wchodzisz 2” / „Fade wchodzisz 3” | wskazana kamera na Program |
+
+- Numer kamery to numer wejścia w mikserze, mówiony cyfrą albo słownie, w różnych formach („dwa”, „dwójka”, „dwójkę”, „kamerę trzecią”), do 20.
+- Komendy przyjmowane są tylko z mikrofonu osoby z rolą Reżyser, która ma włączone sterowanie głosem. Reżyser potrzebuje też prawa mówienia.
+- Każda rozpoznana komenda jest na ekranie: co usłyszano, z jaką pewnością, co wykonano i w jakim czasie.
+- **Nic się nie dzieje**, gdy:
+  - pewność rozpoznania jest niska (domyślnie poniżej 60%),
+  - kamery o tym numerze nie ma,
+  - trwa przejście,
+  - w wypowiedzi jest coś poza komendą (np. „Przygotuj dwójkę i zrób zbliżenie”).
+  Zwykła rozmowa bez słów komendy jest pomijana.
+- Rozpoznawanie działa na serwerze (Whisper), osobnym szybkim modelem `base`, który nie czeka w kolejce za transkrypcją czatu. Gdy wynik wygląda na komendę, ale coś się nie zgadza, serwer próbuje drugi raz modelem głównym.
+- Model `base` (ok. 150 MB) pobiera się przy pierwszym starcie usługi STT po aktualizacji, potem działa offline. Inny model ustawisz w `.env`: `WHISPER_CMD_MODEL=small` (dokładniejszy, wolniejszy) albo `off` (komendy przez model główny).
+- **Opóźnienie** od puszczenia przycisku Mów do przełączenia:
+  - ok. 0,45 s końcówki nagrania (żeby nie uciąć ostatniego słowa),
+  - plus czas rozpoznania i przełączenia, widoczny przy każdej komendzie.
+  - Na Macu M-series rozpoznanie i przełączenie trwało ok. 0,33 s, a z drugą próbą ok. 1,5 s. Na OptiPlexie spodziewaj się mniej więcej 2–3 razy dłużej.
+
+**Stream Deck** (opcjonalnie): w panelu → Reżyseria wygeneruj klucz. Polecenia przyjmują GET i POST, np. `/api/mixer/deck/cut?key=KLUCZ`, `/api/mixer/deck/preview?key=KLUCZ&input=2`, `fade`, `program?input=3`, `start`, `stop`, `toggle`, `next`, `preset?name=Nazwa`. Bez klucza ta możliwość jest wyłączona.
+
+Ustawienia autopilota, presety i klucz Stream Decka są w `data/mixer.json` i trafiają do kopii ustawień.
+
+## 0.51.0
+- **Reżyseria – moduł miksera wideo Blackmagic ATEM** (opis w rozdziale wyżej):
+  - połączenie z mikserem po stronie serwera,
+  - widok Program / Preview z ręcznym przełączaniem (CUT, FADE),
+  - autopilot z presetami (przeniesiony z osobnej aplikacji ATEM Auto),
+  - komendy głosowe: „Przygotuj N”, „Wchodzisz N”, „Cut wchodzisz [N]”, „Fade wchodzisz [N]”,
+  - opcjonalny Stream Deck z kluczem.
+- **Nowa rola „Reżyser”**:
+  - kolumna w zakładkach Stan i Osoby i uprawnienia (Auto / Tak / Nie),
+  - automatycznie według stanowisk i zespołów z Planning Center,
+  - sprawdzana na serwerze przy każdym poleceniu (HTTP i WebSocket).
+- **Panel → Reżyseria**: włączenie, adres IP, M/E, tryb symulacji, stanowiska Reżysera, klucz Stream Decka.
+- **Usługa rozpoznawania mowy**:
+  - nowe wejście `/command`, z osobnym szybkim modelem (`WHISPER_CMD_MODEL`, domyślnie `base`) i osobną kolejką,
+  - model pobiera się przy pierwszym starcie po aktualizacji (wymaga wtedy internetu).
+- **Pierwsze testy automatyczne** w repozytorium: `cd app && npm test`. Obejmują autopilota, komendy do ATEM-a, rozpoznawanie komend i uprawnienia (uruchamiają prawdziwy serwer z symulatorem miksera).
+- Aplikacja na telefon bez zmian (1.4.1). Widok Reżyserii i komendy głosowe działają w obecnej aplikacji, bez przebudowy.
 
 ## 0.50.1
 - **Zmiany w grafiku Planning Center działają od razu.** Gdy ktoś zostanie dopisany do planu na stanowisku mówiącym (albo z niego zdjęty), dostaje lub traci przycisk mówienia po najbliższym odświeżeniu planu – bez zamykania aplikacji. Tak samo działa zmiana zasad w zakładce Planning Center (stanowiska i zespoły mówiące, liderzy). Wcześniej rola przeliczała się dopiero przy ponownym połączeniu.
