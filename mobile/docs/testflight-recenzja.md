@@ -15,8 +15,8 @@ Do uzupełnienia przed wysłaniem:
 |---|---|
 | Bundle ID | `pl.churchinterkom.app` |
 | Wersja / kompilacja | 1.5.0 / numer z `mobile/build-number` |
-| Serwer demo | `https://57-128-249-85.sslip.io` |
-| Polityka prywatności (Privacy Policy URL) | `https://57-128-249-85.sslip.io/prywatnosc` |
+| Serwer demo | `https://malinkainterkom.duckdns.org` |
+| Polityka prywatności (Privacy Policy URL) | `https://malinkainterkom.duckdns.org/prywatnosc` |
 | Kontakt (Feedback Email) | `[E-MAIL KONTAKTOWY]` |
 | Sign-in required | Tak – nazwa użytkownika: `Apple Review` (dowolna), hasło: PIN konta demo |
 
@@ -56,7 +56,7 @@ Interkom to interkom dla ekip obsługujących nabożeństwa: dźwięk, kamery, t
 
 How to sign in
 
-1. On first launch the app shows the server picker. Tap **“Serwer domyślny (internet)”** – `57-128-249-85.sslip.io`. You can also type that address under “Wpisz adres” (Enter address). The “W tej sieci” (On this network) section searches the church Wi-Fi only, so it will be empty for you – that is expected.
+1. On first launch the app shows the server picker. Tap **“Serwer domyślny (internet)”** – `malinkainterkom.duckdns.org`. You can also type that address under “Wpisz adres” (Enter address). The “W tej sieci” (On this network) section searches the church Wi-Fi only, so it will be empty for you – that is expected.
 2. On the login screen enter the **PIN from the “Sign-in information” field** (“PIN ekipy”) and any name (e.g. “Apple Review”), then tap **“Dołącz”** (Join). The demo account does not need Planning Center. “Zaloguj przez Planning Center” is an optional login for church members.
 3. A privacy notice appears on first sign-in – tap **“Rozumiem”** (I understand).
 4. The demo account (“Recenzent Apple”) can talk and sees two channels: **Ogólny** (General) and a team channel with sample messages. Hold **“Mów”** to talk. The red bar at the top shows that the microphone is open.
@@ -83,7 +83,7 @@ All features (no hidden features)
 
 Jak się zalogować
 
-1. Przy pierwszym uruchomieniu pokazuje się wybór serwera. Stuknij **„Serwer domyślny (internet)”** – `57-128-249-85.sslip.io` (albo wpisz ten adres w „Wpisz adres”). Sekcja „W tej sieci” szuka tylko w Wi-Fi kościoła, więc u recenzenta będzie pusta – to normalne.
+1. Przy pierwszym uruchomieniu pokazuje się wybór serwera. Stuknij **„Serwer domyślny (internet)”** – `malinkainterkom.duckdns.org` (albo wpisz ten adres w „Wpisz adres”). Sekcja „W tej sieci” szuka tylko w Wi-Fi kościoła, więc u recenzenta będzie pusta – to normalne.
 2. Na ekranie logowania wpisz **PIN z pola „Sign-in information”** (pole „PIN ekipy”) i dowolne imię (np. „Apple Review”), potem stuknij **„Dołącz”**. Konto demo nie wymaga Planning Center. „Zaloguj przez Planning Center” to opcjonalne logowanie dla członków zboru.
 3. Przy pierwszym logowaniu pojawia się informacja o prywatności – stuknij **„Rozumiem”**.
 4. Konto demo („Recenzent Apple”) może mówić i widzi dwa kanały: **Ogólny** i kanał zespołu z przykładowymi wiadomościami. Przytrzymaj **„Mów”**, żeby mówić. Czerwony pasek u góry pokazuje, że mikrofon jest otwarty.

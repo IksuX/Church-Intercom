@@ -38,7 +38,7 @@ iPhone przy pierwszym wyszukiwaniu zapyta o dostęp do **sieci lokalnej** – tr
 ```bash
 cd mobile
 npm install
-export IK_SERVER_URL=https://57-128-249-85.sslip.io   # opcjonalnie – „Serwer domyślny (internet)” na liście
+export IK_SERVER_URL=https://malinkainterkom.duckdns.org   # opcjonalnie – „Serwer domyślny (internet)” na liście
 npx cap add ios
 npx cap add android
 npm run sync
