@@ -75,7 +75,7 @@
         <div class="a-card">
           <h2>Osoby online <span class="a-count" id="stOnlineN"></span></h2>
           <p class="hint">Uprawnienia: <b>Auto</b> = według grafiku Planning Center / PIN-u. Zmiana działa od razu. Dla osób z Planning Center zapisuje się na stałe, dla zalogowanych PIN-em – do wylogowania.</p>
-          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th></tr></thead><tbody id="stUsers"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dane</th></tr></thead><tbody id="stUsers"></tbody></table></div>
         </div>
         <div class="a-card" id="stGrantsCard" hidden>
           <h2>Zapisane uprawnienia (osoby z Planning Center)</h2>
@@ -123,13 +123,36 @@
         <div class="a-card">
           <h2>Aplikacja na telefon</h2>
           <p class="hint">Gdy aplikacje będą gotowe, wklej linki – na ekranie logowania (i w ustawieniach w przeglądarce) pojawią się przyciski do pobrania. Puste pole = bez przycisku.</p>
-          <label class="a-field">iPhone – link do App Store albo publiczny link TestFlight<input id="apIos" placeholder="https://apps.apple.com/… lub https://testflight.apple.com/join/…" autocomplete="off"></label>
+          <label class="a-field">iPhone – link do App Store albo publiczny link TestFlight (przycisk: „iPhone – wersja testowa (TestFlight)”)<input id="apIos" placeholder="https://apps.apple.com/… lub https://testflight.apple.com/join/…" autocomplete="off"></label>
           <label class="a-field">Android – link do Google Play albo do pliku APK<input id="apAndroid" placeholder="https://play.google.com/store/apps/details?id=… lub https://…/interkom.apk" autocomplete="off"></label>
           <div class="a-field">Android – plik APK na tym serwerze
             <p class="hint" id="apkState">…</p>
             <div class="row-btns"><label class="btn-file"><input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden><span role="button" tabindex="0">⬆ Wgraj plik APK…</span></label><button type="button" id="apkDel" class="danger" hidden>Usuń plik</button></div>
             <details class="hint"><summary>Jak to działa</summary>
               <p>Bez Google Play: zbuduj APK w Android Studio (Build → Build APK(s)) i wgraj go tutaj. Gdy pole „Android” powyżej jest puste, ekran logowania pokaże przycisk „Pobierz na Androida (APK)” z tego serwera. Przy instalacji Android zapyta o zgodę na „instalowanie nieznanych aplikacji” z przeglądarki.</p></details>
+          </div>
+        </div>
+        <div class="a-card" id="pvCard">
+          <h2>Prywatność</h2>
+          <p class="hint">Strona <a href="/prywatnosc" target="_blank" rel="noopener">/prywatnosc</a> – link jest na ekranie logowania, w ustawieniach i w aplikacji. Opisuje, jakie dane zbiera interkom. Tu uzupełniasz administratora, kontakt i okres przechowywania. Po zmianie treści każdy przy następnym wejściu zobaczy ponownie informację „Zanim zaczniesz”.</p>
+          <label class="a-field">Administrator danych – nazwa i adres<textarea id="pvController" rows="2" maxlength="300" placeholder="np. Parafia …, ul. …, 00-000 Miasto"></textarea></label>
+          <label class="a-field">Kontakt w sprawie danych (e-mail lub telefon)<input id="pvContact" maxlength="200" autocomplete="off" placeholder="np. biuro@parafia.pl"></label>
+          <label class="a-field">Przechowywanie wiadomości i transkrypcji (dni; 0 = bez automatycznego usuwania)<input id="pvDays" type="number" min="0" max="3650" step="1"></label>
+          <label class="a-field">Dodatkowe informacje na stronie (opcjonalnie)<textarea id="pvNotes" rows="3" maxlength="3000"></textarea></label>
+          <p class="hint" id="pvState"></p>
+          <h3>Usuń dane osoby</h3>
+          <p class="hint">Usuwa wiadomości, wypowiedzi i transkrypcje osoby (także z dziennika na dysku), jej rozmowy prywatne, ksywki, powiadomienia, zdjęcie z Planning Center i zapis o zapoznaniu się z informacją. Osoby online i z Planning Center usuniesz też przyciskiem „Usuń dane” przy osobie. Osobę zalogowaną PIN-em wyszukasz po imieniu, pod którym się logowała.</p>
+          <div class="row"><input id="pvForgetName" maxlength="60" placeholder="Imię (jak przy logowaniu)" autocomplete="off"><button type="button" id="pvForget" class="danger">Usuń dane</button></div>
+        </div>
+        <div class="a-card" id="demoCard">
+          <h2>Konto demo (recenzja aplikacji)</h2>
+          <p class="hint">Osobny PIN dla recenzenta Apple lub Google. Konto ma stałą nazwę i prawo mówienia. Widzi tylko kanał ogólny i wybrane niżej kanały, nie ma rozmów prywatnych i nie widzi listy ekipy. Na pierwszym kanale są przykładowe wiadomości (nie trafiają do dziennika). Działa także spoza sieci kościoła. PIN-u nie zapisuj w repozytorium – podajesz go w App Store Connect.</p>
+          <label class="switch"><input type="checkbox" id="dmEnabled"> Włącz konto demo</label>
+          <div id="dmBox">
+            <label class="a-field">Nazwa widoczna dla innych<input id="dmName" maxlength="30" autocomplete="off"></label>
+            <label class="a-field">PIN konta demo (inny niż pozostałe)<span class="a-pin"><input id="dmPin" data-pin autocomplete="off"><button type="button" class="a-eye">👁</button></span></label>
+            <div class="a-field">Kanały (oprócz kanału ogólnego, najwyżej 4)<div id="dmChans" class="a-checks"></div></div>
+            <label class="a-field">Przykładowe wiadomości – „Kto: treść”, po jednej w wierszu (puste = domyślne)<textarea id="dmSamples" rows="4" maxlength="2000"></textarea></label>
           </div>
         </div>
       </section>
@@ -191,7 +214,7 @@
             <button type="button" id="ppBulkGo">Zastosuj</button>
             <span class="pp-confirm" id="ppConfirm" hidden>Na pewno zmienić <b id="ppConfirmN"></b> osobom? <button type="button" id="ppConfirmYes" class="danger">Tak, zmień</button><button type="button" id="ppConfirmNo">Anuluj</button></span>
           </div>
-          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th></tr></thead><tbody id="ppRows"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dane</th></tr></thead><tbody id="ppRows"></tbody></table></div>
           <div class="row" id="ppMoreRow" hidden><button type="button" id="ppMore">Pokaż więcej</button></div>
         </div>
       </section>

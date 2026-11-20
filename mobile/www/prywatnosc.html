@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Interkom – prywatność</title>
+<style>
+@font-face{font-family:"Inter";font-weight:400 700;font-display:swap;src:url(fonts/inter-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"Inter";font-weight:400 700;font-display:swap;src:url(fonts/inter-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+A720-A7FF}
+:root { --bg:#000000; --panel:#141413; --line:#2a2a28; --fg:#ffffff; --muted:#9c9fa5; --accent:#ff5600; }
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); font:16px/1.5 "Inter",system-ui,-apple-system,sans-serif; -webkit-text-size-adjust:100%; }
+body { padding: calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 28px); display:flex; justify-content:center; }
+main { width:100%; max-width:560px; }
+a { color:var(--accent); }
+h1 { font-size:24px; margin:10px 0 6px; }
+h2 { font-size:17px; margin:24px 0 6px; }
+p, li { color:var(--fg); }
+.muted { color:var(--muted); font-size:14px; }
+ul { padding-left:20px; }
+li { margin:6px 0; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+</style></head>
+<body><main>
+  <a href="index.html?pick">← Wybór serwera</a>
+  <h1>Prywatność</h1>
+  <p class="muted">Aplikacja Interkom</p>
+
+  <p>Interkom służy zespołom obsługującym nabożeństwa do rozmów głosowych (naciśnij i mów), czatu i zamiany mowy na tekst. Aplikacja łączy się <b>tylko z serwerem interkomu wybranym przez Ciebie</b> – w sieci kościoła albo w internecie. Wszystkie dane (imię, wiadomości, transkrypcje) są przetwarzane na tym serwerze. Odpowiada za nie jego administrator, zwykle Twój kościół lub zbór.</p>
+
+  <h2>Polityka prywatności serwera</h2>
+  <div class="card">
+    <p style="margin:0">Każdy serwer ma własną stronę <b>Prywatność</b>: kto jest administratorem danych, jakie dane zbiera, jak długo je przechowuje i jak poprosić o ich usunięcie. Link jest na ekranie logowania i w ustawieniach.</p>
+    <p style="margin:10px 0 0" id="defBox" hidden>Serwer domyślny: <a id="defLink" href="#">polityka prywatności</a></p>
+  </div>
+
+  <h2>Co robi sama aplikacja</h2>
+  <ul>
+    <li><b>Mikrofon</b> – tylko wtedy, gdy włączysz mówienie (przycisk <i>Mów</i>, przycisk na słuchawkach albo pilot). Aplikacja pokazuje wtedy czerwony pasek „Mówisz”. Na iPhonie widać też systemowy wskaźnik mikrofonu, a na Androidzie powiadomienie „Mówisz – mikrofon włączony”.</li>
+    <li><b>Dźwięk w tle</b> – żeby słyszeć zespół i mówić przy zablokowanym ekranie, jak w krótkofalówce.</li>
+    <li><b>Sieć lokalna</b> – tylko do wyszukania serwera interkomu w sieci Wi-Fi kościoła.</li>
+    <li>Adres serwera i lista ostatnio używanych serwerów są zapisane tylko w telefonie.</li>
+    <li>Aplikacja nie zawiera reklam, analityki ani narzędzi śledzących. Nie wysyła danych twórcom aplikacji ani innym firmom.</li>
+  </ul>
+</main>
+<script>
+// link do polityki serwera domyślnego (np. serwer demonstracyjny) – otwiera się w przeglądarce
+window.Capacitor?.Plugins?.IkAudio?.getServer?.().then((r) => {
+  const u = r?.defaultUrl;
+  if (!u) return;
+  const a = document.getElementById('defLink');
+  a.href = u.replace(/\/+$/, '') + '/prywatnosc';
+  a.textContent = new URL(u).host + '/prywatnosc';
+  document.getElementById('defBox').hidden = false;
+}).catch(() => {});
+</script>
+</body></html>

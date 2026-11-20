@@ -173,6 +173,29 @@ export function validateConfig(input) {
     logoColor: br.logoColor === 'accent' || /^#[0-9a-f]{6}$/i.test(br.logoColor || '') ? String(br.logoColor).toLowerCase() : '',
   };
   c.historyPerChannel = Math.min(2000, Math.max(50, Number(c.historyPerChannel) || 300));
+  // prywatność (panel → Ogólne → Prywatność): strona /prywatnosc i automatyczne usuwanie wiadomości i transkrypcji
+  const pv = c.privacy && typeof c.privacy === 'object' ? c.privacy : {};
+  const rd = pv.retentionDays === '' || pv.retentionDays == null ? NaN : Number(pv.retentionDays);
+  c.privacy = {
+    controller: str(pv.controller, 300), // administrator danych: nazwa i adres
+    contact: str(pv.contact, 200),       // kontakt w sprawie danych (e-mail / telefon)
+    retentionDays: Number.isFinite(rd) ? Math.min(3650, Math.max(0, Math.round(rd))) : 30, // 0 = bez automatycznego usuwania
+    notes: str(pv.notes, 3000),          // dodatkowe informacje na stronie
+    version: str(pv.version, 40),        // ustawia serwer przy zmianie treści – ponowna informacja dla użytkowników
+  };
+  // konto demo (np. dla recenzenta Apple): logowanie osobnym PIN-em, tylko wybrane kanały
+  const dm = c.demo && typeof c.demo === 'object' ? c.demo : {};
+  c.demo = {
+    enabled: !!dm.enabled,
+    name: str(dm.name, 30) || 'Recenzent Apple',
+    pin: str(dm.pin, 20),
+    channels: strList(dm.channels, 32).filter((id) => ids.has(id)).slice(0, 4),
+    samples: str(dm.samples, 2000), // przykładowe wiadomości „Kto: treść”, po jednej w wierszu
+  };
+  if (c.demo.enabled) {
+    if (!/^\S{3,20}$/.test(c.demo.pin)) fail('Konto demo: PIN musi mieć 3–20 znaków bez spacji.');
+    if ([c.accessPin, c.speakerPin, c.adminPin].includes(c.demo.pin)) fail('Konto demo: PIN musi być inny niż PIN ekipy, mówiącego i administratora.');
+  }
   return c;
 }
 

@@ -21,7 +21,7 @@ import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 import { MixerModule } from './mixer/index.js';
 import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.51.0';
+const VERSION = '0.52.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -53,6 +53,24 @@ let channelIds = new Set(channels.map((c) => c.id));
 let broadcastId = (config.channels.find((c) => c.broadcast) || config.channels[0]).id;
 const history = new History(DATA_DIR, config.historyPerChannel);
 history.restoreToday({ has: (id) => channelIds.has(id) || String(id).startsWith('pco-') });
+
+// ---------- prywatność: informacja przy pierwszym logowaniu i okres przechowywania ----------
+// Kto zapoznał się z informacją o przetwarzaniu danych (klucz osoby -> { name, at, v }). Wersja zmienia się przy edycji strony.
+const ACKS_PATH = path.join(DATA_DIR, 'privacy-ack.json');
+let acks = readJson(ACKS_PATH, {});
+const privacyVersion = () => config.privacy?.version || '1';
+const hasAck = (key) => acks[key]?.v === privacyVersion();
+// Wiadomości, wypowiedzi i transkrypcje starsze niż N dni znikają z pamięci serwera i z dziennika na dysku.
+function applyRetention() {
+  const days = config.privacy?.retentionDays;
+  if (!days) return;
+  const cutoff = Date.now() - days * 864e5;
+  const r = history.prune(cutoff);
+  for (const [k, c] of dms) { c.msgs = c.msgs.filter((m) => !(m.ts < cutoff)); if (!c.msgs.length) dms.delete(k); }
+  if (r.removed || r.files) console.log(`[prywatność] okres przechowywania ${days} dni: usunięto ${r.removed} wpisów z pamięci i ${r.files} plików dziennika`);
+}
+setTimeout(applyRetention, 5000);
+setInterval(applyRetention, 3600e3);
 
 function setChannels(list) {
   if (JSON.stringify(list) === JSON.stringify(channels)) return;
@@ -387,9 +405,10 @@ const dms = new Map(); // convKey -> { members: { key: { name, pid } }, msgs: []
 const convKey = (a, b) => [a, b].sort().join('|');
 function usersByKey(key) { return [...users.values()].filter((x) => pk(x) === key); }
 function dmPeer(u, ch) {
-  if (!isDm(ch)) return null;
+  if (!isDm(ch) || u.sess?.demo) return null;
   const key = ch.slice(3);
   if (!key || key === pk(u)) return null;
+  if (usersByKey(key).some((x) => x.sess?.demo)) return null; // konto demo nie ma rozmów prywatnych
   const online = usersByKey(key)[0];
   const known = [...dms.values()].find((c) => c.members[key] && c.members[pk(u)]);
   if (!online && !known) return null;
@@ -442,7 +461,39 @@ function presence() {
 function send(ws, obj) { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function broadcast(obj) {
   const s = JSON.stringify(obj);
-  for (const u of users.values()) for (const ws of u.sockets) if (ws.readyState === 1) ws.send(s);
+  for (const u of users.values()) {
+    if (!u.sockets.size) continue;
+    const lim = demoLimit(u.sess);
+    const v = lim ? demoView(obj, lim, u) : s;
+    if (v == null) continue;
+    const out = typeof v === 'string' ? v : JSON.stringify(v);
+    for (const ws of u.sockets) if (ws.readyState === 1) ws.send(out);
+  }
+}
+// ---------- konto demo: widzi tylko swoje kanały (i kanał ogólny), bez rozmów prywatnych i listy całej ekipy ----------
+function demoLimit(s) { return s?.demo ? new Set([broadcastId, ...(config.demo?.channels || [])]) : null; }
+const isDemoUser = (x) => !!users.get(x.id)?.sess?.demo;
+function demoView(obj, lim, u) {
+  switch (obj.t) {
+    case 'msg': case 'msgUpdate': return lim.has(obj.m?.channel) ? obj : null;
+    case 'ptt': return lim.has(obj.channel) ? obj : null;
+    case 'channels': return { ...obj, channels: obj.channels.filter((c) => lim.has(c.id)) };
+    case 'presence': return { ...obj, users: demoPresence(obj.users, u) };
+    default: return obj;
+  }
+}
+const demoPresence = (list, u) => list.filter((x) => x.id === u.id || isDemoUser(x));
+// przykładowe wiadomości na pierwszym kanale konta demo (nie trafiają do dziennika)
+function demoSamples() {
+  const lines = String(config.demo?.samples || '').split('\n').map((x) => x.trim()).filter(Boolean);
+  const list = lines.length ? lines : ['Realizator: Próba dźwięku za 5 minut, proszę o gotowość.', 'Kamera 2: Gotowe, ustawiony plan ogólny.', 'Prowadzący: Po drugiej pieśni czytanie, potem ogłoszenia.'];
+  const ch = (config.demo?.channels || []).find((id) => channelIds.has(id)) || broadcastId;
+  const now = Date.now();
+  return list.slice(0, 20).map((line, i, a) => {
+    const k = line.indexOf(':');
+    const who = k > 0 && k < 31 ? line.slice(0, k).trim() : 'Ekipa', text = (k > 0 && k < 31 ? line.slice(k + 1) : line).trim().slice(0, 500);
+    return { id: 'demo' + i, type: 'text', channel: ch, from: 'demo-sample', fromName: who, fromPid: null, text, ts: now - (a.length - i) * 90e3 };
+  });
 }
 let presenceTimer = null;
 function schedulePresence() {
@@ -488,12 +539,13 @@ async function sessionResponse(token, s0) {
   return {
     token,
     me: { id: s.id, name: s.name, role: s.role, fromRoster: !!s.pid,
-      teams: s.teamNames, viaPco: s.via === 'pco' },
+      teams: s.teamNames, viaPco: s.via === 'pco', demo: !!s.demo },
+    privacy: { url: '/prywatnosc', version: privacyVersion(), ack: hasAck(sessionKey(s)), retentionDays: config.privacy?.retentionDays ?? 30 },
     org: config.orgName,
     brand: brandPublic(),
     version: VERSION,
-    channels,
-    defaultListen: pco && s.teams?.length ? [broadcastId, ...pco.channelsForTeams(s.teams)] : null,
+    channels: demoLimit(s) ? channels.filter((c) => demoLimit(s).has(c.id)) : channels,
+    defaultListen: demoLimit(s) ? [...demoLimit(s)].filter((id) => channelIds.has(id)) : pco && s.teams?.length ? [broadcastId, ...pco.channelsForTeams(s.teams)] : null,
     broadcastChannel: broadcastId,
     pco: !!pco,
     quick: config.quick,
@@ -531,7 +583,7 @@ const REMOTE_PAGE = `<!doctype html><meta charset="utf-8"><meta name="viewport" 
 <body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0d12;color:#e8ebf2;font:16px system-ui,sans-serif;text-align:center;padding:24px">
 <div><div style="font-size:44px">📡</div><h1 style="font-size:22px">Dostęp spoza sieci jest wyłączony</h1><p style="color:#8b93a7">Interkom działa teraz tylko w sieci Wi-Fi kościoła. Administrator może włączyć dostęp zdalny w panelu.</p></div></body>`;
 app.use((req, res, next) => {
-  if (!isRemote(req) || config.remote?.enabled !== false) return next();
+  if (!isRemote(req) || config.remote?.enabled !== false || req.path === '/prywatnosc' || req.path === '/privacy' || req.path === '/branding.css') return next(); // strona prywatności – zawsze dostępna
   if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) return res.status(403).json({ error: 'Dostęp spoza sieci kościoła jest wyłączony.' });
   res.status(403).type('html').send(REMOTE_PAGE);
 });
@@ -550,13 +602,19 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, version: VERSION, onl
 
 app.post('/api/join', async (req, res) => {
   const ip = req.ip;
-  if (remotePinBlocked(req)) return res.status(403).json({ error: REMOTE_PIN_MSG });
+  const demoPin = !!(config.demo?.enabled && config.demo.pin && String(req.body?.pin || '') === String(config.demo.pin));
+  if (remotePinBlocked(req) && !demoPin) return res.status(403).json({ error: REMOTE_PIN_MSG });
   if (tooManyAttempts(ip)) return res.status(429).json({ error: 'Za dużo prób. Odczekaj 10 minut.' });
   // PIN ekipy + wpisane imię (goście, zastępstwa). Tożsamość z grafiku potwierdza tylko logowanie kontem Planning Center.
   const name = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 30);
   const pin = String(req.body?.pin || '');
   const rolePin = String(req.body?.rolePin || '');
   if (!name) return res.status(400).json({ error: 'Podaj imię.' });
+  if (config.demo?.enabled && config.demo.pin && pin === String(config.demo.pin)) { // konto demo: stała nazwa, prawo mówienia, tylko wybrane kanały
+    const s = { id: 'u_' + crypto.randomBytes(6).toString('hex'), name: config.demo.name, role: 'speaker', iat: Date.now(), demo: true };
+    console.log(`[login] konto demo (${ip})`);
+    return res.json(await sessionResponse(signSession(s), s));
+  }
   if (pin !== String(config.accessPin)) { failAttempt(ip); return res.status(401).json({ error: 'Nieprawidłowy PIN.' }); }
   let role = 'listener'; // prawo mówienia z grafiku dolicza effectiveRole()
   if (rolePin) {
@@ -804,7 +862,96 @@ function oauthCreds() {
 const oauthEnabled = () => !!(pco && config.planningCenter?.oauthLogin?.enabled && oauthCreds());
 const redirectUri = (req) => `${req.protocol}://${req.get('host')}/auth/pco/callback`;
 
-app.get('/api/login-options', (req, res) => res.json({ org: config.orgName, pcoLogin: oauthEnabled(), logo: logoUrl(), brand: brandPublic(), remote: isRemote(req), pinLogin: !remotePinBlocked(req), apps: appLinks() }));
+app.get('/api/login-options', (req, res) => res.json({ org: config.orgName, pcoLogin: oauthEnabled(), logo: logoUrl(), brand: brandPublic(), remote: isRemote(req), pinLogin: !remotePinBlocked(req), demo: !!config.demo?.enabled, apps: appLinks(), privacy: '/prywatnosc' }));
+
+// ================= PRYWATNOŚĆ =================
+// Strona /prywatnosc – treść opisuje to, co serwer faktycznie robi; administrator uzupełnia w panelu swoje dane i okres przechowywania.
+const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const htmlLines = (v) => escHtml(v).replace(/\r?\n/g, '<br>');
+const htmlLinks = (v) => htmlLines(v).replace(/\b([\w.+-]+@[\w-]+(\.[\w-]+)+)\b/g, '<a href="mailto:$1">$1</a>');
+function privacyPage() {
+  const p = config.privacy || {}, org = escHtml(config.orgName);
+  const days = p.retentionDays;
+  const keep = days ? `<b>${days} ${days === 1 ? 'dzień' : 'dni'}</b> – starsze są usuwane automatycznie z pamięci serwera i z dziennika na dysku` : '<b>do usunięcia przez administratora</b> (automatyczne usuwanie jest wyłączone)';
+  const who = p.controller ? htmlLines(p.controller) : '<i>Administrator nie uzupełnił jeszcze tych danych (panel → Ogólne → Prywatność).</i>';
+  const contact = p.contact ? htmlLinks(p.contact) : '<i>nie podano – zapytaj osobę, która dała Ci dostęp do interkomu</i>';
+  const pcoOn = !!pco;
+  const updated = /^\d{4}-\d{2}-\d{2}/.test(p.version || '') ? new Date(p.version).toLocaleDateString('pl-PL', { timeZone: process.env.TZ || 'Europe/Warsaw' }) : null;
+  return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prywatność – ${org}</title><link rel="stylesheet" href="/branding.css">
+<style>:root{color-scheme:light dark;--bg:#f6f7f9;--fg:#141821;--muted:#5b6475;--card:#fff;--line:#e3e6ec}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--fg:#e8ebf2;--muted:#9aa3b5;--card:#141821;--line:#262c38}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 40px}
+h1{font-size:26px;margin:8px 0 4px}h2{font-size:18px;margin:28px 0 8px}p,li{color:var(--fg)}.muted{color:var(--muted);font-size:14px}
+ul{padding-left:20px}li{margin:6px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+a{color:var(--accent,#ff5600)}.back{display:inline-block;margin-bottom:8px;font-size:15px}</style></head>
+<body><main>
+<a class="back" href="/" onclick="if(history.length>1){history.back();return false}">← Wróć</a>
+<h1>Prywatność</h1>
+<p class="muted">${/interkom/i.test(config.orgName) ? org : `Interkom – ${org}`}${updated ? ` · aktualizacja: ${escHtml(updated)}` : ''}</p>
+<p>Interkom to narzędzie do komunikacji zespołów obsługujących nabożeństwa: kanały głosowe (naciśnij i mów), czat, zamiana mowy na tekst i czytanie wiadomości na głos. Działa w przeglądarce i w aplikacji na iPhone'a i Androida. Wszystkie dane są na serwerze ${org}, opisanym niżej.</p>
+
+<h2>Administrator danych</h2>
+<div class="card"><p style="margin:0">${who}</p><p style="margin:8px 0 0">Kontakt w sprawie danych: ${contact}</p></div>
+
+<h2>Jakie dane przetwarzamy</h2>
+<ul>
+<li><b>Imię i rola</b> – imię wpisane przy logowaniu PIN-em${pcoOn ? ' albo imię i nazwisko, zespoły, stanowiska w grafiku i zdjęcie profilowe z Planning Center (przy logowaniu kontem Planning Center i dla osób z grafiku)' : ' (albo dane z Planning Center, jeśli serwer z niego korzysta)'}. Rola decyduje, kto może mówić i co widzi.</li>
+<li><b>Głos</b> – tylko wtedy, gdy mikrofon jest włączony (przycisk <i>Mów</i>, przycisk na słuchawkach lub pilot PTT). Aplikacja pokazuje wtedy czerwony pasek „Mówisz”. Głos jest przesyłany na żywo do osób słuchających danego kanału. Serwer nie nagrywa rozmów i nie przechowuje nagrań.</li>
+<li><b>Transkrypcje</b> – na kanałach z włączoną transkrypcją kopia wypowiedzi trafia do rozpoznawania mowy na tym samym serwerze, a tekst pojawia się w czacie (przy pasku „Mówisz” widać wtedy „· transkrypcja”). Nagranie jest usuwane po zamianie na tekst. Do strojenia jakości usługa trzyma w pamięci operacyjnej najwyżej 20 ostatnich wypowiedzi. Znikają one po wyczyszczeniu czatu lub ponownym uruchomieniu serwera i nie są zapisywane na dysku.</li>
+<li><b>Wiadomości</b> – teksty, szybkie przyciski, wpisy o wypowiedziach (kto, kiedy, jak długo) oraz informacje o dołączeniu do kanału. Rozmowy prywatne są tylko w pamięci serwera i nie trafiają do dziennika na dysku.</li>
+<li><b>Identyfikator urządzenia do powiadomień</b> i ustawienia powiadomień – żeby telefon lub przeglądarka mogły pokazać nową wiadomość, gdy aplikacja jest w tle.</li>
+<li><b>Ksywki</b> (jeśli je ustawisz) i informacja, że zapoznałeś(-aś) się z tą stroną (imię i data).</li>
+<li><b>Adres serwera</b> i lista ostatnio używanych serwerów – tylko w pamięci telefonu, w aplikacji. Nie są nigdzie wysyłane.</li>
+<li><b>Dziennik techniczny serwera</b> – m.in. logowania, błędy i działania administratora, czasem z imieniem i adresem IP. Jest automatycznie skracany (najwyżej kilkadziesiąt MB).</li>
+</ul>
+
+<h2>W jakim celu</h2>
+<p>Wyłącznie do komunikacji zespołu w czasie nabożeństw, prób i wydarzeń: żeby osoby obsługujące mogły się słyszeć, czytać wiadomości i widzieć, kto jest na kanale. Nie używamy danych do reklam, analityki ani profilowania. Interkom nie zawiera narzędzi śledzących ani zewnętrznych modułów analitycznych.</p>
+
+<h2>Gdzie są dane</h2>
+<p>Na serwerze interkomu ${org}: w sieci kościoła albo na wynajętym serwerze (VPS). Rozpoznawanie mowy działa na tym samym serwerze. Nagrania nie są wysyłane do żadnej usługi w chmurze.</p>
+<ul>
+<li>Powiadomienia w przeglądarce i w aplikacji zainstalowanej ze strony przechodzą przez serwery powiadomień Apple, Google lub Mozilla. Trafia tam treść powiadomienia, np. kto napisał i początek wiadomości.</li>
+${pcoOn ? '<li>Logowanie kontem Planning Center i grafik pochodzą z usługi Planning Center, z której korzysta Twój zbór.</li>' : ''}
+</ul>
+
+<h2>Jak długo</h2>
+<ul>
+<li>Wiadomości, wpisy o wypowiedziach i transkrypcje: ${keep}. Administrator może też wcześniej wyczyścić czat.</li>
+<li>Rozmowy prywatne: do wyczyszczenia czatu albo ponownego uruchomienia serwera.</li>
+<li>Identyfikatory urządzeń do powiadomień: do wylogowania. Po wygaśnięciu sesji serwer usuwa je po tygodniu.</li>
+<li>Pozostałe dane (ksywki, zdjęcie z Planning Center, informacja o zapoznaniu się z tą stroną): do usunięcia na prośbę.</li>
+</ul>
+
+<h2>Twoje prawa i usunięcie danych</h2>
+<p>Możesz poprosić administratora o dostęp do swoich danych, ich poprawienie lub usunięcie albo ograniczenie przetwarzania. Napisz na adres podany wyżej. Administrator usuwa w panelu wszystkie dane danej osoby: wiadomości, transkrypcje, ksywki, identyfikatory powiadomień i zdjęcie profilowe. Przysługuje Ci też skarga do Prezesa Urzędu Ochrony Danych Osobowych.</p>
+
+<h2>Aplikacja na telefon</h2>
+<ul>
+<li><b>Mikrofon</b> – tylko do mówienia do zespołu, gdy włączysz mówienie. Na iPhonie system pokazuje wtedy własny wskaźnik mikrofonu, a na Androidzie – powiadomienie.</li>
+<li><b>Dźwięk w tle</b> – żeby słyszeć zespół i mówić przy zablokowanym ekranie, jak w krótkofalówce.</li>
+<li><b>Sieć lokalna</b> – tylko do wyszukania serwera interkomu w sieci Wi-Fi kościoła.</li>
+<li>Sama aplikacja nie zbiera danych dla twórców aplikacji i nie zawiera analityki. Łączy się tylko z wybranym przez Ciebie serwerem interkomu.</li>
+</ul>
+${p.notes ? `<h2>Dodatkowe informacje</h2><div class="card"><p style="margin:0">${htmlLinks(p.notes)}</p></div>` : ''}
+</main></body></html>`;
+}
+app.get(['/prywatnosc', '/privacy'], (_req, res) => res.set('cache-control', 'no-cache').type('html').send(privacyPage()));
+app.get('/api/privacy', (_req, res) => res.json({ url: '/prywatnosc', version: privacyVersion(), retentionDays: config.privacy?.retentionDays ?? 30, controller: config.privacy?.controller || '', contact: config.privacy?.contact || '' }));
+// „Rozumiem” przy pierwszym logowaniu – serwer zapisuje, kto i kiedy zapoznał się z informacją (wersja strony)
+app.post('/api/privacy/ack', (req, res) => {
+  const s = sessionFrom(req);
+  if (!s) return res.status(401).json({ error: 'Sesja wygasła.' });
+  const key = sessionKey(s);
+  if (!hasAck(key)) {
+    acks[key] = { name: s.name, at: new Date().toISOString(), v: privacyVersion(), via: s.pid ? 'pco' : s.demo ? 'demo' : 'pin', ...(req.body?.device ? { device: true } : {}) };
+    saveJson(ACKS_PATH, acks);
+    console.log(`[prywatność] ${s.name}: zapoznał(a) się z informacją (wersja ${privacyVersion()})`);
+  }
+  res.json({ ok: true, version: privacyVersion() });
+});
 
 // ---------- plik aplikacji na Androida (APK) trzymany na tym serwerze ----------
 // Administrator wgrywa plik w panelu; ekran logowania pokazuje przycisk „Pobierz na Androida”, gdy nie ma linku do Google Play.
@@ -970,8 +1117,13 @@ app.get('/api/admin/config', requireAdmin, (_req, res) => res.json({ config, pco
 app.put('/api/admin/config', requireAdmin, (req, res) => {
   try {
     const next = validateConfig(req.body?.config);
+    // zmieniona treść strony prywatności = nowa wersja – każdy zobaczy informację ponownie
+    const pv = (c) => JSON.stringify([c.privacy?.controller, c.privacy?.contact, c.privacy?.retentionDays, c.privacy?.notes]);
+    next.privacy.version = pv(next) !== pv(config) ? new Date().toISOString() : config.privacy?.version || '';
+    const retentionChanged = next.privacy.retentionDays !== config.privacy?.retentionDays;
     saveJson(CONFIG_PATH, next);
     applyConfig(next);
+    if (retentionChanged) applyRetention();
     console.log(`[admin] zapisano konfigurację (${req.ip})`);
     res.json({ ok: true, config });
   } catch (e) { adminErr(res, e); }
@@ -1275,6 +1427,44 @@ app.post('/api/admin/grant', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// Usunięcie danych osoby: wiadomości, wypowiedzi i transkrypcje (pamięć i dziennik), rozmowy prywatne, ksywki,
+// powiadomienia, zdjęcie z Planning Center i zapis zapoznania się z informacją o prywatności.
+// Osoby z Planning Center – po identyfikatorze; zalogowane PIN-em (bez stałej tożsamości) – po imieniu.
+app.post('/api/admin/forget', requireAdmin, (req, res) => {
+  const b = req.body || {};
+  const online = b.userId ? users.get(String(b.userId)) : null;
+  const pid = String(online?.pid || b.pid || '').trim();
+  const name = String(online?.name || b.name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  if (!pid && name.length < 2) return res.status(400).json({ error: 'Podaj imię osoby (co najmniej 2 znaki) albo wybierz osobę z listy.' });
+  const low = (x) => String(x || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+  const keys = new Set();
+  if (pid) keys.add('p' + pid);
+  for (const u of users.values()) if (pid ? String(u.pid) === pid : !u.pid && low(u.name) === low(name)) keys.add(pk(u));
+  const sids = new Set([...users.values()].filter((u) => keys.has(pk(u))).map((u) => u.id));
+  const match = (m) => !!m && m.type !== 'system' && (pid ? String(m.fromPid || '') === pid : !m.fromPid && (sids.has(m.from) || low(m.fromName) === low(name)));
+  const ids = history.forget(match);
+  let dmN = 0;
+  for (const [k, c] of dms) {
+    const mine = Object.keys(c.members).some((x) => keys.has(x) || (!pid && x.startsWith('s') && low(c.members[x].name) === low(name)));
+    if (mine) { dmN += c.msgs.length; dms.delete(k); }
+  }
+  for (const key of Object.keys(acks)) if (keys.has(key) || (!pid && key.startsWith('s') && low(acks[key].name) === low(name))) { keys.add(key); delete acks[key]; }
+  saveJson(ACKS_PATH, acks);
+  for (const key of Object.keys(nicks)) if (keys.has(key)) delete nicks[key];
+  saveJson(NICKS_PATH, nicks);
+  for (const key of keys) push.forget(key);
+  if (pid) avatars.forget(pid);
+  sttCall('/recent/clear', 'POST').catch(() => {}); // ostatnie nagrania w pamięci usługi transkrypcji
+  if (ids.length) broadcast({ t: 'msgsDelete', ids });
+  schedulePresence();
+  console.log(`[prywatność] usunięto dane osoby ${pid ? 'z Planning Center' : 'zalogowanej PIN-em'} (${ids.length} wpisów, ${dmN} wiadomości prywatnych) – ${req.ip}`);
+  res.json({ ok: true, messages: ids.length, dms: dmN, keys: keys.size });
+});
+app.get('/api/admin/privacy', requireAdmin, (_req, res) => {
+  const list = Object.values(acks).filter((a) => a.v === privacyVersion()).length;
+  res.json({ version: privacyVersion(), acks: list, total: Object.keys(acks).length });
+});
+
 app.post('/api/admin/clear-chat', requireAdmin, (req, res) => {
   history.clear(); dms.clear();
   sttCall('/recent/clear', 'POST').catch(() => {}); // nagrania do strojenia też
@@ -1361,7 +1551,7 @@ app.post('/api/native/ptt', (req, res) => {
   if (u.role !== 'speaker' && u.role !== 'admin') return res.status(403).json({ error: 'Nie masz prawa mówienia.' });
   if (req.body?.on) {
     const talkId = /^[a-z0-9]{4,32}$/i.test(req.body.talkId || '') ? req.body.talkId : crypto.randomBytes(6).toString('hex');
-    const ch = req.body.channel && (channelIds.has(req.body.channel) || dmPeer(u, req.body.channel)) ? req.body.channel : u.target || broadcastId;
+    const ch = req.body.channel && (channelOk(u, req.body.channel) || dmPeer(u, req.body.channel)) ? req.body.channel : u.target || broadcastId;
     if (!startTalkSrv(u, ch, talkId)) return res.status(400).json({ error: 'Nieznany kanał.' });
     return res.json({ ok: true, talkId, channel: ch });
   }
@@ -1611,7 +1801,9 @@ wss.on('connection', (ws, req) => {
   send(ws, { t: 'perm', ...perms(u) });
   sendMixerTo(u);
   for (const x of users.values()) if (x.wPeer === pk(u) && x.sockets.size) send(ws, { t: 'wtarget', user: x.id, on: true });
-  send(ws, { t: 'hello', users: presence(), history: [...history.all(), ...dmHistoryFor(u)], you: publicUser(u), channels, plan: pco ? pco.publicPlan() : null, streams: streams.list(), program: publicProgram() });
+  const lim = demoLimit(s);
+  if (lim) send(ws, { t: 'hello', users: demoPresence(presence(), u), history: [...demoSamples(), ...history.all().filter((m) => lim.has(m.channel))], you: publicUser(u), channels: channels.filter((c) => lim.has(c.id)), plan: pco ? pco.publicPlan() : null, streams: streams.list(), program: publicProgram() });
+  else send(ws, { t: 'hello', users: presence(), history: [...history.all(), ...dmHistoryFor(u)], you: publicUser(u), channels, plan: pco ? pco.publicPlan() : null, streams: streams.list(), program: publicProgram() });
   const pend = pendingCalls.get(pk(u));
   if (pend && Date.now() - pend.ts < 90000) send(ws, pend); else pendingCalls.delete(pk(u));
   schedulePresence();
@@ -1642,7 +1834,8 @@ wss.on('connection', (ws, req) => {
 function handle(u, m, ws) {
   switch (m.t) {
     case 'listen': {
-      const list = Array.isArray(m.channels) ? m.channels.filter((c) => channelIds.has(c)) : [];
+      const lim = demoLimit(u.sess);
+      const list = Array.isArray(m.channels) ? m.channels.filter((c) => channelIds.has(c) && (!lim || lim.has(c))) : [];
       const before = u.listen;
       u.listen = new Set([broadcastId, ...list]); // kanał ogólny (wywoławczy) słyszą wszyscy – nie da się go wyłączyć
       for (const ch of u.listen) if (!before.has(ch)) announceMember(u, ch, 'join');
@@ -1652,7 +1845,7 @@ function handle(u, m, ws) {
       break;
     }
     case 'target': {
-      if (!channelIds.has(m.channel) && !dmPeer(u, m.channel)) return;
+      if (!channelOk(u, m.channel) && !dmPeer(u, m.channel)) return;
       u.target = m.channel;
       setWhisperTarget(u, m.channel);
       schedulePresence();
@@ -1663,7 +1856,7 @@ function handle(u, m, ws) {
       if (!text) return;
       const peer = dmPeer(u, m.channel);
       if (peer) { dmPost(u, peer, { type: 'text', from: u.id, fromName: u.name, fromPid: u.pid || null, text }); return; }
-      if (!channelIds.has(m.channel)) return;
+      if (!channelOk(u, m.channel)) return;
       const men = resolveMentions(text, m.mentions);
       post({ type: 'text', channel: m.channel, from: u.id, fromName: u.name, fromPid: u.pid || null, text, ...(men.mentions.length ? { mentions: men.mentions } : {}), ...(men.mentionAll ? { mentionAll: true } : {}) });
       const chName = channels.find((c) => c.id === m.channel)?.name || m.channel;
@@ -1679,7 +1872,7 @@ function handle(u, m, ws) {
       if (!q) return;
       const peer = dmPeer(u, m.channel);
       if (peer) { dmPost(u, peer, { type: 'quick', from: u.id, fromName: u.name, fromPid: u.pid || null, text: q.label, key: q.key, tone: q.tone, urgent: !!q.urgent }); return; }
-      if (!channelIds.has(m.channel)) return;
+      if (!channelOk(u, m.channel)) return;
       post({ type: 'quick', channel: m.channel, from: u.id, fromName: u.name, fromPid: u.pid || null, text: q.label, key: q.key, tone: q.tone, urgent: !!q.urgent });
       notifyChannel(pk(u), m.channel, q.urgent ? `🚨 ${q.label}` : `⚡ ${q.label}`, u.name, { urgent: !!q.urgent });
       break;
@@ -1744,7 +1937,7 @@ function handle(u, m, ws) {
     case 'modMove': {
       if (!canModerate(u)) return send(ws, { t: 'modDone', ok: false, text: 'Nie masz uprawnień do przenoszenia innych.' });
       const to = users.get(String(m.to)), ch = String(m.channel || '');
-      if (!to || !channelIds.has(ch)) return;
+      if (!to || !channelOk(to, ch)) return;
       const wasTalking = !!to.talking;
       if (to.talking) endTalk(to);
       to.target = ch;
@@ -1824,9 +2017,11 @@ function announceMember(u, channel, kind) {
   post({ type: 'member', kind, channel, from: u.id, fromName: u.name, fromPid: u.pid || null, text });
 }
 
+// kanał istnieje i (konto demo) jest na liście jego kanałów
+const channelOk = (u, ch) => channelIds.has(ch) && (!demoLimit(u.sess) || demoLimit(u.sess).has(ch));
 function startTalkSrv(u, channel, talkId) {
   const peer = dmPeer(u, channel);
-  if (!channelIds.has(channel) && !peer) return false;
+  if (!channelOk(u, channel) && !peer) return false;
   if (u.talking) endTalk(u);
   u.talking = channel; u.target = channel; u.talkStart = Date.now();
   u.talkPeer = peer;

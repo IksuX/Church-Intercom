@@ -19,3 +19,22 @@ mobile/android/
 zmiany-lokalne-*.patch
 # graf wiedzy i pamięć podręczna narzędzia graphify (lokalnie)
 graphify-out/
+# serwer uruchomiony lokalnie (npm run dev) – ustawienia i dane w app/
+app/config/config.json
+app/config/secrets.json
+app/data/
+# podpisywanie aplikacji i klucze – nigdy do repozytorium (repozytorium jest publiczne)
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.keystore
+*.jks
+*.xcarchive/
+*.ipa
+*.aab
+*.apk
+mobile/build/
+mobile/plugins/*/android/build/

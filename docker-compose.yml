@@ -1,10 +1,16 @@
 # Interkom – całość działa lokalnie. Wszystkie usługi w sieci hosta (najprostsze dla WebRTC w LAN).
+# Dzienniki usług (imiona, adresy IP przy logowaniu, błędy): najwyżej 3 × 10 MB na usługę, starsze są usuwane.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
 services:
   app:
     build: ./app
     image: interkom-app:0.43.1
     network_mode: host
     restart: unless-stopped
+    logging: *logging
     env_file: .env
     environment:
       HOST: 127.0.0.1
@@ -26,6 +32,7 @@ services:
     image: interkom-stt:0.43.1
     network_mode: host
     restart: unless-stopped
+    logging: *logging
     environment:
       WHISPER_MODEL: ${WHISPER_MODEL:-auto}
       WHISPER_CMD_MODEL: ${WHISPER_CMD_MODEL:-base}  # komendy głosowe Reżyserii (szybki model); „off” = przez model główny
@@ -40,6 +47,7 @@ services:
     image: interkom-audio:0.43.1
     network_mode: host
     restart: unless-stopped
+    logging: *logging
     profiles: ["audio"]
     devices:
       - /dev/snd:/dev/snd
@@ -56,6 +64,7 @@ services:
     image: livekit/livekit-server:latest
     network_mode: host
     restart: unless-stopped
+    logging: *logging
     command: --config /etc/livekit.yaml
     volumes:
       - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
@@ -65,6 +74,7 @@ services:
     image: interkom-caddy:0.43.1
     network_mode: host
     restart: unless-stopped
+    logging: *logging
     env_file: .env
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro

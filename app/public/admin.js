@@ -138,9 +138,11 @@ async function loadStatus() {
         <td data-l="Administrator">${u.admin.viaPin ? '<span class="hint">PIN admina</span>' : `<select data-kind="admin" class="${u.admin.value ? 'on' : ''}"><option value="false" ${u.admin.value ? '' : 'selected'}>Nie</option><option value="true" ${u.admin.value ? 'selected' : ''}>Tak${u.persistent ? ' – na stałe' : ''}</option></select>`}</td>
         <td data-l="Mówienie">${u.role === 'admin' ? '<span class="hint">administrator</span>' : sel('speak', u.speak)}</td>
         <td data-l="Sterowanie planem">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('live', u.live, !g.liveEnabled)}</td>
-        <td data-l="Reżyser">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('director', u.director, !g.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td></tr>`).join('')
-      || '<tr><td colspan="6" class="hint">Nikogo nie ma online.</td></tr>';
+        <td data-l="Reżyser">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('director', u.director, !g.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td>
+        <td data-l="Dane"><button type="button" class="danger" data-forget data-name="${esc(u.name)}">Usuń dane</button></td></tr>`).join('')
+      || '<tr><td colspan="7" class="hint">Nikogo nie ma online.</td></tr>';
     $$('#stUsers select').forEach((el) => (el.onchange = () => setGrant({ userId: el.closest('tr').dataset.uid }, el.dataset.kind, el.value)));
+    $$('#stUsers [data-forget]').forEach((b) => (b.onclick = () => forgetPerson({ userId: b.closest('tr').dataset.uid }, b.dataset.name)));
     const lbl = (v) => (v === true ? 'Tak – zawsze' : v === false ? 'Nie – nigdy' : 'Auto');
     $('#stGrantsCard').hidden = !g.grants.length;
     $('#stGrants').innerHTML = g.grants.map((x) => `<tr data-pid="${esc(x.pid)}"><td>${esc(x.name)}${x.online ? ' <span class="ok-t">● online</span>' : ''}</td><td data-l="Administrator">${x.admin ? 'Tak' : '—'}</td><td data-l="Mówienie">${lbl(x.speak)}</td><td data-l="Sterowanie planem">${lbl(x.live)}</td><td data-l="Reżyser">${lbl(x.director)}</td>
@@ -154,6 +156,16 @@ async function setGrant(who, kind, value) {
   try { await api('POST', '/api/admin/grant', body); toast('Uprawnienia zmienione.'); } catch (e) { toast(e.message, 'err'); }
   document.activeElement?.blur?.();
   loadStatus();
+}
+// Usunięcie danych osoby (prośba o usunięcie danych) – wiadomości, transkrypcje, ksywki, powiadomienia, zdjęcie
+async function forgetPerson(who, name) {
+  if (!confirm(`Usunąć wszystkie dane osoby „${name}”?\n\nZnikną jej wiadomości, wypowiedzi i transkrypcje (także z dziennika na dysku), rozmowy prywatne, ksywki, powiadomienia i zdjęcie. Tego nie da się cofnąć.${who.pid || who.userId ? '' : '\n\nOsoby zalogowane PIN-em szukamy po imieniu – usunięte zostaną dane wszystkich osób, które logowały się pod tym imieniem.'}`)) return false;
+  try {
+    const r = await api('POST', '/api/admin/forget', who);
+    toast(`Usunięto dane: ${name} (wiadomości i wypowiedzi: ${r.messages}${r.dms ? `, prywatne: ${r.dms}` : ''}).`);
+    loadNicks(); loadStatus();
+    return true;
+  } catch (e) { toast(e.message, 'err'); return false; }
 }
 setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="status"]').hidden) loadStatus(); }, 5000);
 // ---------- SERWER: procesor, pamięć, dysk, usługi, restart ----------
@@ -286,6 +298,38 @@ function renderGeneral() {
   cfg.apps ||= { ios: '', android: '' };
   for (const [id, k] of [['#apIos', 'ios'], ['#apAndroid', 'android']]) { const el = $(id); el.value = cfg.apps[k] || ''; el.oninput = () => { cfg.apps[k] = el.value.trim(); dirty(); }; }
   loadApk();
+  renderPrivacy(); renderDemo();
+}
+// ---------- OGÓLNE → Prywatność ----------
+function renderPrivacy() {
+  cfg.privacy ||= { controller: '', contact: '', retentionDays: 30, notes: '' };
+  const pv = cfg.privacy;
+  for (const [id, k] of [['#pvController', 'controller'], ['#pvContact', 'contact'], ['#pvNotes', 'notes']]) { const el = $(id); el.value = pv[k] || ''; el.oninput = () => { pv[k] = el.value; dirty(); }; }
+  const d = $('#pvDays'); d.value = pv.retentionDays ?? 30;
+  d.oninput = () => { pv.retentionDays = d.value === '' ? 30 : Math.max(0, Math.min(3650, Math.round(Number(d.value) || 0))); dirty(); };
+  api('GET', '/api/admin/privacy').then((r) => {
+    $('#pvState').textContent = `Informację w obecnej wersji potwierdziło: ${r.acks}.${pv.controller && pv.contact ? '' : ' Uzupełnij administratora i kontakt – są potrzebne na stronie prywatności (także dla App Store).'}`;
+  }).catch(() => {});
+}
+$('#pvForget').onclick = async () => {
+  const n = $('#pvForgetName').value.trim();
+  if (n.length < 2) return toast('Podaj imię (co najmniej 2 znaki).', 'err');
+  if (await forgetPerson({ name: n }, n)) $('#pvForgetName').value = '';
+};
+// ---------- OGÓLNE → Konto demo ----------
+function renderDemo() {
+  cfg.demo ||= { enabled: false, name: 'Recenzent Apple', pin: '', channels: [], samples: '' };
+  const dm = cfg.demo;
+  $('#dmEnabled').checked = !!dm.enabled; $('#dmBox').hidden = !dm.enabled;
+  $('#dmEnabled').onchange = () => { dm.enabled = $('#dmEnabled').checked; $('#dmBox').hidden = !dm.enabled; dirty(); };
+  for (const [id, k] of [['#dmName', 'name'], ['#dmPin', 'pin'], ['#dmSamples', 'samples']]) { const el = $(id); el.value = dm[k] || ''; el.oninput = () => { dm[k] = k === 'pin' ? el.value.trim() : el.value; dirty(); }; }
+  const chans = cfg.channels.filter((c) => !c.broadcast && c.id);
+  $('#dmChans').innerHTML = chans.map((c) => `<label><input type="checkbox" value="${esc(c.id)}" ${dm.channels.includes(c.id) ? 'checked' : ''}> ${esc(c.name)}</label>`).join('') || '<span class="hint">Brak kanałów poza ogólnym.</span>';
+  $$('#dmChans input').forEach((i) => (i.onchange = () => {
+    const sel = $$('#dmChans input:checked').map((x) => x.value);
+    if (sel.length > 4) { i.checked = false; return toast('Najwyżej 4 kanały.', 'err'); }
+    dm.channels = sel; dirty();
+  }));
 }
 function renderRemote() {
   cfg.remote ||= { enabled: true, pin: false, admin: false };
@@ -1122,8 +1166,10 @@ function renderPeople() {
       <td data-l="Administrator"><select data-kind="admin" class="${p.grant.admin ? 'on' : ''}"><option value="false" ${p.grant.admin ? '' : 'selected'}>Nie</option><option value="true" ${p.grant.admin ? 'selected' : ''}>Tak</option></select></td>
       <td data-l="Mówienie">${p.grant.admin ? '<span class="hint">administrator</span>' : sel3('speak', p.grant.speak, `Auto (${p.autoSpeak ? 'tak' : 'nie'})`)}</td>
       <td data-l="Sterowanie planem">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('live', p.grant.live, 'Auto', !PP.liveEnabled)}</td>
-      <td data-l="Reżyser">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('director', p.grant.director, `Auto (${p.autoDirector ? 'tak' : 'nie'})`, !PP.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
+      <td data-l="Reżyser">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('director', p.grant.director, `Auto (${p.autoDirector ? 'tak' : 'nie'})`, !PP.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td>
+      <td data-l="Dane"><button type="button" class="danger" data-forget>Usuń dane</button></td></tr>`).join('')
+    || '<tr><td colspan="7" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
+  $$('#ppRows [data-forget]').forEach((b) => (b.onclick = () => { const p = PP.all.find((x) => x.pid === b.closest('tr').dataset.pid); if (p) forgetPerson({ pid: p.pid, name: p.name }, p.name); }));
   $('#ppMoreRow').hidden = list.length <= PP.shown;
   $$('#ppRows select').forEach((el) => (el.onchange = async () => {
     const p = PP.all.find((x) => x.pid === el.closest('tr').dataset.pid);

@@ -318,8 +318,27 @@ def transcribe(data: bytes, lang: str, prompt, hotwords=""):
     return clean(text), dur, conf
 
 
+# Nieudane nagrania zapisujemy na dysk TYLKO na żądanie (diagnoza): IK_STT_KEEP_FAILED=1. Domyślnie serwer nie przechowuje
+# żadnych nagrań na dysku – stare pliki z poprzednich wersji są usuwane przy starcie.
+KEEP_FAILED = os.environ.get("IK_STT_KEEP_FAILED") == "1"
+
+
+def drop_failed_dir():
+    if KEEP_FAILED:
+        return
+    d = os.path.join(os.path.dirname(SETTINGS), "failed")
+    try:
+        for old in os.listdir(d):
+            os.remove(os.path.join(d, old))
+        os.rmdir(d)
+    except OSError:
+        pass
+
+
 def keep_failed(data: bytes, ctype: str):
-    """Zachowuje 10 ostatnich nieudanych nagrań do diagnozy (data/stt-models/failed)."""
+    """Na żądanie (IK_STT_KEEP_FAILED=1) zachowuje 10 ostatnich nieudanych nagrań do diagnozy (data/stt-models/failed)."""
+    if not KEEP_FAILED:
+        return
     try:
         d = os.path.join(os.path.dirname(SETTINGS), "failed")
         os.makedirs(d, exist_ok=True)
@@ -489,6 +508,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    drop_failed_dir()
     name = wanted_model()
     threading.Thread(target=load_model, args=(name,), daemon=True).start()
     threading.Thread(target=load_cmd_model, daemon=True).start()

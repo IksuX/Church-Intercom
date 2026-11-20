@@ -83,8 +83,8 @@ $('#loginForm').addEventListener('submit', (e) => {
 // przyciski pobrania aplikacji (linki ustawia administrator: Ogólne → Aplikacja na telefon); w samej aplikacji ukryte
 function appBadge(url, kind) {
   const ios = kind === 'ios', tf = /testflight\.apple\.com/i.test(url), play = /play\.google\.com/i.test(url);
-  const small = ios ? (tf ? 'Pobierz przez' : 'Pobierz z') : play ? 'Pobierz z' : 'Pobierz na';
-  const big = ios ? (tf ? 'TestFlight' : 'App Store') : play ? 'Google Play' : 'Androida (APK)';
+  const small = ios ? (tf ? 'iPhone – wersja testowa' : 'Pobierz z') : play ? 'Pobierz z' : 'Pobierz na';
+  const big = ios ? (tf ? '(TestFlight)' : 'App Store') : play ? 'Google Play' : 'Androida (APK)';
   const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>' + (ios ? '' : '<path d="M12 7v6m-2.5-2.5L12 13l2.5-2.5"/>') + '</svg>';
   return `<a class="app-badge" href="${esc(url)}" target="_blank" rel="noopener">${icon}<span><small>${small}</small><b>${big}</b></span></a>`;
 }
@@ -172,7 +172,49 @@ function start(sess, resumed = false) {
   connectVoice();
   applyWake();
   if (resumed) showAudioHintIfNeeded();
+  checkPrivacy(sess);
+  renderMicBar();
 }
+
+// ================= PRYWATNOŚĆ – informacja przy pierwszym logowaniu =================
+// Serwer zapisuje, że osoba zapoznała się z informacją. Na tym samym urządzeniu (np. kolejne logowanie PIN-em)
+// nie pokazujemy jej ponownie, dopóki administrator nie zmieni treści strony (nowa wersja).
+function checkPrivacy(sess) {
+  const p = sess.privacy;
+  if (!p) return;
+  const ack = () => fetch('/api/privacy/ack', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + S.session.token }, body: JSON.stringify({ device: store.get('privacyAck') === p.version }) }).catch(() => {});
+  if (p.ack) { store.set('privacyAck', p.version); return; }
+  if (store.get('privacyAck') === p.version) { ack(); return; }
+  const d = p.retentionDays;
+  $('#privStt').hidden = !sess.stt;
+  $('#privKeep').textContent = d ? `Wiadomości i transkrypcje są przechowywane na serwerze przez ${d} ${d === 1 ? 'dzień' : 'dni'}, potem są usuwane automatycznie.` : 'Wiadomości i transkrypcje są przechowywane na serwerze, dopóki administrator ich nie usunie.';
+  $('#privBox').hidden = false;
+  $('#privOk').focus();
+  $('#privOk').onclick = () => { $('#privBox').hidden = true; ack(); store.set('privacyAck', p.version); };
+}
+
+// ================= WSKAŹNIK MIKROFONU =================
+// Czerwony pasek „Mówisz – kanał X” przez cały czas, gdy mikrofon jest otwarty (przycisk, kłódka, słuchawki, pilot PTT),
+// w każdym widoku – także w Reżyserii i nad otwartymi oknami. Przy kanale z transkrypcją: „· transkrypcja”.
+// Sterowanie głosem (Reżyser) ma własną, stałą etykietę.
+function renderMicBar() {
+  const bar = $('#micBar'); if (!bar) return;
+  const live = !!(S.session && S.pttOn), voice = !!(S.session && director.voiceOn?.());
+  let html = '';
+  if (live) {
+    const c = chan(S.active);
+    const where = isDm(S.active) ? `prywatnie do ${(c?.name || '').replace(/^💬\s*/, '')}` : `kanał ${c?.name || ''}`;
+    const stt = S.session.stt && sttOnFor(S.active);
+    html = `<span class="mb-dot" aria-hidden="true"></span><span>🎙️ Mówisz – ${esc(where)}</span>${stt ? '<span class="mb-extra">· transkrypcja</span>' : ''}${voice ? '<span class="mb-extra">· sterowanie głosem</span>' : ''}`;
+  } else if (voice) html = '<span>🎬 Sterowanie głosem włączone – Twoje wypowiedzi mogą przełączać kamery</span>';
+  const show = live || voice;
+  if (bar._h !== html) { bar.innerHTML = html; bar._h = html; }
+  bar.classList.toggle('voice-only', !live && voice);
+  if (bar.hidden === show) bar.hidden = !show;
+  document.body.classList.toggle('mic-live', show);
+  if (show) document.body.style.setProperty('--micbar-h', bar.offsetHeight + 'px');
+}
+setInterval(renderMicBar, 400); // zapas: każda zmiana stanu mikrofonu i tak wywołuje renderMicBar od razu
 const roleName = (r) => ({ admin: 'administrator (mówi)', speaker: 'mówiący', listener: 'słucha / czyta' }[r] || r);
 
 // ================= WEBSOCKET =================
@@ -262,6 +304,12 @@ function onWs(m) {
       updateGates(); renderTalkNow(); renderTabs();
       if (!$('#sheetPeople').hidden) renderPeople();
       break;
+    case 'msgsDelete': { // administrator usunął dane osoby – jej wiadomości znikają też z ekranu
+      const gone = new Set(m.ids || []);
+      for (const [ch, arr] of S.msgs) S.msgs.set(ch, arr.filter((x) => !gone.has(x.id)));
+      renderFeed();
+      break;
+    }
     case 'cleared':
       S.msgs.clear(); S.unread.clear(); S.urgent.clear(); S.dms.clear();
       if (isDm(S.active)) S.active = S.broadcast;
@@ -922,6 +970,7 @@ async function nativeConnect() {
       S.pttOn = !!e.on; if (e.talkId) S.talkId = e.talkId;
       $('#ptt').classList.toggle('live', S.pttOn);
       if (S.pttOn) setPttL1('MÓWISZ'); else renderPttLabel();
+      renderMicBar();
     });
     NAT.addListener('program', (e) => { if (prog.natLive === !!e.live) return; prog.natLive = !!e.live; renderProg(); });
     NAT.addListener('notice', (e) => sysMsg(e.message));
@@ -1585,6 +1634,7 @@ function startTalk() {
     NAT.setMic({ on: true, talkId, channel: S.active }).catch(() => {});
     wsSend({ t: 'ptt', channel: S.active, on: true, talkId });
     $('#ptt').classList.add('live'); setPttL1('MÓWISZ'); vibrate(25);
+    renderMicBar();
     return;
   }
   if (canTalk() && !S.micPub && S.room && !S.pttOn) { prepareMic(); return; } // mikrofon nie ruszył (np. brak zgody) – naciśnięcie zapyta ponownie
@@ -1613,6 +1663,7 @@ function startTalk() {
   $('#ptt').classList.add('live');
   setPttL1('MÓWISZ');
   vibrate(25);
+  renderMicBar();
 }
 let stopTimer, recStopTimer;
 function stopTalk() {
@@ -1622,6 +1673,7 @@ function stopTalk() {
     NAT.setMic({ on: false }).catch(() => {});
     wsSend({ t: 'ptt', on: false });
     $('#ptt').classList.remove('live'); renderPttLabel();
+    renderMicBar();
     return;
   }
   if (!S.pttOn) return;
@@ -1633,6 +1685,7 @@ function stopTalk() {
   wsSend({ t: 'ptt', on: false });
   $('#ptt').classList.remove('live');
   renderPttLabel();
+  renderMicBar();
 }
 function renderPttLabel() {
   if (!canTalk()) return;

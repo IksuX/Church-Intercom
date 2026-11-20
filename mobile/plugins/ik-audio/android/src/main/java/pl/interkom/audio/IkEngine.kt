@@ -235,6 +235,7 @@ object IkEngine {
             scope.launch(Dispatchers.IO) { delay(450); val wav = Recorder.stop(); if (tid != null && wav != null) upload(tid, wav) }
         }
         applyGates() // ściszanie transmisji, gdy sam mówisz
+        IkService.refresh(app, talking) // powiadomienie: „Mówisz – mikrofon włączony”
     }
 
     /** Z przycisku sprzętowego – serwer powiadamiamy sami (strona może spać). */
@@ -245,6 +246,7 @@ object IkEngine {
             hwTalk = true
             buzz(longArrayOf(0, 25))
             Recorder.start(); micPub()?.muted = false; talking = true
+            IkService.refresh(app, true)
             scope.launch(Dispatchers.IO) {
                 val res = post("/api/native/ptt", JSONObject().put("on", true))
                 val id = res?.optString("talkId")

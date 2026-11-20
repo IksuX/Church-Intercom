@@ -29,7 +29,7 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     private var volumeButtons = UserDefaults.standard.bool(forKey: "ik.volume")
 
     override public func load() {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             IkEngine.shared.emit = { [weak self] name, data in self?.notifyListeners(name, data: data, retainUntilConsumed: true) }
         }
         watchVolume()

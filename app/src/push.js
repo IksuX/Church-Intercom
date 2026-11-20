@@ -51,6 +51,12 @@ export class Push {
     if (!this.subs[key].length) delete this.subs[key];
     this.save();
   }
+  // usunięcie danych osoby (panel → „Usuń dane”): wszystkie jej urządzenia i ustawienia powiadomień
+  forget(key) {
+    delete this.subs[key];
+    if (this.prefs[key]) { delete this.prefs[key]; fs.writeFile(this.prefsFile, JSON.stringify(this.prefs), () => {}); }
+    this.save();
+  }
   // porządki: zapisy wygasłe ponad tydzień temu usuwamy całkiem
   prune() {
     const old = Date.now() - 7 * 24 * 3600 * 1000;

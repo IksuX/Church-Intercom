@@ -18,6 +18,11 @@ export class Avatars {
     this.urls[pid] = url;
     fs.writeFile(this.indexFile, JSON.stringify(this.urls), () => {});
   }
+  // usunięcie danych osoby: adres i kopia zdjęcia profilowego
+  forget(pid) {
+    if (this.urls[pid]) { delete this.urls[pid]; fs.writeFile(this.indexFile, JSON.stringify(this.urls), () => {}); }
+    for (const f of [this.file(pid), this.file(pid) + '.type']) fs.rm(f, { force: true }, () => {});
+  }
   has(pid) { return !!this.urls[pid] || fs.existsSync(this.file(pid)); }
   file(pid) { return path.join(this.dir, `${String(pid).replace(/[^\w-]/g, '')}.img`); }
   // Zwraca { data, type } albo null

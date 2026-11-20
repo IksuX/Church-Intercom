@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -24,13 +25,7 @@ class IkService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val n = NotificationCompat.Builder(this, Notify.CH_SERVICE)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle("Interkom")
-            .setContentText("Połączony – słuchasz także przy zablokowanym ekranie")
-            .setOngoing(true)
-            .setContentIntent(Notify.openAppIntent(this))
-            .build()
+        val n = notification(this, IkEngine.talking)
         try {
             if (Build.VERSION.SDK_INT >= 30) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
             else startForeground(1, n)
@@ -66,7 +61,22 @@ class IkService : Service() {
     }
 
     companion object {
-        fun start(ctx: Context) { ContextCompat.startForegroundService(ctx, Intent(ctx, IkService::class.java)) }
-        fun stop(ctx: Context) { ctx.stopService(Intent(ctx, IkService::class.java)) }
+        @Volatile private var running = false
+        /** Powiadomienie usługi mówi wprost, czy mikrofon jest otwarty (wymóg przejrzystości nagrywania). */
+        fun notification(ctx: Context, talking: Boolean) = NotificationCompat.Builder(ctx, Notify.CH_SERVICE)
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setContentTitle(if (talking) "🎙️ Mówisz – mikrofon włączony" else "Interkom – połączony")
+            .setContentText(if (talking) "Zespół słyszy Cię na żywo. Zakończ mówienie przyciskiem." else "Słuchasz zespołu także przy zablokowanym ekranie. Mikrofon jest wyłączony.")
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(Notify.openAppIntent(ctx))
+            .build()
+        /** Zmiana stanu mikrofonu – odśwież powiadomienie usługi (bez dźwięku). */
+        fun refresh(ctx: Context, talking: Boolean) {
+            if (!running) return
+            try { NotificationManagerCompat.from(ctx).notify(1, notification(ctx, talking)) } catch (_: SecurityException) { /* brak zgody na powiadomienia */ }
+        }
+        fun start(ctx: Context) { running = true; ContextCompat.startForegroundService(ctx, Intent(ctx, IkService::class.java)) }
+        fun stop(ctx: Context) { running = false; ctx.stopService(Intent(ctx, IkService::class.java)) }
     }
 }

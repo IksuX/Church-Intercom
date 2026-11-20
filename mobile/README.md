@@ -1,4 +1,4 @@
-# Interkom – aplikacja na iPhone i Android (1.4.1)
+# Interkom – aplikacja na iPhone i Android (1.5.0)
 
 Aplikacja to „opakowanie” zwykłej strony interkomu (ten sam wygląd, logowanie, czat, powiadomienia),
 ale **dźwięk obsługuje natywnie** (LiveKit), dzięki czemu:
@@ -7,7 +7,7 @@ ale **dźwięk obsługuje natywnie** (LiveKit), dzięki czemu:
 - działają **przyciski sprzętowe**: przycisk na słuchawkach, piloty/przyciski PTT Bluetooth, przyciski głośności,
 - powiadomienia (wezwania, wzmianki) przychodzą przez połączenie aplikacji – bez Web Push.
 
-Strona nadal działa w przeglądarce jak dotąd – aplikacja jest dodatkiem. Wymaga serwera **0.32.0+** (wyszukiwanie w sieci: **0.33.0+**).
+Strona nadal działa w przeglądarce jak dotąd – aplikacja jest dodatkiem. Wymaga serwera **0.32.0+** (wyszukiwanie w sieci: **0.33.0+**; strona prywatności, informacja przy logowaniu i konto demo: **0.52.0+**).
 
 ## Wybór serwera
 
@@ -28,8 +28,9 @@ iPhone przy pierwszym wyszukiwaniu zapyta o dostęp do **sieci lokalnej** – tr
 
 - Mac z **Xcode 16+** (iOS) i **Android Studio** (Ladybug lub nowsze, JDK 21) – Android można budować też na Windows/Linux,
 - **Node 22+**,
-- iPhone: konto Apple Developer (99 USD/rok) do TestFlight / instalacji ad-hoc; darmowe konto Apple ID pozwala
-  zainstalować aplikację na własnym iPhonie, ale wygasa po 7 dniach,
+- iPhone: płatne konto **Apple Developer Program** (99 USD/rok) do TestFlight / Ad Hoc / App Store. Darmowe konto
+  Apple ID („Personal Team”) pozwala tylko zainstalować aplikację na własnym iPhonie (wygasa po 7 dniach) – nie da się
+  nim wysłać aplikacji do TestFlight,
 - Android: nic – plik APK instaluje się bezpośrednio.
 
 ## Budowanie
@@ -37,25 +38,81 @@ iPhone przy pierwszym wyszukiwaniu zapyta o dostęp do **sieci lokalnej** – tr
 ```bash
 cd mobile
 npm install
-export IK_SERVER_URL=https://57-128-249-85.sslip.io   # opcjonalnie – „Serwer domyślny” na liście
-export IK_APP_ID=pl.cme.interkom                      # opcjonalnie – identyfikator aplikacji
+export IK_SERVER_URL=https://57-128-249-85.sslip.io   # opcjonalnie – „Serwer domyślny (internet)” na liście
 npx cap add ios
 npx cap add android
 npm run sync
 ```
 
+Identyfikator aplikacji (Bundle ID / applicationId) to **`pl.churchinterkom.app`** (`capacitor.config.ts`). Taki sam
+musi być w App Store Connect – po utworzeniu aplikacji nie da się go zmienić. `IK_APP_ID` nadpisuje go tylko do prób.
+Uwaga: do wersji 1.4.1 identyfikator był `pl.interkom.app`, więc na Androidzie 1.5.0 instaluje się jako nowa aplikacja.
+Starą trzeba usunąć ręcznie.
+
 `npm run sync` (oraz `npm run ios` / `npm run android`) uruchamia też skrypty `scripts/ios-setup.sh`
-i `scripts/android-setup.sh`, które uzupełniają Info.plist i MainActivity – uruchamiaj je po każdym `cap add`.
+i `scripts/android-setup.sh`. Uruchamiaj je po każdym `cap add`. Bezpiecznie można je uruchamiać wielokrotnie.
+- **iOS:** Info.plist (opisy uprawnień – tylko mikrofon, sieć lokalna i Bluetooth; tryb w tle tylko `audio`;
+  `ITSAppUsesNonExemptEncryption = false`), wersja i numer kompilacji, manifest prywatności `PrivacyInfo.xcprivacy`
+  (z `resources/`, dopisany do projektu Xcode), ikona i ekran startowy.
+- **Android:** MainActivity, repozytorium JitPack, `versionName` / `versionCode`, ikony (`mipmap-*`, ikona adaptacyjna)
+  i ekran startowy, usunięcie nieużywanych uprawnień dodawanych przez LiveKit (kamera, udostępnianie ekranu).
+
 Zmiany w samej stronie (serwer) **nie wymagają** przebudowy aplikacji – aplikacja wczytuje stronę z serwera.
+
+### Wersja i numer kompilacji
+
+- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.5.0).
+- **Numer kompilacji** (`CFBundleVersion` / `versionCode`) jest w pliku `mobile/build-number`. Przed **każdym**
+  archiwum do TestFlight i każdym nowym APK: `npm run bump-build` (podnosi numer o 1 i od razu wpisuje go do projektów
+  iOS i Android). App Store Connect odrzuca kompilację z numerem, który już był. Zmieniony `build-number` dołącz do commita.
+
+### Ikona i ekran startowy
+
+Źródła są w `mobile/resources/`: `icon.png` (1024×1024, bez przezroczystości – wymóg App Store),
+`icon-foreground.png` (warstwa przednia ikony adaptacyjnej Androida) i `splash.png` (2732×2732). Obecna ikona
+jest tymczasowa: pomarańczowe koło z mikrofonem, jak `app/public/icon.svg`. Generuje ją `npm run icons`
+(`resources/make-icons.swift`, na Macu). Własną grafikę wystarczy podmienić w `resources/` i uruchomić `npm run sync`.
 
 ### iPhone
 
 1. `npm run ios` – otworzy się Xcode.
-2. Projekt **App** → zakładka *Signing & Capabilities* → wybierz swój *Team*.
-3. Sprawdź, że w *Background Modes* jest zaznaczone **Audio, AirPlay and Picture in Picture**
-   (skrypt `scripts/ios-setup.sh` dopisuje to do Info.plist).
-4. Podłącz iPhone’a → ▶ Run. Do dystrybucji: *Product → Archive → Distribute → TestFlight*
-   (TestFlight nie wymaga publikacji w App Store; zapraszasz zespół mailem).
+2. Projekt **App** → zakładka *Signing & Capabilities* → zaznacz *Automatically manage signing* i wybierz *Team*
+   z płatnego konta Apple Developer Program. Certyfikaty i profile zostają w Xcode i w pęku kluczy – **nic z tego
+   nie trafia do repozytorium** (`.gitignore` blokuje `*.p12`, `*.p8`, `*.mobileprovision`, `*.cer`).
+3. Podłącz iPhone’a → ▶ Run (próba na własnym telefonie).
+
+### Dystrybucja na iPhone’a
+
+**TestFlight służy do testowania** wersji przed wydaniem, nie zastępuje publikacji:
+- kompilacja w TestFlight **wygasa po 90 dniach** – potem testerzy nie uruchomią aplikacji, dopóki nie wyślesz nowej,
+- **testerzy wewnętrzni** (do 100 osób z kontem w App Store Connect) dostają kompilację od razu, bez recenzji,
+- **testerzy zewnętrzni** (do 10 000, zaproszenie mailem albo publiczny link) wymagają recenzji **Beta App Review**
+  – pierwsza kompilacja każdej wersji idzie do recenzji (zwykle do 1–2 dni).
+
+Docelowo (do decyzji) zostają dwie drogi:
+- **Ad Hoc** – instalacja na zarejestrowanych iPhone’ach zespołu (do 100 urządzeń rocznie, UDID każdego telefonu),
+  profil i aplikację trzeba odnawiać co rok. Bez recenzji Apple.
+- **Aplikacja niepubliczna w App Store** (*Unlisted App*) – pełna recenzja App Store, potem stały link, aktualizacje
+  jak dla zwykłej aplikacji, bez wygasania. Nie da się jej znaleźć w wyszukiwarce sklepu.
+
+#### TestFlight krok po kroku
+
+1. **App Store Connect → Aplikacje → ＋ Nowa aplikacja**: platforma iOS, nazwa (np. „Interkom”), język główny polski,
+   Bundle ID **`pl.churchinterkom.app`** (najpierw zarejestruj go w *Certificates, Identifiers & Profiles → Identifiers*,
+   jeśli nie ma go na liście), SKU – dowolny własny kod (np. `interkom-ios`), dostęp: pełny.
+2. `cd mobile && npm run bump-build && npm run sync` → `npx cap open ios`.
+3. Xcode: u góry wybierz urządzenie **Any iOS Device (arm64)** → *Product → Archive*. Po zakończeniu otworzy się
+   *Organizer*: **Validate App** (popraw zgłoszone problemy) → **Distribute App → App Store Connect → Upload**.
+4. Po kilku–kilkunastu minutach kompilacja pojawi się w App Store Connect → TestFlight. **Export Compliance** jest
+   wypełnione z góry (`ITSAppUsesNonExemptEncryption = false` – tylko standardowe szyfrowanie HTTPS/WebRTC).
+5. **Testerzy wewnętrzni:** TestFlight → *Internal Testing* → ＋ grupa → dodaj użytkowników App Store Connect
+   (muszą mieć konto w zespole, *Users and Access*). Instalują aplikację **TestFlight** z App Store i przyjmują zaproszenie.
+6. **Grupa zewnętrzna:** TestFlight → *External Testing* → ＋ grupa (np. „Zespół kościoła”) → dodaj kompilację.
+7. Uzupełnij dane do recenzji z [`docs/testflight-recenzja.md`](docs/testflight-recenzja.md): *Beta App Description*,
+   *What to Test*, *Feedback Email*, *Privacy Policy URL*, dane logowania (PIN konta demo – tylko w App Store Connect)
+   i *Review Notes*. Przed wysłaniem włącz konto demo na serwerze VPS (panel → Ogólne → Konto demo).
+8. **Submit for Review**. Po akceptacji: **publiczny link** (*Enable Public Link*) – wklej go w panelu interkomu
+   (Ogólne → Aplikacja na telefon) – albo zaproszenia mailowe dla osób dopisanych do grupy.
 
 ### Android
 
@@ -86,7 +143,7 @@ Krótkie naciśnięcie (< 0,35 s) w trybie „przytrzymaj” na Androidzie dzia�
   strona w tle „śpi”. Aplikacja zgłasza się serwerowi co 20 s (`/api/native/beat`).
 - Mówienie przyciskiem sprzętowym idzie bezpośrednio do serwera (`/api/native/ptt`); nagranie do transkrypcji
   aplikacja wysyła sama.
-- Android: usługa pierwszoplanowa (stałe powiadomienie „Interkom aktywny”) + MediaSession.
+- Android: usługa pierwszoplanowa (stałe powiadomienie „Interkom – połączony”, a w trakcie mówienia „🎙️ Mówisz – mikrofon włączony”) + MediaSession.
 - iPhone: tryb audio w tle + MPRemoteCommandCenter.
 
 ## Ograniczenia

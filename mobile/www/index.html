@@ -71,6 +71,7 @@ input:focus { border-color:var(--accent); }
     <p class="err" id="err"></p>
     <p class="hint">Adres znajdziesz u administratora – ten sam, który otwierasz w przeglądarce.</p>
   </section>
+  <p class="hint" style="text-align:center"><a href="prywatnosc.html" style="color:var(--muted)">Prywatność</a></p>
 </main>
 <div class="busy" id="busy" hidden><div><div class="spin"></div><div id="busyMsg">Łączenie z<br><b id="busyName"></b></div>
   <button type="button" id="busyCancel" style="margin-top:22px">Anuluj – wybierz inny serwer</button></div></div>
@@ -128,7 +129,7 @@ function srvButton(s, extra = '') {
 
 function renderRecent(defaultUrl) {
   const list = loadRecent();
-  if (defaultUrl && !list.some((x) => x.url === defaultUrl)) list.push({ url: defaultUrl, name: 'Serwer domyślny', fixed: true });
+  if (defaultUrl && !list.some((x) => x.url === defaultUrl)) list.push({ url: defaultUrl, name: 'Serwer domyślny (internet)', fixed: true });
   $('#recentBox').hidden = !list.length;
   const box = $('#recentList'); box.innerHTML = '';
   for (const s of list) {

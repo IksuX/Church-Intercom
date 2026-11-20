@@ -38,8 +38,8 @@ final class IkDiscovery: @unchecked Sendable {
         q.async {
             let b = NWBrowser(for: .bonjourWithTXTRecord(type: "_interkom._tcp", domain: nil), using: NWParameters())
             self.browser = b
-            b.browseResultsChangedHandler = { [weak self] results, _ in
-                guard let self else { return }
+            // silne odwołanie celowo: obiekt wyszukiwania żyje do końca czasu (browser = nil poniżej przerywa cykl)
+            b.browseResultsChangedHandler = { results, _ in
                 for r in results {
                     guard case let .service(name, _, _, _) = r.endpoint else { continue }
                     var e = ["name": name]

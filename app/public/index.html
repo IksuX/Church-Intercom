@@ -91,13 +91,15 @@
       <button type="submit" id="loginBtn" class="primary big">Dalej</button>
       <button type="button" id="btnSrvLogin" class="srvbtn" hidden><svg class="ic" aria-hidden="true"><use href="#i-server"/></svg> Zmień serwer</button>
       <p class="hint">Najlepiej działa ze słuchawkami przewodowymi. Bluetooth dodaje opóźnienie.</p>
-      <p class="hint"><a href="/pomoc" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Instrukcja obsługi</a></p>
+      <p class="hint"><a href="/pomoc" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Instrukcja obsługi</a> · <a href="/prywatnosc" target="_blank" rel="noopener">Prywatność</a></p>
       <div class="app-links" id="appLinks" hidden></div>
     </form>
   </section>
 
   <!-- APLIKACJA -->
   <section id="main" class="view" hidden>
+    <!-- stały wskaźnik: mikrofon otwarty (i transkrypcja) / sterowanie głosem – widoczny w każdym widoku -->
+    <div id="micBar" class="micbar" hidden role="status" aria-live="polite"></div>
     <header class="top">
       <span id="conn" class="dot" title="Połączenie"></span>
       <span id="orgLogo" class="org-logo" hidden></span>
@@ -197,6 +199,17 @@
   </div>
 
   <!-- WEZWANIE (pełny ekran) -->
+  <!-- informacja o prywatności przy pierwszym logowaniu -->
+  <div id="privBox" class="privbox" hidden role="dialog" aria-modal="true" aria-labelledby="privH">
+    <div class="privcard">
+      <h2 id="privH">Zanim zaczniesz</h2>
+      <p>Gdy mówisz (przycisk <b>Mów</b>, przycisk na słuchawkach albo pilot), osoby słuchające kanału słyszą Twój głos na żywo. U góry widać wtedy czerwony pasek <b>„Mówisz”</b>.</p>
+      <p id="privStt">Na kanałach z transkrypcją wypowiedź jest też zamieniana na tekst na serwerze interkomu i trafia do czatu.</p>
+      <p id="privKeep"></p>
+      <p><a href="/prywatnosc" target="_blank" rel="noopener">Polityka prywatności – jakie dane, gdzie i jak długo</a></p>
+      <button type="button" id="privOk" class="primary big">Rozumiem</button>
+    </div>
+  </div>
   <div id="callBox" class="callbox" hidden role="alertdialog" aria-live="assertive">
     <div class="call-inner">
       <div id="callAv" class="call-av"></div>
@@ -338,7 +351,7 @@
         <section class="set-sec" data-sec="account" data-title="Konto" hidden>
           <h3 class="set-h">Konto</h3>
         <p class="me" id="meLine"></p>
-        <p class="helplink"><a href="/pomoc" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Instrukcja obsługi</a></p>
+        <p class="helplink"><a href="/pomoc" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Instrukcja obsługi</a> · <a href="/prywatnosc" target="_blank" rel="noopener">Prywatność</a></p>
         <div class="app-links web-only" id="appLinksSet" hidden></div>
         <label class="field">Twoje ksywki – po nich inni mogą Cię oznaczyć (@), oddziel przecinkami
           <span class="row nickrow"><input id="optNicks" maxlength="100" placeholder="ksywki oddzielone przecinkami" autocomplete="off"><button type="button" id="btnNicks"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> Zapisz</button></span></label>

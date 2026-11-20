@@ -1,4 +1,4 @@
-# Interkom 0.51.0
+# Interkom 0.52.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -24,11 +24,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.51.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.52.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.51.0.zip && cd interkom
+   unzip interkom-0.52.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -598,7 +598,7 @@ W folderze `mobile/` jest projekt aplikacji (Capacitor 8 + natywny dźwięk Live
 
 **Serwer:** nowe endpointy `/api/native/beat`, `/api/native/ptt`, `/api/native/bye`. Serwer sam wysyła telefonowi (kanałem danych LiveKit, temat `ik`) listę osób, które ma słyszeć, oraz powiadomienia. Dzięki temu nic nie zależy od strony uśpionej w tle. Telefon z aplikacją w tle widać na liście obecnych.
 
-**Dystrybucja bez sklepów:** iPhone przez TestFlight (konto Apple Developer), Android jako plik APK. Instrukcja budowania: `mobile/README.md`.
+**Dystrybucja:** iPhone – na razie wersje testowe przez TestFlight (konto Apple Developer Program; kompilacje wygasają po 90 dniach, testerzy zewnętrzni wymagają recenzji Beta App Review), docelowo Ad Hoc albo niepubliczna aplikacja w App Store (do decyzji). Android jako plik APK. Instrukcja budowania i krok po kroku dla TestFlight: `mobile/README.md`.
 
 Ograniczenia: na iPhonie przycisk słuchawek działa jako przełącznik (naciśnij – mów, naciśnij – koniec). Dźwięk transmisji w aplikacji idzie przez LiveKit, bez trybu ultra i bez trybu lokalnego.
 
@@ -671,7 +671,7 @@ Wyłączenie: `sudo ./install.sh --remote-off`, a potem usuń przekierowania w r
 
 ## Przyciski pobrania aplikacji na ekranie logowania (od 0.38.0)
 
-Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo publiczny link TestFlight (iPhone) oraz link do Google Play albo do pliku APK (Android). Na ekranie logowania i w ustawieniach w przeglądarce pojawią się wtedy przyciski do pobrania. Napis na przycisku dopasowuje się do linku („App Store”, „TestFlight”, „Google Play”, „Androida (APK)”), a na telefonie najpierw pokazuje się przycisk dla jego systemu. W samej aplikacji przyciski są ukryte. Puste pole oznacza brak przycisku.
+Panel → **Ogólne → Aplikacja na telefon**: wklej link do App Store albo publiczny link TestFlight (iPhone) oraz link do Google Play albo do pliku APK (Android). Na ekranie logowania i w ustawieniach w przeglądarce pojawią się wtedy przyciski do pobrania. Napis na przycisku dopasowuje się do linku („App Store”, „iPhone – wersja testowa (TestFlight)”, „Google Play”, „Androida (APK)”), a na telefonie najpierw pokazuje się przycisk dla jego systemu. W samej aplikacji przyciski są ukryte. Puste pole oznacza brak przycisku.
 
 ## 0.38.1
 
@@ -738,6 +738,47 @@ Uprawnienia sprawdza serwer przy każdym poleceniu. Osoba bez roli dostaje odmow
 **Stream Deck** (opcjonalnie): w panelu → Reżyseria wygeneruj klucz. Polecenia przyjmują GET i POST, np. `/api/mixer/deck/cut?key=KLUCZ`, `/api/mixer/deck/preview?key=KLUCZ&input=2`, `fade`, `program?input=3`, `start`, `stop`, `toggle`, `next`, `preset?name=Nazwa`. Bez klucza ta możliwość jest wyłączona.
 
 Ustawienia autopilota, presety i klucz Stream Decka są w `data/mixer.json` i trafiają do kopii ustawień.
+
+## Prywatność, konto demo i aplikacja w TestFlight (od 0.52.0)
+
+Przygotowanie do TestFlight i wymagań umowy Apple Developer Program (pkt 3.3.3: nagrania, zgoda, prywatność).
+
+**Strona „Prywatność”** – `/prywatnosc` (także `/privacy`). Link jest na ekranie logowania, w ⚙️ → Konto i na ekranie wyboru serwera w aplikacji. Strona opisuje to, co serwer faktycznie robi: jakie dane (imię i rola, głos tylko w trakcie mówienia, transkrypcje, wiadomości, identyfikator urządzenia do powiadomień, adres serwera zapisany w telefonie, dziennik techniczny), w jakim celu, gdzie (serwer kościoła albo VPS, transkrypcja lokalnie, bez chmury), jak długo i jak poprosić o usunięcie. Administrator uzupełnia w panelu → **Ogólne → Prywatność**: administratora danych, kontakt, okres przechowywania i opcjonalne dodatkowe informacje. Strona działa także wtedy, gdy dostęp spoza sieci jest wyłączony.
+
+**Informacja przy pierwszym logowaniu** – „Zanim zaczniesz”: głos słyszą na żywo osoby na kanale, na kanałach z transkrypcją wypowiedź jest zamieniana na tekst, wiadomości są przechowywane N dni. Przycisk **„Rozumiem”** i link do polityki. Serwer zapisuje, kto i kiedy potwierdził (`data/privacy-ack.json`). Na tym samym urządzeniu informacja nie wraca przy kolejnym logowaniu PIN-em. Po zmianie treści strony w panelu każdy zobaczy ją ponownie.
+
+**Okres przechowywania** – domyślnie 30 dni (0 = bez automatycznego usuwania). Co godzinę serwer usuwa starsze wiadomości, wpisy o wypowiedziach i transkrypcje z pamięci i całe pliki dziennika (`data/log/RRRR-MM-DD.jsonl`) z wcześniejszych dni.
+
+**Usuń dane osoby** – przycisk „Usuń dane” przy osobie (Stan → Osoby online, Osoby i uprawnienia) albo po imieniu (Ogólne → Prywatność; osoby logujące się PIN-em nie mają stałej tożsamości, więc szukamy po imieniu). Usuwa wiadomości, wypowiedzi i transkrypcje (także z dziennika na dysku i z ekranów osób online), rozmowy prywatne, ksywki, subskrypcje i ustawienia powiadomień, zdjęcie z Planning Center i zapis o zapoznaniu się z informacją.
+
+**Co serwer zapisuje na dysk** (sprawdzone w kodzie): dziennik czatu (`data/log`), ksywki, subskrypcje i ustawienia powiadomień, zdjęcia z Planning Center, potwierdzenia informacji o prywatności, konfigurację. **Nagrań rozmów nie zapisuje.** Usługa transkrypcji trzyma w pamięci RAM do 20 ostatnich wypowiedzi (strojenie jakości w panelu). Dotąd zapisywała na dysk 10 ostatnich *nieudanych* nagrań – teraz robi to tylko po ustawieniu `IK_STT_KEEP_FAILED=1`, a stare pliki usuwa przy starcie. Dzienniki usług Dockera mają limit 3 × 10 MB na usługę (`docker-compose.yml`).
+
+**Wskaźnik mikrofonu** – gdy mikrofon jest otwarty (przycisk Mów, kłódka, słuchawki, pilot PTT), u góry każdego widoku jest czerwony pasek **„🎙️ Mówisz – kanał X”**, także w Reżyserii i nad otwartymi oknami. Przy kanale z transkrypcją dochodzi „· transkrypcja”. Włączone **Sterowanie głosem** (Reżyser) ma własną, stałą etykietę. Na Androidzie powiadomienie usługi pokazuje w trakcie mówienia „🎙️ Mówisz – mikrofon włączony”. Na iPhonie widać systemowy wskaźnik mikrofonu.
+
+**Konto demo** (panel → Ogólne → Konto demo) – dla recenzenta Apple albo Google: osobny PIN (inny niż pozostałe), stała nazwa (domyślnie „Recenzent Apple”), prawo mówienia. Konto widzi tylko kanał ogólny i do 4 wybranych kanałów, nie ma rozmów prywatnych i nie widzi listy ekipy. Na pierwszym kanale są przykładowe wiadomości, które nie trafiają do dziennika. Działa też spoza sieci kościoła i nie wymaga Planning Center. PIN-u nie zapisuj w repozytorium.
+
+Teksty do App Store Connect (opis, „What to Test”, notatki dla recenzenta, PL i EN): `mobile/docs/testflight-recenzja.md`.
+
+## 0.52.0 (aplikacja 1.5.0)
+- **Prywatność** (opis w rozdziale wyżej):
+  - strona `/prywatnosc` edytowana w panelu (Ogólne → Prywatność),
+  - informacja „Zanim zaczniesz” przy pierwszym logowaniu, z zapisem potwierdzenia na serwerze,
+  - automatyczne usuwanie wiadomości i transkrypcji po N dniach (domyślnie 30),
+  - przycisk „Usuń dane” przy osobie i usuwanie po imieniu.
+- **Stały wskaźnik mikrofonu**: czerwony pasek „Mówisz – kanał X” (· transkrypcja) w każdym widoku, także w Reżyserii, i etykieta „Sterowanie głosem”.
+- **Konto demo** dla recenzji aplikacji: osobny PIN, tylko wybrane kanały, przykładowe wiadomości.
+- Usługa transkrypcji **nie zapisuje już nieudanych nagrań na dysk** (tylko z `IK_STT_KEEP_FAILED=1`).
+- Limit dzienników Dockera: 3 × 10 MB na usługę.
+- Przycisk TestFlight na ekranie logowania: „iPhone – wersja testowa (TestFlight)”.
+- Testy: `app/test/privacy.test.js` – strona prywatności, potwierdzenie, okres przechowywania, usuwanie danych, konto demo.
+- **Aplikacja 1.5.0** (iPhone i Android):
+  - Bundle ID / applicationId **`pl.churchinterkom.app`** (na Androidzie instaluje się jako nowa aplikacja – starą usuń),
+  - manifest prywatności iOS (`PrivacyInfo.xcprivacy`), `ITSAppUsesNonExemptEncryption = false`, tryb w tle tylko `audio`,
+  - wersja z `package.json`, numer kompilacji z `mobile/build-number`, nowe polecenie `npm run bump-build`,
+  - ikona i ekran startowy (`mobile/resources/`, tymczasowa grafika),
+  - Android: powiadomienie „Mówisz – mikrofon włączony”, usunięte nieużywane uprawnienia z LiveKit (kamera, udostępnianie ekranu),
+  - link „Prywatność” na ekranie wyboru serwera.
+  - Instrukcja TestFlight w `mobile/README.md`.
 
 ## 0.51.0
 - **Reżyseria – moduł miksera wideo Blackmagic ATEM** (opis w rozdziale wyżej):

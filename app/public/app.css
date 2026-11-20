@@ -861,3 +861,19 @@ html.pip #main { display: flex; flex-direction: column; height: 100dvh; }
 .srvbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .sheet .row { flex-wrap: wrap; }
 .chstt .ic, .pgo .ic { width: 15px; height: 15px; vertical-align: -3px; }
+
+/* ---- stały wskaźnik mikrofonu i transkrypcji (widoczny w każdym widoku, także w Reżyserii i nad oknami) ---- */
+.micbar { position: fixed; left: 0; right: 0; top: 0; z-index: 80; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 10px;
+  min-height: 40px; box-sizing: border-box; padding: calc(6px + var(--safe-t)) 12px 6px; background: #c81e1e; color: #fff; font-weight: 700; font-size: 15px; text-align: center; box-shadow: 0 4px 14px #0007; pointer-events: none; }
+.micbar .mb-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1s infinite; flex: none; }
+.micbar .mb-extra { font-weight: 600; opacity: .95; }
+.micbar.voice-only { background: #8a4b00; font-size: 14px; min-height: 34px; }
+body.mic-live #main { padding-top: var(--micbar-h, 40px); box-sizing: border-box; }
+body.mic-live .top { padding-top: 8px; }
+body.mic-live .toast { top: calc(56px + var(--micbar-h, 40px)); }
+/* ---- informacja o prywatności przy pierwszym logowaniu ---- */
+.privbox { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: #000b; }
+.privcard { width: min(440px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; background: var(--panel2, var(--panel)); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+.privcard h2 { margin: 0 0 10px; font-size: 20px; }
+.privcard p { margin: 0 0 10px; line-height: 1.45; }
+.privcard .primary { width: 100%; margin-top: 6px; }

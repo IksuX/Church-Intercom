@@ -6,7 +6,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const defaultServer = process.env.IK_SERVER_URL || 'https://57-128-249-85.sslip.io';
 
 const config: CapacitorConfig = {
-  appId: process.env.IK_APP_ID || 'pl.interkom.app',
+  appId: process.env.IK_APP_ID || 'pl.churchinterkom.app', // Bundle ID w App Store Connect (nie da się go później zmienić)
   appName: 'Interkom',
   webDir: 'www',
   server: {
