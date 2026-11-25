@@ -132,6 +132,13 @@
               <p>Bez Google Play: zbuduj APK w Android Studio (Build → Build APK(s)) i wgraj go tutaj. Gdy pole „Android” powyżej jest puste, ekran logowania pokaże przycisk „Pobierz na Androida (APK)” z tego serwera. Przy instalacji Android zapyta o zgodę na „instalowanie nieznanych aplikacji” z przeglądarki.</p></details>
           </div>
         </div>
+        <div class="a-card" id="tgCard">
+          <h2>Mówienie przyciskiem (aplikacja)</h2>
+          <p class="hint">Przycisk słuchawek, pilot i pauza na ekranie blokady włączają mikrofon bez przytrzymywania. Te limity chronią przed zapomnianym, włączonym mikrofonem. Nie dotyczą przycisku przytrzymywanego na ekranie ani kłódki. Aplikacja od wersji 1.6.0 stosuje wszystkie. Przytrzymany przycisk słuchawek i starsze aplikacje serwer wyłącza po trzykrotności limitu czasu.</p>
+          <label class="a-field">Wyłącz mikrofon po czasie (s, 10–600)<input id="tgMax" type="number" min="10" max="600" step="1"></label>
+          <label class="a-field">Wyłącz mikrofon po ciszy (s; 0 = nie wyłączaj)<input id="tgSilence" type="number" min="0" max="120" step="1"></label>
+          <label class="a-field">Sygnał przypominający co (s; 0 = bez sygnału)<input id="tgRemind" type="number" min="0" max="120" step="1"></label>
+        </div>
         <div class="a-card" id="pvCard">
           <h2>Prywatność</h2>
           <p class="hint">Strona <a href="/prywatnosc" target="_blank" rel="noopener">/prywatnosc</a> – link jest na ekranie logowania, w ustawieniach i w aplikacji. Opisuje, jakie dane zbiera interkom. Tu uzupełniasz administratora, kontakt i okres przechowywania. Po zmianie treści każdy przy następnym wejściu zobaczy ponownie informację „Zanim zaczniesz”.</p>

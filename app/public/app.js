@@ -278,6 +278,7 @@ function onWs(m) {
     case 'call': showCall(m); break;
     case 'modDone': toast({ channel: S.broadcast, fromName: m.ok ? 'Gotowe' : 'Uwaga', text: m.text, plan: true, urgent: !m.ok }); if (!$('#sheetPeople').hidden) renderPeople(); break;
     case 'modMuted': onModMuted(m.by); break;
+    case 'talkLimit': onTalkLimit('max'); break;
     case 'modMoved': onModMoved(m.channel, m.by, m.wasTalking); break;
     case 'callStatus': toast({ channel: S.broadcast, fromName: m.ok ? 'Wezwanie' : 'Uwaga', text: m.ok ? `wysłane do: ${m.to}` : m.error, plan: true, urgent: !m.ok }); break;
     case 'callReply': toast({ channel: S.broadcast, fromName: m.answer === 'yes' ? '✓ ' + m.from.name : '✗ ' + m.from.name, text: m.answer === 'yes' ? 'idzie' : 'nie może teraz', plan: true, urgent: m.answer !== 'yes' }); vibrate(m.answer === 'yes' ? 60 : [200, 100, 200]); break;
@@ -617,6 +618,7 @@ function setActive(id) {
   // wchodzisz na kanał = chcesz go słyszeć (można wyłączyć w ustawieniach)
   if (S.opt.autoListen !== false && chan(id) && !isDm(id) && !S.listen.has(id)) setListen(id, true);
   renderTabs(); renderFeed(); renderPttLabel(); renderListenBar();
+  nativeSync(); // karta na ekranie blokady pokazuje kanał mówienia
   $('#msgInput').placeholder = `Napisz do: ${chan(id).name}…`;
 }
 
@@ -955,7 +957,7 @@ async function connectVoice() {
   setConn(); showAudioHintIfNeeded(); updateGates();
 }
 // ---- głos w aplikacji natywnej ----
-const nativeOpts = () => ({ voice: S.opt.voice !== false, vol: volLevel(), prog: progWanted(), progVol: progVolPct() / 100, progDuck: S.opt.progDuck !== false, duck: (prog.cfg.duck ?? 30) / 100, canTalk: canTalk(), progStereo: S.opt.progStereo !== false, hiFi: !!S.opt.hiFi });
+const nativeOpts = () => ({ voice: S.opt.voice !== false, vol: volLevel(), prog: progWanted(), progVol: progVolPct() / 100, progDuck: S.opt.progDuck !== false, duck: (prog.cfg.duck ?? 30) / 100, canTalk: canTalk(), progStereo: S.opt.progStereo !== false, hiFi: !!S.opt.hiFi, channel: S.active && isDm(S.active) ? 'rozmowa prywatna' : chan(S.active)?.name || '' });
 function nativeSync() { // tylko gdy coś się zmieniło – inaczej strona i telefon odbijają się w nieskończoność
   if (!NAT || !S.session) return;
   const o = nativeOpts(), k = JSON.stringify(o);
@@ -968,13 +970,15 @@ async function nativeConnect() {
     NAT.addListener('state', (e) => { S.natState = e.state; setConn(); });
     NAT.addListener('ptt', (e) => { // mówienie z przycisku Bluetooth / słuchawek / głośności
       S.pttOn = !!e.on; if (e.talkId) S.talkId = e.talkId;
+      if (!e.on && S.pttLocked) { S.pttLocked = false; $('#pttLock').setAttribute('aria-pressed', 'false'); } // „Koniec” z powiadomienia zdejmuje też kłódkę
       $('#ptt').classList.toggle('live', S.pttOn);
       if (S.pttOn) setPttL1('MÓWISZ'); else renderPttLabel();
       renderMicBar();
     });
     NAT.addListener('program', (e) => { if (prog.natLive === !!e.live) return; prog.natLive = !!e.live; renderProg(); });
     NAT.addListener('notice', (e) => sysMsg(e.message));
-    NAT.addListener('forceMute', (e) => onModMuted(e.by || 'Reżyser')); // gdy strona spała – aplikacja przekazuje po wybudzeniu
+    NAT.addListener('talkEnded', (e) => onTalkLimit(e.reason)); // aplikacja sama wyłączyła mikrofon (cisza / limit czasu)
+    NAT.addListener('forceMute', (e) => e.limit ? onTalkLimit('max') : onModMuted(e.by || 'Reżyser')); // gdy strona spała – aplikacja przekazuje po wybudzeniu
     NAT.addListener('moveTo', (e) => onModMoved(e.channel, e.by || 'Reżyser', false));
   }
   try {
@@ -991,16 +995,17 @@ async function renderNativeButtons() {
   $('#natBox').hidden = false;
   let b = {};
   try { b = await NAT.getButtons(); } catch {}
-  $('#nbMedia').checked = b.media !== false; $('#nbVol').checked = !!b.volume; $('#nbMode').value = b.mode || 'hold';
+  $('#nbMedia').checked = b.media !== false; $('#nbVol').checked = !!b.volume; $('#nbLiveRow').hidden = b.live === undefined; $('#nbLive').checked = b.live !== false; $('#nbMode').value = b.mode || 'hold';
   $('#nbLearn').hidden = $('#nbKey').hidden = b.platform === 'ios';
   $('#nbMode').disabled = b.platform === 'ios'; if (b.platform === 'ios') $('#nbMode').value = 'toggle';
   $('#nbKey').textContent = b.keyName ? `Przycisk PTT: ${b.keyName}` : 'Brak przypisanego przycisku PTT';
   $('#nbHint').textContent = b.platform === 'ios'
-    ? 'iPhone: przyciski słuchawek i Bluetooth (także pilot PTT) działają w trybie „naciśnij – mów, naciśnij ponownie – koniec” – również przy zablokowanym ekranie. Przyciski głośności – tylko gdy aplikacja jest na ekranie.'
-    : 'Android: przytrzymanie działa dla przycisków słuchawek, Bluetooth i przypisanego przycisku PTT – także przy zablokowanym ekranie. Przyciski głośności – gdy ekran jest włączony.';
+    ? `iPhone: przyciski słuchawek i Bluetooth (także pilot PTT) oraz pauza na ekranie blokady działają w trybie „naciśnij – mów, naciśnij ponownie – koniec” – również przy zablokowanym ekranie. Przyciski głośności – tylko gdy aplikacja jest na ekranie. ${guardHint()} Karta na ekranie blokady: stuknij ją, odblokuj telefon i przytrzymaj duży przycisk „Mów”.`
+    : `Android: przytrzymanie działa dla przycisków słuchawek, Bluetooth i przypisanego przycisku PTT – także przy zablokowanym ekranie. Przyciski głośności – gdy ekran jest włączony. ${guardHint()} W powiadomieniu Interkomu jest przycisk „Mów” – otwiera duży przycisk do przytrzymania, także bez odblokowania telefonu.`;
 }
-const saveButtons = () => NAT?.setButtons({ media: $('#nbMedia').checked, volume: $('#nbVol').checked, mode: $('#nbMode').value }).catch(() => {});
-$('#nbMedia').onchange = saveButtons; $('#nbVol').onchange = saveButtons; $('#nbMode').onchange = saveButtons;
+function guardHint() { const g = S.session?.talkGuard || { max: 60, silence: 8 }; return `Mikrofon włączony bez przytrzymywania wyłącza się sam ${g.silence ? `po ${g.silence} s ciszy i ` : ''}najpóźniej po ${g.max} s.`; }
+const saveButtons = () => NAT?.setButtons({ media: $('#nbMedia').checked, volume: $('#nbVol').checked, mode: $('#nbMode').value, live: $('#nbLive').checked }).catch(() => {});
+$('#nbMedia').onchange = saveButtons; $('#nbVol').onchange = saveButtons; $('#nbMode').onchange = saveButtons; $('#nbLive').onchange = saveButtons;
 $('#nbLearn').onclick = async () => {
   $('#nbKey').textContent = 'Naciśnij teraz przycisk PTT… (10 s)';
   try { const r = await NAT.learnButton({ timeoutMs: 10000 }); $('#nbKey').textContent = r?.keyName ? `Przycisk PTT: ${r.keyName}` : 'Nie wykryto przycisku.'; }
@@ -1631,7 +1636,7 @@ function startTalk() {
     S.pttOn = true;
     const talkId = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
     S.talkId = talkId;
-    NAT.setMic({ on: true, talkId, channel: S.active }).catch(() => {});
+    NAT.setMic({ on: true, talkId, channel: S.active, hold: !S.pttLocked }).catch(() => {}); // hold: zablokowanie telefonu lub wyjście z aplikacji od razu wyłącza mikrofon
     wsSend({ t: 'ptt', channel: S.active, on: true, talkId });
     $('#ptt').classList.add('live'); setPttL1('MÓWISZ'); vibrate(25);
     renderMicBar();
@@ -1997,7 +2002,7 @@ async function applyWake() {
     else if (!S.opt.wake && wakeLock) { await wakeLock.release(); wakeLock = null; }
   } catch {}
 }
-document.addEventListener('visibilitychange', () => { wsSend({ t: 'vis', hidden: document.hidden }); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.pttOn && !S.pttLocked && !boom.talk && !NAT) stopTalk(); wsSend({ t: 'vis', hidden: document.hidden }); }); // w aplikacji pilnuje tego część natywna (tam nadawanie może trwać z przycisku słuchawek)
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { applyWake(); showAudioHintIfNeeded(); } });
 
 // ================= STATUS POŁĄCZENIA =================
@@ -2021,6 +2026,15 @@ function onModMuted(by) {
   toast({ channel: S.broadcast, fromName: 'Wyciszono', text, plan: true, urgent: true });
   sysMsg(text);
   say(`${by} wyciszył Twój mikrofon.`);
+}
+// Mikrofon włączony przyciskiem bez przytrzymywania wyłączył się sam (zabezpieczenie przed zapomnianym nadawaniem)
+function onTalkLimit(reason) {
+  if (!modOnce('limit')) return;
+  if (S.pttOn && !S.pttLocked && !boom.talk) stopTalk();
+  renderPttLabel();
+  const text = reason === 'silence' ? 'Mikrofon wyłączył się sam – była cisza. Aby mówić, naciśnij przycisk ponownie.' : 'Mikrofon wyłączył się sam – minął limit czasu nadawania. Aby mówić, naciśnij przycisk ponownie.';
+  toast({ channel: S.broadcast, fromName: 'Koniec mówienia', text, plan: true, urgent: true });
+  sysMsg(text);
 }
 function onModMoved(ch, by, wasTalking) {
   const c = chan(ch); if (!c || !modOnce('move')) return;

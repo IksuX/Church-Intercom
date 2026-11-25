@@ -1,6 +1,6 @@
 {
   "name": "interkom-mobile",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Interkom – aplikacja na iPhone i Android (Capacitor + natywny dźwięk LiveKit)",
   "scripts": {

@@ -19,8 +19,11 @@ set_str NSBluetoothAlwaysUsageDescription "Interkom obsługuje słuchawki i przy
 set_str NSLocalNetworkUsageDescription "Interkom szuka serwerów interkomu w sieci Wi-Fi kościoła."
 $PB -c "Print :NSBonjourServices" "$P" >/dev/null 2>&1 || $PB -c "Add :NSBonjourServices array" "$P"
 $PB -c "Print :NSBonjourServices" "$P" | grep -q "_interkom._tcp" || $PB -c "Add :NSBonjourServices: string _interkom._tcp" "$P"
+# Aparatu aplikacja nie używa i nigdy o niego nie pyta, ale biblioteka LiveKit (WebRTC) zawiera kod kamery,
+# więc App Store Connect odrzuca kompilację bez tego opisu (ITMS-90683).
+set_str NSCameraUsageDescription "Interkom nie korzysta z aparatu. Biblioteka do rozmów głosowych zawiera obsługę wideo, ale aplikacja nigdy jej nie włącza."
 # uprawnienia, których aplikacja nie używa – recenzja Apple sprawdza, czy każde jest potrzebne
-for k in NSCameraUsageDescription NSPhotoLibraryUsageDescription NSPhotoLibraryAddUsageDescription NSLocationWhenInUseUsageDescription \
+for k in NSPhotoLibraryUsageDescription NSPhotoLibraryAddUsageDescription NSLocationWhenInUseUsageDescription \
          NSLocationAlwaysUsageDescription NSLocationAlwaysAndWhenInUseUsageDescription NSContactsUsageDescription NSSpeechRecognitionUsageDescription \
          NSUserTrackingUsageDescription; do
   $PB -c "Delete :$k" "$P" 2>/dev/null && echo "Usunięto nieużywane uprawnienie: $k" || true
@@ -37,6 +40,12 @@ $PB -c "Set :NSAppTransportSecurity:NSAllowsLocalNetworking true" "$P" 2>/dev/nu
 
 # --- szyfrowanie (export compliance): tylko standardowe szyfrowanie systemu (HTTPS, WebRTC/DTLS w LiveKit) – zwolnione ---
 set_bool ITSAppUsesNonExemptEncryption false
+
+# --- karta na ekranie blokady (Live Activity): rozszerzenie InterkomLive, zespół jak w aplikacji ---
+set_bool NSSupportsLiveActivities true
+mkdir -p "$ROOT/ios/App/InterkomLive"
+cp "$ROOT/resources/ios-live/InterkomLive.swift" "$ROOT/resources/ios-live/Info.plist" "$ROOT/ios/App/InterkomLive/"
+if [ -f "$PBX" ]; then node "$ROOT/scripts/ios-live-target.mjs" "$PBX"; fi
 
 # --- wersja (z package.json) i numer kompilacji (plik build-number, podnosi go „npm run bump-build”) ---
 VERSION=$(node -p "require('$ROOT/package.json').version")

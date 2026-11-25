@@ -252,8 +252,9 @@
         <div id="audioBox">
           <div id="natBox" class="natbox" hidden>
             <p class="hint">Aplikacja: rozmowy działają też przy zablokowanym ekranie i w kieszeni.</p>
-            <label class="switch"><input type="checkbox" id="nbMedia"> Mów przyciskiem na słuchawkach / Bluetooth (play/pauza)</label>
+            <label class="switch"><input type="checkbox" id="nbMedia"> Mów przyciskiem na słuchawkach / Bluetooth i pauzą na ekranie blokady</label>
             <label class="switch"><input type="checkbox" id="nbVol"> Mów przyciskiem głośności telefonu</label>
+            <label class="switch" id="nbLiveRow" hidden><input type="checkbox" id="nbLive"> Przycisk „Mów” na ekranie blokady</label>
             <label class="field">Sposób mówienia przyciskiem
               <select id="nbMode"><option value="hold">Przytrzymaj i mów</option><option value="toggle">Naciśnij – mów, naciśnij – koniec</option></select></label>
             <div class="row"><button id="nbLearn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> Naucz przycisk PTT</button><span class="hint" id="nbKey"></span></div>

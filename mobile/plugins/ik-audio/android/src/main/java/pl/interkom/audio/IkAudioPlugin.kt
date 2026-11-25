@@ -44,7 +44,7 @@ class IkAudioPlugin : Plugin(), IkEngine.Listener {
     override fun onEvent(name: String, data: JSObject) { notifyListeners(name, data, true) }
 
     override fun handleOnResume() { IkEngine.foreground = true }
-    override fun handleOnPause() { IkEngine.foreground = false }
+    override fun handleOnPause() { IkEngine.foreground = false; IkEngine.endScreenHold() } // zablokowanie / wyjście kończy mówienie przytrzymanym przyciskiem
 
     // przyciski (głośność, przypisany przycisk PTT) – gdy aplikacja jest na ekranie
     private fun installKeyHook() {
@@ -73,6 +73,7 @@ class IkAudioPlugin : Plugin(), IkEngine.Listener {
         canTalk = call.getBoolean("canTalk", false) ?: false,
         progStereo = call.getBoolean("progStereo", true) ?: true,
         hiFi = call.getBoolean("hiFi", false) ?: false,
+        channel = call.getString("channel") ?: "",
     )
 
     @PluginMethod
@@ -100,19 +101,20 @@ class IkAudioPlugin : Plugin(), IkEngine.Listener {
     }
 
     @PluginMethod fun configure(call: PluginCall) { IkEngine.configure(opts(call)); call.resolve() }
-    @PluginMethod fun setMic(call: PluginCall) { IkEngine.setMic(call.getBoolean("on", false) == true, call.getString("talkId")); call.resolve() }
+    @PluginMethod fun setMic(call: PluginCall) { IkEngine.setMic(call.getBoolean("on", false) == true, call.getString("talkId"), call.getBoolean("hold", false) == true); call.resolve() }
     @PluginMethod fun disconnect(call: PluginCall) { IkEngine.disconnect(); call.resolve() }
 
     @PluginMethod
     fun getButtons(call: PluginCall) {
         call.resolve(JSObject().put("platform", "android").put("media", IkPrefs.media).put("volume", IkPrefs.volume)
-            .put("mode", IkPrefs.mode).put("keyName", IkPrefs.keyName))
+            .put("mode", IkPrefs.mode).put("keyName", IkPrefs.keyName).put("live", IkPrefs.live))
     }
 
     @PluginMethod
     fun setButtons(call: PluginCall) {
         call.getBoolean("media")?.let { IkPrefs.media = it }
         call.getBoolean("volume")?.let { IkPrefs.volume = it }
+        call.getBoolean("live")?.let { IkPrefs.live = it; IkService.refresh(context.applicationContext, IkEngine.talking) }
         call.getString("mode")?.let { IkPrefs.mode = if (it == "toggle") "toggle" else "hold" }
         call.resolve()
     }

@@ -21,7 +21,7 @@ import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 import { MixerModule } from './mixer/index.js';
 import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.52.0';
+const VERSION = '0.53.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -540,6 +540,7 @@ async function sessionResponse(token, s0) {
     token,
     me: { id: s.id, name: s.name, role: s.role, fromRoster: !!s.pid,
       teams: s.teamNames, viaPco: s.via === 'pco', demo: !!s.demo },
+    talkGuard: config.talkGuard,
     privacy: { url: '/prywatnosc', version: privacyVersion(), ack: hasAck(sessionKey(s)), retentionDays: config.privacy?.retentionDays ?? 30 },
     org: config.orgName,
     brand: brandPublic(),
@@ -1501,6 +1502,9 @@ function hearFor(id, n) {
   if (n.prog && config.program?.enabled) out.push(PROGRAM_ID);
   return out;
 }
+// imiona osób, które właśnie słychać (karta na ekranie blokady), i nazwa kanału mówienia
+const hearNames = (ids) => ids.filter((x) => x !== PROGRAM_ID).map((x) => users.get(x)?.name).filter(Boolean).slice(0, 3);
+const targetName = (u) => config.channels.find((c) => c.id === (u.target || broadcastId))?.name || (u.target ? 'rozmowa prywatna' : '');
 function nativeSend(ids, obj) {
   if (!ids.length) return;
   lkAdmin.sendData(ROOM, Buffer.from(JSON.stringify(obj)), DataPacket_Kind.RELIABLE, { destinationIdentities: ids, topic: 'ik' }).catch(() => {});
@@ -1511,7 +1515,7 @@ function nativeHear(force) {
     const hear = hearFor(id, n), sig = hear.join(',');
     if (!force && sig === n.hear) continue;
     n.hear = sig;
-    nativeSend([id], { t: 'hear', ids: hear, talking: hear.some((x) => x !== PROGRAM_ID) });
+    nativeSend([id], { t: 'hear', ids: hear, talking: hear.some((x) => x !== PROGRAM_ID), names: hearNames(hear) });
   }
 }
 let nativeHearT = null;
@@ -1542,7 +1546,7 @@ app.post('/api/native/beat', (req, res) => {
   if (!prev || prev.voice !== n.voice || prev.prog !== n.prog) n.hear = null; // ustawienia się zmieniły – wyślij listę od nowa
   if (!prev || Date.now() - prev.at > NATIVE_TTL) schedulePresence();
   nativeHearSoon();
-  res.json({ ok: true, hear: hearFor(s.id, n), canTalk: ['speaker', 'admin'].includes(u.role), target: u.target, program: publicProgram() });
+  res.json({ ok: true, hear: hearFor(s.id, n), canTalk: ['speaker', 'admin'].includes(u.role), target: u.target, targetName: targetName(u), names: hearNames(hearFor(s.id, n)), talkGuard: config.talkGuard, program: publicProgram() });
 });
 app.post('/api/native/ptt', (req, res) => {
   const s = sessionFrom(req);
@@ -1553,6 +1557,7 @@ app.post('/api/native/ptt', (req, res) => {
     const talkId = /^[a-z0-9]{4,32}$/i.test(req.body.talkId || '') ? req.body.talkId : crypto.randomBytes(6).toString('hex');
     const ch = req.body.channel && (channelOk(u, req.body.channel) || dmPeer(u, req.body.channel)) ? req.body.channel : u.target || broadcastId;
     if (!startTalkSrv(u, ch, talkId)) return res.status(400).json({ error: 'Nieznany kanał.' });
+    armTalkLimit(u, req.body.mode === 'toggle');
     return res.json({ ok: true, talkId, channel: ch });
   }
   if (u.talking) endTalk(u);
@@ -2039,7 +2044,22 @@ async function forceMuteMic(identity) {
     for (const t of p?.tracks || []) if ((t.type === 0 || t.type === 'AUDIO') && !t.muted) await lkAdmin.mutePublishedTrack(ROOM, identity, t.sid, true);
   } catch (e) { console.warn('[moderacja] wyciszenie w LiveKit:', e.message); }
 }
+// Zapas na wypadek, gdyby telefon nie wyłączył nadawania sam (zawiesił się, stracił zasięg, starsza aplikacja):
+// tryb włącz/wyłącz – limit z panelu, pozostałe mówienie przyciskiem (przytrzymanie, aplikacja przed 1.6.0) – 3 razy dłużej.
+function armTalkLimit(u, toggle) {
+  clearTimeout(u.talkLimit);
+  const { max } = config.talkGuard;
+  u.talkLimit = setTimeout(() => {
+    if (!u.talking) return;
+    endTalk(u);
+    forceMuteMic(u.id);
+    nativeSend([u.id], { t: 'forceMute', by: 'Limit czasu nadawania', limit: true });
+    for (const s of u.sockets) send(s, { t: 'talkLimit' });
+    console.log(`[mówienie] ${u.name}: przekroczony limit czasu nadawania – mikrofon wyłączony`);
+  }, (toggle ? max + 5 : max * 3) * 1000);
+}
 function endTalk(u) {
+  clearTimeout(u.talkLimit);
   const ch = u.talking;
   u.talking = null;
   const peer = u.talkPeer; u.talkPeer = null;

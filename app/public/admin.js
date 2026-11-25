@@ -298,7 +298,15 @@ function renderGeneral() {
   cfg.apps ||= { ios: '', android: '' };
   for (const [id, k] of [['#apIos', 'ios'], ['#apAndroid', 'android']]) { const el = $(id); el.value = cfg.apps[k] || ''; el.oninput = () => { cfg.apps[k] = el.value.trim(); dirty(); }; }
   loadApk();
-  renderPrivacy(); renderDemo();
+  renderPrivacy(); renderDemo(); renderTalkGuard();
+}
+// ---------- OGÓLNE → Mówienie przyciskiem ----------
+function renderTalkGuard() {
+  const g = (cfg.talkGuard ||= { max: 60, silence: 8, remind: 10 });
+  for (const [id, k] of [['#tgMax', 'max'], ['#tgSilence', 'silence'], ['#tgRemind', 'remind']]) {
+    const el = $(id); el.value = g[k];
+    el.oninput = () => { g[k] = el.value === '' ? null : Number(el.value); dirty(); };
+  }
 }
 // ---------- OGÓLNE → Prywatność ----------
 function renderPrivacy() {

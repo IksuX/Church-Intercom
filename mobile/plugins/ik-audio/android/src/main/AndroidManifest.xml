@@ -17,5 +17,16 @@
             android:name="pl.interkom.audio.IkService"
             android:exported="false"
             android:foregroundServiceType="microphone|mediaPlayback" />
+        <!-- Ekran „Przytrzymaj i mów” z powiadomienia – także nad zablokowanym ekranem -->
+        <activity
+            android:name="pl.interkom.audio.IkPttActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>

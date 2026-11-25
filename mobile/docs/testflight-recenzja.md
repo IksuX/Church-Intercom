@@ -1,4 +1,4 @@
-# Interkom 1.5.0 – teksty do App Store Connect (TestFlight)
+# Interkom 1.6.0 – teksty do App Store Connect (TestFlight)
 
 Gotowe teksty do wklejenia w App Store Connect → aplikacja **Interkom** → **TestFlight**.
 Po polsku i po angielsku (recenzenci Apple czytają po angielsku – wklej wersję angielską, polską trzymaj dla zespołu).
@@ -14,7 +14,7 @@ Do uzupełnienia przed wysłaniem:
 | Pole | Wartość |
 |---|---|
 | Bundle ID | `pl.churchinterkom.app` |
-| Wersja / kompilacja | 1.5.0 / numer z `mobile/build-number` |
+| Wersja / kompilacja | 1.6.0 / numer z `mobile/build-number` |
 | Serwer demo | `https://malinkainterkom.duckdns.org` |
 | Polityka prywatności (Privacy Policy URL) | `https://malinkainterkom.duckdns.org/prywatnosc` |
 | Kontakt (Feedback Email) | `[E-MAIL KONTAKTOWY]` |
@@ -32,13 +32,14 @@ Interkom is a self-hosted intercom for church service teams – sound, cameras, 
 
 Interkom to interkom dla ekip obsługujących nabożeństwa: dźwięk, kamery, transmisja, uwielbienie, powitanie. Zespół rozmawia na kanałach głosowych „naciśnij i mów” (także przy zablokowanym ekranie i przyciskiem na słuchawkach, jak krótkofalówka), pisze na czacie, widzi transkrypcję wypowiedzi i może słuchać wiadomości czytanych na głos. Aplikacja łączy się tylko z serwerem interkomu wybranym przez użytkownika (w Wi-Fi kościoła albo w internecie), który kościół utrzymuje sam. Rozpoznawanie mowy działa na serwerze kościoła – bez usług w chmurze, analityki i reklam.
 
-## What to Test (1.5.0)
+## What to Test (1.6.0)
 
 **EN**
 
 - First sign-in: choose the server, sign in with the PIN, read the privacy notice and tap “Rozumiem” (I understand).
 - Push-to-talk: hold “Mów” (Talk). A red bar “Mówisz – kanał …” (You are talking – channel …) stays at the top of every screen while the microphone is open. On channels with transcription it also shows “· transkrypcja”.
-- Talking and listening with the screen locked, headset button as push-to-talk (press to talk, press again to stop).
+- Talking and listening with the screen locked, headset button as push-to-talk (press to talk, press again to stop). The mic turns itself off after 8 s of silence or 60 s; a short tone every 10 s reminds you it is open.
+- Lock Screen card (Live Activity): tap it, unlock, then hold the big “Przytrzymaj i mów” (Hold and talk) button. Releasing it, locking the phone or leaving the app stops transmitting.
 - Privacy policy link: login screen, ⚙️ Settings → Konto (Account) and the server picker.
 - Server search on local Wi-Fi and the local network permission prompt.
 
@@ -46,7 +47,8 @@ Interkom to interkom dla ekip obsługujących nabożeństwa: dźwięk, kamery, t
 
 - Pierwsze logowanie: wybór serwera, PIN, informacja o prywatności i „Rozumiem”.
 - Mówienie: przytrzymaj „Mów”. Czerwony pasek „Mówisz – kanał …” jest u góry każdego ekranu, dopóki mikrofon jest otwarty, a przy kanale z transkrypcją widać też „· transkrypcja”.
-- Mówienie i słuchanie przy zablokowanym ekranie, przycisk na słuchawkach (naciśnij – mów, naciśnij – koniec).
+- Mówienie i słuchanie przy zablokowanym ekranie, przycisk na słuchawkach (naciśnij – mów, naciśnij – koniec). Mikrofon wyłącza się sam po 8 s ciszy albo po 60 s, a co 10 s słychać krótki sygnał.
+- Karta na ekranie blokady: stuknij, odblokuj telefon i przytrzymaj „Przytrzymaj i mów”. Puszczenie, zablokowanie telefonu lub wyjście z aplikacji kończy mówienie.
 - Link do polityki prywatności: ekran logowania, ⚙️ Ustawienia → Konto, ekran wyboru serwera.
 - Wyszukiwanie serwera w sieci Wi-Fi i pytanie o zgodę na sieć lokalną.
 
@@ -67,12 +69,14 @@ Why we need these permissions
 - **Background audio (UIBackgroundModes: audio)** – the app works like a walkie-talkie: crew members keep the phone locked in a pocket during the service, keep hearing the team and can talk with the headset button.
 - **Local network** – only to find the intercom server on the church Wi-Fi (Bonjour `_interkom._tcp`). The server runs on a computer in the church.
 - **Bluetooth** – for Bluetooth headsets and Bluetooth push-to-talk remotes.
+- **Camera** – not used. The app never asks for camera access. The purpose string is there only because the voice library (LiveKit / WebRTC) contains video code.
 
 Speech-to-text runs on the church's own server (open-source Whisper on the same machine as the intercom). Audio and transcripts are never sent to any cloud service. The server deletes messages and transcripts automatically after the period set by the church (default 30 days). The app has no analytics, ads or tracking.
 
 All features (no hidden features)
 
 - Voice channels with push-to-talk, text chat, quick status buttons (“OK”, “Gotowe”/Ready, “Czekam”/Waiting, “PILNE”/Urgent), private messages, calling a person, @mentions.
+- Lock Screen card (Live Activity) with the current channel, who is talking and whether the mic is open. Tapping it opens a hold-to-talk screen. The mic never opens from the card itself.
 - Live transcripts of speech in the chat and reading messages aloud (text-to-speech on the device).
 - Service plan from Planning Center, current item and timer (if the church connects Planning Center).
 - Live-stream audio monitoring (the church's sound desk mix) with a personal volume mixer.
@@ -94,12 +98,14 @@ Po co uprawnienia
 - **Dźwięk w tle** – aplikacja działa jak krótkofalówka: w trakcie nabożeństwa telefon jest zablokowany w kieszeni, a osoba dalej słyszy zespół i mówi przyciskiem na słuchawkach.
 - **Sieć lokalna** – tylko do wyszukania serwera interkomu w Wi-Fi kościoła (Bonjour `_interkom._tcp`).
 - **Bluetooth** – słuchawki i piloty PTT Bluetooth.
+- **Aparat** – nieużywany, aplikacja nigdy o niego nie pyta. Opis jest tylko dlatego, że biblioteka do rozmów (LiveKit / WebRTC) zawiera kod wideo.
 
 Transkrypcja działa na serwerze kościoła (Whisper, na tym samym komputerze co interkom). Nagrania i transkrypcje nie trafiają do żadnej usługi w chmurze. Serwer automatycznie usuwa wiadomości i transkrypcje po okresie ustawionym przez kościół (domyślnie 30 dni). Aplikacja nie ma analityki, reklam ani śledzenia.
 
 Wszystkie funkcje (bez ukrytych)
 
 - Kanały głosowe „naciśnij i mów”, czat, szybkie przyciski, wiadomości prywatne, wzywanie osoby, oznaczenia @.
+- Karta na ekranie blokady (Live Activity): kanał, kto mówi, czy mikrofon jest włączony. Stuknięcie otwiera ekran „Przytrzymaj i mów”; sama karta nigdy nie włącza mikrofonu.
 - Transkrypcja wypowiedzi w czacie i czytanie wiadomości na głos (synteza mowy w telefonie).
 - Plan nabożeństwa z Planning Center, bieżący punkt i zegar (gdy kościół podłączy Planning Center).
 - Odsłuch dźwięku transmisji (miks z konsolety) z osobistym mikserem głośności.

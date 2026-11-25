@@ -33,6 +33,13 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             IkEngine.shared.emit = { [weak self] name, data in self?.notifyListeners(name, data: data, retainUntilConsumed: true) }
         }
         watchVolume()
+        // stuknięcie karty na ekranie blokady (interkom://mow) → ekran „Przytrzymaj i mów”
+        NotificationCenter.default.addObserver(self, selector: #selector(urlOpened(_:)), name: .capacitorOpenURL, object: nil)
+    }
+
+    @objc private func urlOpened(_ n: Notification) {
+        guard let d = n.object as? [String: Any?], let u = d["url"] as? URL ?? (d["url"] as? NSURL)?.absoluteURL, u.scheme == "interkom", u.host == "mow" else { return }
+        DispatchQueue.main.async { [weak self] in IkPttScreen.open(over: self?.bridge?.viewController) }
     }
 
     private func opts(_ call: CAPPluginCall) -> IkEngine.Opts {
@@ -47,6 +54,7 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         o.canTalk = call.getBool("canTalk") ?? false
         o.progStereo = call.getBool("progStereo") ?? true
         o.hiFi = call.getBool("hiFi") ?? false
+        o.channel = call.getString("channel") ?? ""
         return o
     }
 
@@ -68,8 +76,8 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func setMic(_ call: CAPPluginCall) {
-        let on = call.getBool("on") ?? false, id = call.getString("talkId")
-        Task { @MainActor in IkEngine.shared.setMic(on, id); call.resolve() }
+        let on = call.getBool("on") ?? false, id = call.getString("talkId"), hold = call.getBool("hold") ?? false
+        Task { @MainActor in IkEngine.shared.setMic(on, id, hold: hold); call.resolve() }
     }
 
     @objc func disconnect(_ call: CAPPluginCall) {
@@ -78,15 +86,18 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func getButtons(_ call: CAPPluginCall) {
         Task { @MainActor in
-            call.resolve(["platform": "ios", "media": IkEngine.shared.mediaButtons, "volume": self.volumeButtons, "mode": "toggle", "keyName": ""])
+            var r: [String: Any] = ["platform": "ios", "media": IkEngine.shared.mediaButtons, "volume": self.volumeButtons, "mode": "toggle", "keyName": ""]
+            if #available(iOS 16.2, *) { r["live"] = IkLive.enabled }
+            call.resolve(r)
         }
     }
 
     @objc func setButtons(_ call: CAPPluginCall) {
-        let media = call.getBool("media"), vol = call.getBool("volume")
+        let media = call.getBool("media"), vol = call.getBool("volume"), live = call.getBool("live")
         if let vol { volumeButtons = vol; UserDefaults.standard.set(vol, forKey: "ik.volume") }
         Task { @MainActor in
             if let media { IkEngine.shared.mediaButtons = media }
+            if let live, live != IkLive.enabled { IkEngine.shared.setLive(live) }
             call.resolve()
         }
     }

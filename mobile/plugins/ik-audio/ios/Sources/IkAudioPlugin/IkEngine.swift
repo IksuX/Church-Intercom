@@ -15,6 +15,7 @@ final class IkEngine: NSObject, RoomDelegate {
 
     struct Opts {
         var voice = true, vol = 1.0, prog = false, progVol = 0.5, progDuck = true, duck = 0.3, canTalk = false
+        var channel = "" // nazwa kanału mówienia (karta na ekranie blokady)
         var progStereo = true // transmisja przez własny odtwarzacz stereo (odtwarzanie LiveKit/WebRTC na iPhonie jest zawsze mono)
         var hiFi = false // jakość muzyczna: bez obróbki rozmowy iPhone'a (VPIO) i bez trybu rozmowy słuchawek Bluetooth
     }
@@ -33,7 +34,16 @@ final class IkEngine: NSObject, RoomDelegate {
     private(set) var talking = false
     private var talkId: String?
     private var hwTalk = false
+    private var screenHold = false // mówienie przytrzymanym przyciskiem na ekranie – kończy się razem z wyjściem z aplikacji
     private var muteTask: Task<Void, Never>?
+    private var guardTask: Task<Void, Never>?
+    private var limits = IkTalkLimits()
+    private let tone = IkTone()
+
+    // stan dla karty na ekranie blokady i ekranu „Przytrzymaj i mów”
+    private(set) var channelName = ""
+    private(set) var talkerNames: [String] = []
+    var isConnected: Bool { room?.connectionState == .connected }
     private let recorder = MicRecorder()
     private var rendererAdded = false
 
@@ -50,7 +60,9 @@ final class IkEngine: NSObject, RoomDelegate {
         self.opts = opts
         wanted = true
         await disconnectRoom()
+        if !opts.channel.isEmpty { channelName = opts.channel }
         setupRemoteCommands()
+        watchApp()
         requestNotifications()
         AudioManager.shared.isSpeakerOutputPreferred = true // głośnik, gdy nie ma słuchawek
         if #available(iOS 17.0, *) { AudioManager.shared.duckingLevel = .min } // obróbka głosu iPhone'a jak najmniej ścisza odtwarzacz transmisji
@@ -69,10 +81,14 @@ final class IkEngine: NSObject, RoomDelegate {
         if opts.canTalk { await prepareMic() }
         startBeat()
         applyGates()
+        refreshCards()
     }
 
     func disconnect() async {
         wanted = false
+        if talking { if hwTalk { hwTalkSet(false) } else { setMic(false, nil) } }
+        IkLive.end()
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         beatTask?.cancel()
         _ = await post("/api/native/bye", [:])
         await disconnectRoom()
@@ -109,6 +125,8 @@ final class IkEngine: NSObject, RoomDelegate {
     func configure(_ o: Opts) {
         let could = opts.canTalk, hi = opts.hiFi
         opts = o
+        if !o.channel.isEmpty { channelName = o.channel }
+        refreshCards()
         if o.hiFi != hi { applySession() }
         applyGates()
         if o.canTalk && !could { Task { await prepareMic() } }
@@ -136,10 +154,11 @@ final class IkEngine: NSObject, RoomDelegate {
     nonisolated func room(_ room: Room, didUpdateConnectionState connectionState: ConnectionState, from oldConnectionState: ConnectionState) {
         Task { @MainActor in
             switch connectionState {
-            case .connected: self.emit?("state", ["state": "connected"]); self.applyGates()
-            case .reconnecting: self.emit?("state", ["state": "reconnecting"])
+            case .connected: self.emit?("state", ["state": "connected"]); self.applyGates(); self.refreshCards()
+            case .reconnecting: self.emit?("state", ["state": "reconnecting"]); self.refreshCards()
             case .disconnected:
                 self.emit?("state", ["state": "disconnected"])
+                if self.wanted { self.refreshCards() }
                 if self.wanted, self.room === room { self.scheduleReconnect() }
             default: break
             }
@@ -171,6 +190,8 @@ final class IkEngine: NSObject, RoomDelegate {
         case "hear":
             hear = Set((j["ids"] as? [String]) ?? [])
             othersTalking = (j["talking"] as? Bool) ?? false
+            talkerNames = (j["names"] as? [String]) ?? []
+            refreshCards()
             applyGates()
         case "notify":
             showNotification(j)
@@ -178,8 +199,10 @@ final class IkEngine: NSObject, RoomDelegate {
             let by = j["by"] as? String ?? "Reżyser"
             if talking { if hwTalk { hwTalkSet(false) } else { setMic(false, nil) } }
             haptic(false)
-            emit?("forceMute", ["by": by])
-            showNotification(["title": "🔇 Wyciszono Twój mikrofon", "body": "\(by) wyłączył(a) Twoje mówienie – mikrofon był włączony.", "urgent": true, "tag": "mute"])
+            let limit = j["limit"] as? Bool ?? false // serwer: przekroczony limit czasu nadawania
+            emit?("forceMute", ["by": by, "limit": limit])
+            if limit { tone.play(.auto) }
+            showNotification(["title": limit ? "🎙️ Mikrofon wyłączony" : "🔇 Wyciszono Twój mikrofon", "body": limit ? "Minął limit czasu nadawania." : "\(by) wyłączył(a) Twoje mówienie – mikrofon był włączony.", "urgent": true, "tag": "mute"])
         case "moveTo": // przeniesiono mnie na inny kanał (serwer już ustawił kanał mówienia)
             let by = j["by"] as? String ?? "Reżyser", ch = j["channel"] as? String ?? ""
             emit?("moveTo", ["channel": ch, "by": by])
@@ -229,15 +252,16 @@ final class IkEngine: NSObject, RoomDelegate {
 
     // ---------------- mówienie ----------------
     /// Ze strony (przycisk na ekranie) – strona już powiadomiła serwer.
-    func setMic(_ on: Bool, _ id: String?) {
+    func setMic(_ on: Bool, _ id: String?, hold: Bool = false) {
         if on {
-            muteTask?.cancel()
-            talking = true; talkId = id
+            muteTask?.cancel(); guardTask?.cancel()
+            talking = true; talkId = id; screenHold = hold; hwTalk = false
             recorder.start()
             Task { try? await micPub?.unmute() }
         } else {
             guard talking else { return }
-            talking = false
+            talking = false; hwTalk = false; screenHold = false
+            guardTask?.cancel()
             let tid = talkId; talkId = nil
             muteTask = Task { try? await Task.sleep(nanoseconds: 250_000_000); if !talking { try? await micPub?.mute() } } // nie ucinaj końcówki
             Task {
@@ -246,37 +270,133 @@ final class IkEngine: NSObject, RoomDelegate {
             }
         }
         applyGates()
+        refreshCards()
     }
 
     /// Z przycisku słuchawek / Bluetooth – serwer powiadamiamy sami (strona może spać).
     func hwToggle() { hwTalkSet(!talking) }
 
-    func hwTalkSet(_ on: Bool) {
+    /// Ekran „Przytrzymaj i mów”: mikrofon tylko przy palcu na przycisku (bez sygnałów i limitów trybu włącz/wyłącz).
+    func screenTalk(_ on: Bool) -> Bool {
+        if on { guard opts.canTalk, isConnected, !talking else { haptic(false); return false } }
+        else { guard talking else { return false } }
+        hwTalkSet(on, hold: true)
+        return on
+    }
+
+    func hwTalkSet(_ on: Bool, hold: Bool = false) {
         if on {
             guard opts.canTalk, room != nil else { haptic(false); return }
-            hwTalk = true; talking = true
+            muteTask?.cancel()
+            let toggle = !hold
+            hwTalk = true; talking = true; screenHold = hold; talkId = nil
+            talkSeq += 1
+            let seq = talkSeq
             recorder.start()
             Task { try? await micPub?.unmute() }
             haptic(true)
-            Task {
-                let res = await post("/api/native/ptt", ["on": true])
-                guard let id = res?["talkId"] as? String else { hwTalk = false; setMic(false, nil); haptic(false); return }
+            if toggle { tone.play(.start); startGuard() }
+            let prev = pttPost
+            pttPost = Task { // po kolei: krótkie naciśnięcie nie może wysłać „koniec” przed „mówię”
+                await prev?.value
+                let res = await post("/api/native/ptt", ["on": true, "mode": toggle ? "toggle" : "hold"])
+                guard seq == talkSeq, talking else { return } // już puszczone
+                guard let id = res?["talkId"] as? String else { setMic(false, nil); haptic(false); return }
                 talkId = id
                 emit?("ptt", ["on": true, "talkId": id])
             }
             applyGates()
+            refreshCards()
         } else {
-            hwTalk = false
+            let wasToggle = hwTalk && !screenHold
+            talkSeq += 1
             setMic(false, nil)
-            Task { _ = await post("/api/native/ptt", ["on": false]) }
+            if wasToggle { tone.play(.stop) }
+            let prev = pttPost
+            pttPost = Task { await prev?.value; _ = await post("/api/native/ptt", ["on": false]) }
             emit?("ptt", ["on": false])
         }
+    }
+    private var talkSeq = 0
+    private var pttPost: Task<Void, Never>?
+
+    // ---------------- zabezpieczenie przed zapomnianym mikrofonem ----------------
+    /// Tryb włącz/wyłącz (słuchawki, pilot, pauza na ekranie blokady): sygnał co kilka sekund, wyłączenie po ciszy i po limicie czasu.
+    private func startGuard() {
+        guardTask?.cancel()
+        recorder.resetVoice()
+        recorder.ignoreVoice(0.6) // sygnał startu
+        let t0 = Date()
+        var reminded = t0
+        guardTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled, talking, hwTalk, !screenHold else { return }
+                let now = Date()
+                if now.timeIntervalSince(t0) >= limits.max { return autoStop("max") }
+                if limits.silence > 0, now.timeIntervalSince(recorder.lastVoice) >= limits.silence { return autoStop("silence") }
+                if limits.remind > 0, now.timeIntervalSince(reminded) >= limits.remind {
+                    reminded = now
+                    recorder.ignoreVoice(0.5)
+                    tone.play(.remind)
+                }
+            }
+        }
+    }
+
+    private func autoStop(_ reason: String) {
+        hwTalkSet(false)
+        tone.play(.auto)
+        haptic(false)
+        emit?("talkEnded", ["reason": reason])
+        showNotification(["title": "🎙️ Mikrofon wyłączony", "body": reason == "silence" ? "Była cisza – nadawanie zakończone." : "Minął limit czasu nadawania.", "urgent": true, "tag": "mute"])
+    }
+
+    private var appWatched = false
+    private func watchApp() {
+        guard !appWatched else { return }
+        appWatched = true
+        // wyjście z aplikacji / zablokowanie telefonu w trakcie przytrzymywania przycisku na ekranie = koniec mówienia;
+        // pilnuje tego część natywna, bo strona mogła już zostać uśpiona
+        NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in IkEngine.shared.endScreenHold() }
+        }
+        NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in IkEngine.shared.refreshCards() } // kartę można utworzyć tylko z aplikacji na ekranie
+        }
+        NotificationCenter.default.addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in IkLive.end() }
+        }
+    }
+
+    private func endScreenHold() {
+        guard talking, screenHold else { return }
+        hwTalkSet(false)
+    }
+
+    // ---------------- karta na ekranie blokady i karta odtwarzacza ----------------
+    private var lastNow = ""
+    func refreshCards() {
+        guard wanted else { return }
+        IkLive.update(channel: channelName, talking: talking, who: talkerNames.joined(separator: ", "), canTalk: opts.canTalk, online: isConnected,
+                      foreground: UIApplication.shared.applicationState == .active)
+        let title = talking ? "🔴 MÓWISZ\(channelName.isEmpty ? "" : " – \(channelName)")" : "Interkom\(channelName.isEmpty ? "" : " – \(channelName)")"
+        let line = !mediaButtons || !opts.canTalk ? (isConnected ? "Połączony" : "Łączenie…") : talking ? "Naciśnij przycisk, aby skończyć" : "Przycisk = mów / koniec"
+        guard title + line != lastNow else { return }
+        lastNow = title + line
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [MPMediaItemPropertyTitle: title, MPMediaItemPropertyArtist: line, MPNowPlayingInfoPropertyPlaybackRate: 1.0]
+    }
+
+    func setLive(_ on: Bool) {
+        IkLive.enabled = on
+        UserDefaults.standard.set(on, forKey: "ik.live")
+        if on { refreshCards() } else { IkLive.end() }
     }
 
     // przyciski słuchawek i Bluetooth (play/pauza) – iOS przekazuje je jako „naciśnięcie”, bez puszczenia
     private var commandsReady = false
     var mediaButtons = UserDefaults.standard.object(forKey: "ik.media") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(mediaButtons, forKey: "ik.media") }
+        didSet { UserDefaults.standard.set(mediaButtons, forKey: "ik.media"); refreshCards() }
     }
     private func setupRemoteCommands() {
         guard !commandsReady else { return }
@@ -284,14 +404,14 @@ final class IkEngine: NSObject, RoomDelegate {
         UIApplication.shared.beginReceivingRemoteControlEvents()
         let c = MPRemoteCommandCenter.shared()
         let handler: (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus = { [weak self] _ in
-            guard let self, self.mediaButtons else { return .commandFailed }
+            guard let self, self.mediaButtons, self.wanted else { return .commandFailed }
             self.hwToggle()
             return .success
         }
         c.togglePlayPauseCommand.isEnabled = true; c.togglePlayPauseCommand.addTarget(handler: handler)
         c.playCommand.isEnabled = true; c.playCommand.addTarget(handler: handler)
         c.pauseCommand.isEnabled = true; c.pauseCommand.addTarget(handler: handler)
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [MPMediaItemPropertyTitle: "Interkom", MPMediaItemPropertyArtist: "Przycisk = mów / koniec", MPNowPlayingInfoPropertyPlaybackRate: 1.0]
+        refreshCards()
     }
 
     // ---------------- zgłaszanie się serwerowi ----------------
@@ -303,6 +423,10 @@ final class IkEngine: NSObject, RoomDelegate {
     private func beat() async {
         guard let res = await post("/api/native/beat", ["voice": opts.voice, "prog": opts.prog]) else { return }
         if let ids = res["hear"] as? [String] { hear = Set(ids); applyGates() }
+        if let g = res["talkGuard"] as? [String: Any] { limits = .from(g) }
+        if let n = res["targetName"] as? String, !n.isEmpty { channelName = n }
+        if let n = res["names"] as? [String] { talkerNames = n }
+        refreshCards() // co 20 s: karta wie, że aplikacja żyje
         if let can = res["canTalk"] as? Bool, can != opts.canTalk { var o = opts; o.canTalk = can; configure(o) }
     }
 
@@ -356,12 +480,28 @@ final class MicRecorder: NSObject, AudioRenderer, @unchecked Sendable {
     private var samples: [Float] = []
     private var rate: Double = 48000
     private let maxSeconds = 120.0
+    private var meter = IkVoiceMeter()
+
+    var lastVoice: Date { lock.lock(); defer { lock.unlock() }; return meter.lastVoice }
+    func resetVoice() { lock.lock(); meter.reset(); lock.unlock() }
+    func ignoreVoice(_ s: Double) { lock.lock(); meter.ignore(s); lock.unlock() }
+
+    private func measure(_ b: AVAudioPCMBuffer) { // wywoływane pod blokadą
+        let n = Int(b.frameLength); guard n > 0 else { return }
+        var sum: Float = 0
+        if let f = b.floatChannelData { for k in 0 ..< n { sum += f[0][k] * f[0][k] } }
+        else if let i = b.int16ChannelData { for k in 0 ..< n { let v = Float(i[0][k]) / 32768; sum += v * v } }
+        else { return }
+        meter.feed(rms: (sum / Float(n)).squareRoot(), seconds: Float(Double(n) / b.format.sampleRate))
+    }
 
     func start() { lock.lock(); samples.removeAll(keepingCapacity: true); on = true; lock.unlock() }
 
     func render(pcmBuffer: AVAudioPCMBuffer) {
         lock.lock(); defer { lock.unlock() }
-        guard on, Double(samples.count) < rate * maxSeconds else { return }
+        guard on else { return }
+        measure(pcmBuffer)
+        guard Double(samples.count) < rate * maxSeconds else { return }
         rate = pcmBuffer.format.sampleRate
         let n = Int(pcmBuffer.frameLength)
         if let f = pcmBuffer.floatChannelData { samples.append(contentsOf: UnsafeBufferPointer(start: f[0], count: n)) }

@@ -183,6 +183,10 @@ export function validateConfig(input) {
     notes: str(pv.notes, 3000),          // dodatkowe informacje na stronie
     version: str(pv.version, 40),        // ustawia serwer przy zmianie treści – ponowna informacja dla użytkowników
   };
+  // mówienie włączane przyciskiem bez przytrzymywania (słuchawki, pilot, pauza na ekranie blokady): automatyczne wyłączanie
+  const tg = c.talkGuard && typeof c.talkGuard === 'object' ? c.talkGuard : {};
+  const tgNum = (v, d, min, max, zero) => { const n = v === undefined || v === null || v === '' ? d : Math.round(Number(v)); return !Number.isFinite(n) ? d : zero && n <= 0 ? 0 : Math.max(min, Math.min(max, n)); };
+  c.talkGuard = { max: tgNum(tg.max, 60, 10, 600), silence: tgNum(tg.silence, 8, 3, 120, true), remind: tgNum(tg.remind, 10, 5, 120, true) };
   // konto demo (np. dla recenzenta Apple): logowanie osobnym PIN-em, tylko wybrane kanały
   const dm = c.demo && typeof c.demo === 'object' ? c.demo : {};
   c.demo = {

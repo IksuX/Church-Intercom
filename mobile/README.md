@@ -1,4 +1,4 @@
-# Interkom – aplikacja na iPhone i Android (1.5.0)
+# Interkom – aplikacja na iPhone i Android (1.6.0)
 
 Aplikacja to „opakowanie” zwykłej strony interkomu (ten sam wygląd, logowanie, czat, powiadomienia),
 ale **dźwięk obsługuje natywnie** (LiveKit), dzięki czemu:
@@ -61,7 +61,7 @@ Zmiany w samej stronie (serwer) **nie wymagają** przebudowy aplikacji – aplik
 
 ### Wersja i numer kompilacji
 
-- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.5.0).
+- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.6.0).
 - **Numer kompilacji** (`CFBundleVersion` / `versionCode`) jest w pliku `mobile/build-number`. Przed **każdym**
   archiwum do TestFlight i każdym nowym APK: `npm run bump-build` (podnosi numer o 1 i od razu wpisuje go do projektów
   iOS i Android). App Store Connect odrzuca kompilację z numerem, który już był. Zmieniony `build-number` dołącz do commita.
@@ -103,6 +103,9 @@ Docelowo (do decyzji) zostają dwie drogi:
 2. `cd mobile && npm run bump-build && npm run sync` → `npx cap open ios`.
 3. Xcode: u góry wybierz urządzenie **Any iOS Device (arm64)** → *Product → Archive*. Po zakończeniu otworzy się
    *Organizer*: **Validate App** (popraw zgłoszone problemy) → **Distribute App → App Store Connect → Upload**.
+   Nie wybieraj **TestFlight Internal Only** – takiej kompilacji nie dodasz do grupy zewnętrznej (trzeba wysłać nową).
+   Przy pierwszym archiwum 1.6.0 Xcode zarejestruje drugi identyfikator – karty na ekranie blokady (`<Bundle ID>.live`,
+   cel **InterkomLive**). Zespół ma taki sam jak aplikacja (przepisuje go `scripts/ios-setup.sh`).
 4. Po kilku–kilkunastu minutach kompilacja pojawi się w App Store Connect → TestFlight. **Export Compliance** jest
    wypełnione z góry (`ITSAppUsesNonExemptEncryption = false` – tylko standardowe szyfrowanie HTTPS/WebRTC).
 5. **Testerzy wewnętrzni:** TestFlight → *Internal Testing* → ＋ grupa → dodaj użytkowników App Store Connect

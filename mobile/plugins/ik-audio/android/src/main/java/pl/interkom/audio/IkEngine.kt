@@ -58,6 +58,7 @@ object IkEngine {
         // jakość muzyczna: zwykły tryb dźwięku Androida (nie „rozmowa telefoniczna”), słuchawki Bluetooth w trybie
         // muzycznym (A2DP), wyjście stereo; mówi się wtedy do mikrofonu telefonu
         val hiFi: Boolean = false,
+        val channel: String = "", // nazwa kanału mówienia (ekran „Przytrzymaj i mów”)
     )
 
     var listener: Listener? = null
@@ -78,7 +79,19 @@ object IkEngine {
     @Volatile var talking = false
     private var talkId: String? = null
     private var hwTalk = false
+    private var screenHold = false // mówienie przytrzymanym przyciskiem na ekranie – kończy się razem z wyjściem z aplikacji
+    private var keyHeld = false // przycisk sprzętowy jest wciśnięty
     private var muteJob: Job? = null
+    private var guardJob: Job? = null
+    private var pttJob: Job? = null
+    private var talkSeq = 0
+    private var limits = IkTalkLimits()
+    val meter = IkVoiceMeter()
+
+    // stan dla ekranu „Przytrzymaj i mów”
+    @Volatile var channelName = ""; private set
+    @Volatile var talkerNames: List<String> = emptyList(); private set
+    val isConnected get() = room?.state == Room.State.CONNECTED
 
     fun init(ctx: Context) {
         if (!::app.isInitialized) { app = ctx.applicationContext; IkPrefs.init(app); createChannels() }
@@ -93,6 +106,7 @@ object IkEngine {
     suspend fun connect(url: String, token: String, session: String, server: String, o: Opts) {
         lastProgLive = null
         this.url = url; this.token = token; this.session = session; this.server = server.trimEnd('/'); opts = o
+        if (o.channel.isNotEmpty()) channelName = o.channel
         wanted = true
         disconnectRoom()
         val r = LiveKit.create(
@@ -120,6 +134,7 @@ object IkEngine {
 
     fun disconnect() {
         wanted = false
+        if (talking) { if (hwTalk) hwTalk(false) else setMic(false, null) }
         beatJob?.cancel()
         scope.launch(Dispatchers.IO) { post("/api/native/bye", JSONObject()) }
         disconnectRoom()
@@ -138,6 +153,8 @@ object IkEngine {
         val couldTalk = opts.canTalk
         val hiFiChanged = o.hiFi != opts.hiFi
         opts = o
+        if (o.channel.isNotEmpty()) channelName = o.channel
+        if (o.canTalk != couldTalk) IkService.refresh(app, talking) // przycisk „Mów” w powiadomieniu
         // tryb dźwięku ustawia się przy tworzeniu połączenia – zmiana „jakości muzycznej” = szybkie ponowne połączenie
         if (hiFiChanged && wanted && room != null) { scope.launch { reconnect() }; return }
         applyGates()
@@ -183,14 +200,16 @@ object IkEngine {
                 "hear" -> {
                     val a = j.optJSONArray("ids"); val set = HashSet<String>()
                     if (a != null) for (i in 0 until a.length()) set.add(a.getString(i))
-                    hear = set; othersTalking = j.optBoolean("talking"); applyGates()
+                    hear = set; othersTalking = j.optBoolean("talking"); talkerNames = strings(j, "names"); applyGates()
                 }
                 "notify" -> Notify.show(app, j)
                 "forceMute" -> { // reżyser / administrator wyciszył mój mikrofon
                     val by = j.optString("by", "Reżyser")
                     if (talking) { if (hwTalk) hwTalk(false) else setMic(false, null) }
-                    emit("forceMute", JSObject().put("by", by))
-                    Notify.show(app, JSONObject().put("title", "🔇 Wyciszono Twój mikrofon").put("body", "$by wyłączył(a) Twoje mówienie – mikrofon był włączony.").put("urgent", true).put("tag", "mute").put("vib", "urgent"))
+                    val limit = j.optBoolean("limit") // serwer: przekroczony limit czasu nadawania
+                    emit("forceMute", JSObject().put("by", by).put("limit", limit))
+                    if (limit) IkTone.auto()
+                    Notify.show(app, JSONObject().put("title", if (limit) "🎙️ Mikrofon wyłączony" else "🔇 Wyciszono Twój mikrofon").put("body", if (limit) "Minął limit czasu nadawania." else "$by wyłączył(a) Twoje mówienie – mikrofon był włączony.").put("urgent", true).put("tag", "mute").put("vib", "urgent"))
                 }
                 "moveTo" -> { // przeniesiono mnie na inny kanał (serwer już ustawił kanał mówienia)
                     val by = j.optString("by", "Reżyser")
@@ -200,6 +219,8 @@ object IkEngine {
             }
         } catch (t: Throwable) { Log.w(TAG, "dane z serwera", t) }
     }
+
+    private fun strings(j: JSONObject, k: String): List<String> { val a = j.optJSONArray(k) ?: return emptyList(); return (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
 
     fun applyGates() {
         val r = room ?: return
@@ -221,15 +242,16 @@ object IkEngine {
 
     // ---------------- mówienie ----------------
     /** Ze strony (przycisk na ekranie) – stronę już powiadomiła serwer przez WebSocket. */
-    fun setMic(on: Boolean, id: String?) {
+    fun setMic(on: Boolean, id: String?, hold: Boolean = false) {
         if (on) {
-            muteJob?.cancel()
-            talking = true; talkId = id
+            muteJob?.cancel(); guardJob?.cancel()
+            talking = true; talkId = id; screenHold = hold; hwTalk = false
             Recorder.start()
             micPub()?.muted = false
         } else {
             if (!talking) return
-            talking = false
+            talking = false; hwTalk = false; screenHold = false
+            guardJob?.cancel()
             val tid = talkId; talkId = null
             muteJob = scope.launch { delay(250); if (!talking) micPub()?.muted = true } // nie ucinaj końcówki
             scope.launch(Dispatchers.IO) { delay(450); val wav = Recorder.stop(); if (tid != null && wav != null) upload(tid, wav) }
@@ -239,30 +261,79 @@ object IkEngine {
     }
 
     /** Z przycisku sprzętowego – serwer powiadamiamy sami (strona może spać). */
-    fun hwTalk(on: Boolean) {
+    fun hwTalk(on: Boolean, hold: Boolean = false) {
         if (on == hwTalk && on == talking) return
         if (on) {
             if (!opts.canTalk || room == null) { buzz(longArrayOf(0, 80, 60, 80)); return }
-            hwTalk = true
+            muteJob?.cancel()
+            hwTalk = true; screenHold = hold; talkId = null
+            val seq = ++talkSeq
+            val toggle = !hold && IkPrefs.mode == "toggle"
             buzz(longArrayOf(0, 25))
             Recorder.start(); micPub()?.muted = false; talking = true
             IkService.refresh(app, true)
-            scope.launch(Dispatchers.IO) {
-                val res = post("/api/native/ptt", JSONObject().put("on", true))
+            if (!hold) { IkTone.start(); startGuard() }
+            val prev = pttJob
+            pttJob = scope.launch(Dispatchers.IO) { // po kolei: krótkie naciśnięcie nie może wysłać „koniec” przed „mówię”
+                prev?.join()
+                val res = post("/api/native/ptt", JSONObject().put("on", true).put("mode", if (toggle) "toggle" else "hold"))
                 val id = res?.optString("talkId")
                 withContext(Dispatchers.Main) {
-                    if (res == null || id.isNullOrEmpty()) { hwTalk = false; setMic(false, null); buzz(longArrayOf(0, 80, 60, 80)); return@withContext }
+                    if (seq != talkSeq || !talking) return@withContext // już puszczone
+                    if (res == null || id.isNullOrEmpty()) { setMic(false, null); buzz(longArrayOf(0, 80, 60, 80)); return@withContext }
                     talkId = id
                     emit("ptt", JSObject().put("on", true).put("talkId", id))
                 }
             }
         } else {
-            hwTalk = false
+            val sound = hwTalk && !screenHold
+            talkSeq++
             setMic(false, null)
-            scope.launch(Dispatchers.IO) { post("/api/native/ptt", JSONObject().put("on", false)) }
+            if (sound) IkTone.stop()
+            val prev = pttJob
+            pttJob = scope.launch(Dispatchers.IO) { prev?.join(); post("/api/native/ptt", JSONObject().put("on", false)) }
             emit("ptt", JSObject().put("on", false))
             buzz(longArrayOf(0, 15))
         }
+    }
+
+    /** Ekran „Przytrzymaj i mów”: mikrofon tylko przy palcu na przycisku. */
+    fun screenTalk(on: Boolean): Boolean {
+        if (on) { if (!opts.canTalk || !isConnected || talking) { buzz(longArrayOf(0, 80, 60, 80)); return false } }
+        else if (!talking) return false
+        hwTalk(on, true)
+        return on
+    }
+
+    /** Zablokowanie telefonu albo wyjście z aplikacji w trakcie przytrzymywania przycisku na ekranie = koniec mówienia. */
+    fun endScreenHold() { if (talking && screenHold) { hwTalk = true; hwTalk(false) } }
+
+    // ---------------- zabezpieczenie przed zapomnianym mikrofonem ----------------
+    /** Przycisk bez przytrzymywania: sygnał co kilka sekund, wyłączenie po ciszy i po limicie czasu. Przytrzymany – tylko 3 razy dłuższy limit. */
+    private fun startGuard() {
+        guardJob?.cancel()
+        val t0 = System.currentTimeMillis()
+        meter.reset(t0); meter.ignore(t0, 600) // sygnał startu
+        var reminded = t0
+        guardJob = scope.launch {
+            while (isActive) {
+                delay(300)
+                if (!talking || !hwTalk || screenHold) return@launch
+                val now = System.currentTimeMillis(); val l = limits
+                if (now - t0 >= l.max * (if (keyHeld) 3000L else 1000L)) { autoStop("max"); return@launch }
+                if (keyHeld) continue
+                if (l.silence > 0 && now - meter.lastVoice >= l.silence * 1000L) { autoStop("silence"); return@launch }
+                if (l.remind > 0 && now - reminded >= l.remind * 1000L) { reminded = now; meter.ignore(now, 500); IkTone.remind() }
+            }
+        }
+    }
+
+    private fun autoStop(reason: String) {
+        keyHeld = false
+        hwTalk(false)
+        IkTone.auto()
+        emit("talkEnded", JSObject().put("reason", reason))
+        Notify.show(app, JSONObject().put("title", "🎙️ Mikrofon wyłączony").put("body", if (reason == "silence") "Była cisza – nadawanie zakończone." else "Minął limit czasu nadawania.").put("urgent", true).put("tag", "mute").put("vib", "urgent"))
     }
 
     // ---------------- przyciski: słuchawki / Bluetooth / głośność / przypisany PTT ----------------
@@ -282,6 +353,7 @@ object IkEngine {
         val mine = (IkPrefs.keyCode != -1 && code == IkPrefs.keyCode) || (isMedia && IkPrefs.media) || (isVol && IkPrefs.volume && !fromMediaSession)
         if (!mine) return false
         if (repeat > 0) return true
+        keyHeld = down
         if (IkPrefs.mode == "toggle") { if (down) hwTalk(!talking) }
         else if (down) { downAt = System.currentTimeMillis(); if (!talking) hwTalk(true) else hwTalk(false) }
         else {
@@ -301,6 +373,9 @@ object IkEngine {
         val res = post("/api/native/beat", JSONObject().put("voice", opts.voice).put("prog", opts.prog)) ?: return
         val a = res.optJSONArray("hear")
         if (a != null) { val set = HashSet<String>(); for (i in 0 until a.length()) set.add(a.getString(i)); withContext(Dispatchers.Main) { hear = set; applyGates() } }
+        res.optJSONObject("talkGuard")?.let { limits = IkTalkLimits.from(it) }
+        res.optString("targetName").let { if (it.isNotEmpty()) channelName = it }
+        if (res.has("names")) talkerNames = strings(res, "names")
         val can = res.optBoolean("canTalk", opts.canTalk)
         if (can != opts.canTalk) withContext(Dispatchers.Main) { configure(opts.copy(canTalk = can)) }
     }
@@ -335,7 +410,10 @@ object IkEngine {
     private fun createChannels() {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = app.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(Notify.CH_SERVICE, "Interkom działa w tle", NotificationManager.IMPORTANCE_LOW))
+        nm.deleteNotificationChannel("ik_service") // do 1.5: kanał „cichy” – Android nie pokazuje takich na ekranie blokady
+        nm.createNotificationChannel(NotificationChannel(Notify.CH_SERVICE, "Interkom działa w tle (przycisk „Mów”)", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            setSound(null, null); enableVibration(false); setShowBadge(false); lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+        })
         nm.createNotificationChannel(NotificationChannel(Notify.CH_MSG, "Wiadomości", NotificationManager.IMPORTANCE_DEFAULT).apply { enableVibration(true) })
         nm.createNotificationChannel(NotificationChannel(Notify.CH_URGENT, "Wezwania i PILNE", NotificationManager.IMPORTANCE_HIGH).apply { enableVibration(true); vibrationPattern = longArrayOf(0, 600, 200, 600, 200, 600) })
     }
@@ -343,7 +421,7 @@ object IkEngine {
 
 /** Powiadomienia z serwera (gdy aplikacja jest w tle albo ekran jest zablokowany). */
 object Notify {
-    const val CH_SERVICE = "ik_service"; const val CH_MSG = "ik_msg"; const val CH_URGENT = "ik_urgent"
+    const val CH_SERVICE = "ik_talk"; const val CH_MSG = "ik_msg"; const val CH_URGENT = "ik_urgent"
     private var n = 100
     private val VIB = mapOf(
         "call" to longArrayOf(0, 600, 200, 600, 200, 600, 200, 600), "urgent" to longArrayOf(0, 400, 150, 400, 150, 400),
@@ -389,6 +467,7 @@ object Recorder {
 
     fun feed(data: ByteArray, sampleRate: Int, channels: Int) {
         if (!on) return
+        measure(data, sampleRate, channels)
         synchronized(buf) {
             if (!on || buf.size() > MAX_BYTES) return
             rate = sampleRate
@@ -399,6 +478,14 @@ object Recorder {
                 bb.clear()
             }
         }
+    }
+
+    private fun measure(data: ByteArray, sampleRate: Int, channels: Int) {
+        val s = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer(); val n = s.remaining()
+        if (n == 0 || sampleRate <= 0) return
+        var sum = 0.0
+        for (i in 0 until n) { val v = s.get(i) / 32768.0; sum += v * v }
+        IkEngine.meter.feed(kotlin.math.sqrt(sum / n).toFloat(), n.toFloat() / maxOf(1, channels) / sampleRate, System.currentTimeMillis())
     }
 
     fun stop(): ByteArray? {
