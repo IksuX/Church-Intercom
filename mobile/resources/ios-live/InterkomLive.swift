@@ -50,7 +50,8 @@ private struct Card: View {
     private var off: Bool { stale || !s.online }
     private var title: String { off ? "Interkom" : s.talking ? "🔴 MÓWISZ" : s.channel.isEmpty ? "Interkom" : s.channel }
     private var line: String {
-        if off { return "Brak połączenia – otwórz aplikację" }
+        if stale { return "Aplikacja zamknięta – stuknij, aby otworzyć" }
+        if !s.online { return "Łączenie z serwerem…" }
         if s.talking { return s.channel }
         return s.who.isEmpty ? "Połączono – mikrofon wyłączony" : "Mówi: \(s.who)"
     }

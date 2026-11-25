@@ -26,7 +26,10 @@ class IkService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == STOP_TALK) { IkEngine.hwTalk(false); return START_STICKY }
+        IkEngine.init(applicationContext)
+        // system wznowił usługę po zamknięciu aplikacji – połączenia nie ma, powiadomienie „połączony” byłoby nieprawdą
+        if (intent == null) { running = false; stopSelf(); return START_NOT_STICKY }
+        if (intent.action == STOP_TALK) { IkEngine.hwTalk(false); if (!running) stopSelf(); return START_NOT_STICKY }
         val n = notification(this, IkEngine.talking)
         try {
             if (Build.VERSION.SDK_INT >= 30) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -36,7 +39,7 @@ class IkService : Service() {
         }
         if (session == null) setupMediaSession()
         if (wake == null) wake = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "interkom:audio").apply { setReferenceCounted(false); acquire() }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun setupMediaSession() {

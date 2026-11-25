@@ -1,4 +1,4 @@
-# Interkom 0.53.0
+# Interkom 0.53.1
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -24,11 +24,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.53.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.53.1.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.53.0.zip && cd interkom
+   unzip interkom-0.53.1.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -765,11 +765,17 @@ Aplikacja 1.6.0, iPhone i Android.
 
 **Karta na ekranie blokady.** Pokazuje kanał mówienia, kto mówi i czy mikrofon jest włączony. Stuknięcie otwiera natywny ekran z jednym dużym przyciskiem **„Przytrzymaj i mów”**. Mikrofon działa tylko, gdy palec jest na przycisku. Puszczenie, zablokowanie telefonu, wyjście z aplikacji albo rozmowa telefoniczna od razu kończy mówienie – pilnuje tego część natywna, także gdy strona jest uśpiona. To samo dotyczy przycisku „Mów” w aplikacji (bez kłódki).
 
-- **iPhone** (iOS 16.2+): Live Activity. Przycisku działającego wprost na zablokowanym ekranie iOS nie pozwala zrobić – przyciski karty nie działają bez odblokowania telefonu (dotyczyłoby to też „Koniec”) i nie zgłaszają przytrzymania. Dlatego karta po Face ID lub kodzie otwiera ekran mówienia. iOS kończy kartę po 8 godzinach; aplikacja odnawia ją, gdy jest na ekranie. Gdy aplikacja zostanie zamknięta, karta po ok. 3 minutach pokazuje brak połączenia. Przy pierwszym użyciu iPhone zapyta o zgodę na „wydarzenia na żywo”.
+- **iPhone** (iOS 16.2+): Live Activity. Przycisku działającego wprost na zablokowanym ekranie iOS nie pozwala zrobić – przyciski karty nie działają bez odblokowania telefonu (dotyczyłoby to też „Koniec”) i nie zgłaszają przytrzymania. Dlatego karta po Face ID lub kodzie otwiera ekran mówienia. iOS kończy kartę po 8 godzinach; aplikacja odnawia ją, gdy jest na ekranie. Zamknięcie aplikacji (przesunięcie w górę), wylogowanie i 10 minut bez serwera usuwają kartę. Gdy aplikację zamknie sam system, iOS nie pozwala jej usunąć – karta po ok. 2 minutach pokazuje „Aplikacja zamknięta” i znika po otwarciu Interkomu. Kartę usuniętą palcem aplikacja pokaże dopiero po ponownym połączeniu. Przy pierwszym użyciu iPhone zapyta o zgodę na „wydarzenia na żywo”.
 - **Android**: powiadomienie Interkomu ma przycisk **„Mów”**. Ekran mówienia otwiera się nad blokadą **bez kodu** i pokazuje tylko kanał i mówiących, bez wiadomości. Gdy mikrofon jest włączony, w powiadomieniu jest „Koniec mówienia”. Kanał powiadomień ma nową nazwę, bo „ciche” Android ukrywa na ekranie blokady.
 - Wyłączysz to w ⚙️ → Dźwięk i mikrofon → „Przycisk „Mów” na ekranie blokady”.
 
 **Limity nadawania.** Przycisk słuchawek, pilot i pauza na ekranie blokady włączają mikrofon bez przytrzymywania, więc łatwo go zapomnieć wyłączyć. Panel → **Ogólne → Mówienie przyciskiem**: wyłączenie po czasie (domyślnie 60 s), po ciszy (8 s) i sygnał przypominający (co 10 s). Do tego sygnały przy włączeniu, wyłączeniu i wyłączeniu samoczynnym, a na karcie odtwarzacza iPhone'a „🔴 MÓWISZ – kanał”. W głośnym miejscu ciszy nie zawsze da się rozpoznać – wtedy działa limit czasu. Dodatkowo limit pilnuje **serwer** (gdyby telefon się zawiesił): tryb włącz/wyłącz – limit + 5 s, przytrzymany przycisk i aplikacje starsze niż 1.6.0 – trzykrotność limitu. Limity nie dotyczą kłódki ani przycisku na ekranie strony.
+
+## 0.53.1 (aplikacja 1.6.1)
+
+- iPhone: karta na ekranie blokady znika po zamknięciu aplikacji (wcześniej zostawała z napisem „Brak połączenia”); resztka po awarii znika przy otwarciu aplikacji, a po 10 minutach bez serwera – sama.
+- iPhone: karta usunięta palcem nie wraca od razu; osobne napisy „Łączenie z serwerem…” i „Aplikacja zamknięta”.
+- Android: po zamknięciu aplikacji przez system nie zostaje powiadomienie „Interkom – połączony” bez połączenia.
 
 ## 0.53.0 (aplikacja 1.6.0)
 

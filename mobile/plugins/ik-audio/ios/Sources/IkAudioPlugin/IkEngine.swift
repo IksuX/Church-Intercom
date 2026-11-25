@@ -364,9 +364,8 @@ final class IkEngine: NSObject, RoomDelegate {
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in IkEngine.shared.refreshCards() } // kartę można utworzyć tylko z aplikacji na ekranie
         }
-        NotificationCenter.default.addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in IkLive.end() }
-        }
+        // zamknięcie aplikacji (przesunięcie w górę): od razu, w tym samym wywołaniu – na Task nie ma już czasu
+        NotificationCenter.default.addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: nil) { _ in IkLive.endNow() }
     }
 
     private func endScreenHold() {
@@ -421,7 +420,7 @@ final class IkEngine: NSObject, RoomDelegate {
     }
 
     private func beat() async {
-        guard let res = await post("/api/native/beat", ["voice": opts.voice, "prog": opts.prog]) else { return }
+        guard let res = await post("/api/native/beat", ["voice": opts.voice, "prog": opts.prog]) else { refreshCards(); return }
         if let ids = res["hear"] as? [String] { hear = Set(ids); applyGates() }
         if let g = res["talkGuard"] as? [String: Any] { limits = .from(g) }
         if let n = res["targetName"] as? String, !n.isEmpty { channelName = n }

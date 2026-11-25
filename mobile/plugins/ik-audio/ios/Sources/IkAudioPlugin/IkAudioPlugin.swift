@@ -33,6 +33,7 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             IkEngine.shared.emit = { [weak self] name, data in self?.notifyListeners(name, data: data, retainUntilConsumed: true) }
         }
         watchVolume()
+        Task { @MainActor in IkLive.end() } // karta po poprzednim uruchomieniu (np. aplikację zamknął system)
         // stuknięcie karty na ekranie blokady (interkom://mow) → ekran „Przytrzymaj i mów”
         NotificationCenter.default.addObserver(self, selector: #selector(urlOpened(_:)), name: .capacitorOpenURL, object: nil)
     }
@@ -64,6 +65,7 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let o = opts(call)
         AVAudioSession.sharedInstance().requestRecordPermission { _ in // bez mikrofonu też da się słuchać
             Task { @MainActor in
+                IkLive.allow()
                 do { try await IkEngine.shared.connect(url: url, token: token, session: session, server: server, opts: o); call.resolve() }
                 catch { call.reject(error.localizedDescription) }
             }

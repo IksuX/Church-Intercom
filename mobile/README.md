@@ -1,4 +1,4 @@
-# Interkom – aplikacja na iPhone i Android (1.6.0)
+# Interkom – aplikacja na iPhone i Android (1.6.1)
 
 Aplikacja to „opakowanie” zwykłej strony interkomu (ten sam wygląd, logowanie, czat, powiadomienia),
 ale **dźwięk obsługuje natywnie** (LiveKit), dzięki czemu:
@@ -61,7 +61,7 @@ Zmiany w samej stronie (serwer) **nie wymagają** przebudowy aplikacji – aplik
 
 ### Wersja i numer kompilacji
 
-- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.6.0).
+- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.6.1).
 - **Numer kompilacji** (`CFBundleVersion` / `versionCode`) jest w pliku `mobile/build-number`. Przed **każdym**
   archiwum do TestFlight i każdym nowym APK: `npm run bump-build` (podnosi numer o 1 i od razu wpisuje go do projektów
   iOS i Android). App Store Connect odrzuca kompilację z numerem, który już był. Zmieniony `build-number` dołącz do commita.

@@ -21,7 +21,7 @@ import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 import { MixerModule } from './mixer/index.js';
 import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.53.0';
+const VERSION = '0.53.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
