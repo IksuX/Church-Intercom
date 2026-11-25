@@ -119,9 +119,14 @@ Docelowo (do decyzji) zostają dwie drogi:
 
 ### Android
 
-1. `npm run android` – otworzy się Android Studio (poczekaj na Gradle sync).
-2. ▶ Run na podłączonym telefonie albo *Build → Generate Signed App Bundle / APK → APK*.
-3. Plik APK (*Build → Build App Bundle(s) / APK(s) → Build APK(s)*, wynik: `android/app/build/outputs/apk/debug/app-debug.apk`) wgraj w panelu interkomu: **Ogólne → Aplikacja na telefon → Wgraj plik APK**. Na ekranie logowania pojawi się przycisk „Pobierz na Androida (APK)”. Instalacja: zezwól przeglądarce na „instalowanie nieznanych aplikacji”.
+1. **Raz:** `npm run android-key` – tworzy klucz, którym podpisujesz aplikację. Plik `~/.interkom/interkom-release.jks`
+   i hasło (Pęk kluczy macOS) zostają poza repozytorium. **Zrób kopię obu** – bez nich nie wydasz aktualizacji, którą telefony
+   zainstalują na istniejącą aplikację. Na innym Macu skopiuj plik w to samo miejsce; skrypt zapyta o hasło.
+2. **Każda wersja:** `npm run bump-build`, potem `npm run apk` – powstaje podpisany plik `mobile/build/Interkom-<wersja>-<kompilacja>.apk`.
+   Nie rozdawaj `app-debug.apk` (▶ Run / *Build APK(s)* w Android Studio, `npm run android`): jest podpisany kluczem testowym
+   jednego komputera i służy tylko do prób.
+3. Wgraj plik w panelu interkomu (na każdym serwerze osobno): **Ogólne → Aplikacja na telefon → Wgraj plik APK**. Na ekranie logowania pojawi się przycisk „Pobierz na Androida (APK)”. Instalacja: zezwól przeglądarce na „instalowanie nieznanych aplikacji”.
+   Kto ma wersję podpisaną innym kluczem (np. debug), musi ją najpierw odinstalować.
 4. Po instalacji: Ustawienia → Aplikacje → Interkom → Bateria → **Bez ograniczeń** (inaczej niektóre telefony
    – Xiaomi, Huawei, Samsung – mogą zamykać aplikację w tle).
 

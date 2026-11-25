@@ -41,6 +41,12 @@ if [ -f "$AG" ]; then
   echo "Wersja $VERSION, versionCode $BUILD"
 fi
 
+# --- podpisywanie wersji release kluczem spoza repozytorium (ścieżka i hasło ze środowiska – ustawia je scripts/android-apk.sh) ---
+if [ -f "$AG" ] && ! grep -q 'ik-signing' "$AG"; then
+  perl -0pi -e 's|(    buildTypes \{\n        release \{\n)|    // ik-signing: bez klucza w środowisku wersja release powstaje niepodpisana\n    signingConfigs {\n        release {\n            if (System.getenv("IK_KEYSTORE")) {\n                storeFile file(System.getenv("IK_KEYSTORE"))\n                storePassword System.getenv("IK_KS_PASS")\n                keyAlias "interkom"\n                keyPassword System.getenv("IK_KS_PASS")\n            }\n        }\n    }\n$1            if (System.getenv("IK_KEYSTORE")) signingConfig signingConfigs.release\n|' "$AG"
+  grep -q 'ik-signing' "$AG" && echo "Dodano podpisywanie wersji release" || echo "UWAGA: nie udało się dodać podpisywania do $AG"
+fi
+
 # --- ikona i ekran startowy z resources/ (sips – tylko na Macu; na innym systemie zostają dotychczasowe) ---
 RES="$ROOT/android/app/src/main/res"
 if command -v sips >/dev/null && [ -f "$ROOT/resources/icon.png" ] && [ -d "$RES" ]; then

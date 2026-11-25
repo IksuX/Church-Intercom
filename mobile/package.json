@@ -8,6 +8,8 @@
     "android": "npx cap sync android && bash scripts/android-setup.sh && npx cap open android",
     "sync": "npx cap sync && (bash scripts/ios-setup.sh || true) && (bash scripts/android-setup.sh || true)",
     "bump-build": "bash scripts/bump-build.sh",
+    "android-key": "bash scripts/android-key.sh",
+    "apk": "bash scripts/android-apk.sh",
     "icons": "swift resources/make-icons.swift resources"
   },
   "dependencies": {
