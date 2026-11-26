@@ -2323,6 +2323,70 @@ addEventListener('resize', () => placePersonMenu());
     if (!d) return; e.preventDefault(); apply(cur + d); save(cur + d);
   });
 })();
+// ---- przeciągane granice: szerokość lewej kolumny, szerokość planu, podział planu (zapamiętane, dwuklik = domyślnie) ----
+function makeResizer(h, { axis, key, measure, apply, step = 16 }) {
+  if (!h) return;
+  const save = (v) => { if (v == null) delete S.opt[key]; else S.opt[key] = Math.round(v); store.set('opt', S.opt); };
+  const set = apply;
+  set(S.opt?.[key] ?? null);
+  let drag = false;
+  h.addEventListener('pointerdown', (e) => {
+    drag = true; h.setPointerCapture(e.pointerId); h.classList.add('drag');
+    document.body.classList.add('resizing', axis === 'x' ? 'rs-col' : 'rs-row'); e.preventDefault();
+  });
+  h.addEventListener('pointermove', (e) => { if (drag) set(measure(e)); });
+  const end = (e) => {
+    if (!drag) return; drag = false; h.classList.remove('drag'); document.body.classList.remove('resizing', 'rs-col', 'rs-row');
+    save(set(measure(e)));
+  };
+  h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+  h.addEventListener('dblclick', () => { set(null); save(null); });
+  h.addEventListener('keydown', (e) => {
+    const k = axis === 'x' ? { ArrowLeft: -1, ArrowRight: 1 } : { ArrowUp: -1, ArrowDown: 1 };
+    const d = k[e.key]; if (!d) return; e.preventDefault();
+    save(set(measure(null) + d * step));
+  });
+  addEventListener('resize', () => { if (S.opt?.[key] != null) apply(S.opt[key]); });
+}
+(() => {
+  const root = document.documentElement, clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  // lewa kolumna (kanały i osoby)
+  const rail = $('#rail');
+  makeResizer($('#railResize'), {
+    axis: 'x', key: 'railW',
+    measure: (e) => (e ? e.clientX - rail.getBoundingClientRect().left : rail.getBoundingClientRect().width),
+    apply: (v) => {
+      if (v == null) { root.style.removeProperty('--rail-w'); return null; }
+      const w = clamp(v, 180, Math.min(480, innerWidth * 0.4)); root.style.setProperty('--rail-w', `${w}px`); return w;
+    },
+  });
+  // plan obok komunikacji (po lewej albo po prawej)
+  const pane = $('#planPane'), split = $('#split');
+  makeResizer($('#planResize'), {
+    axis: 'x', key: 'planW',
+    measure: (e) => {
+      if (!e) return pane.getBoundingClientRect().width;
+      const r = split.getBoundingClientRect();
+      return document.body.classList.contains('plan-right') ? r.right - e.clientX : e.clientX - r.left;
+    },
+    apply: (v) => {
+      if (v == null) { root.style.removeProperty('--plan-w'); return null; }
+      const w = clamp(v, 240, Math.max(240, (split.getBoundingClientRect().width || innerWidth) - 360)); root.style.setProperty('--plan-w', `${w}px`); return w;
+    },
+  });
+  // w planie: przypięty bieżący / następny punkt nad całym programem
+  const pin = $('#sheetPlan .plan-pin');
+  makeResizer($('#pinResize'), {
+    axis: 'y', key: 'pinH',
+    measure: (e) => (e ? e.clientY - pin.getBoundingClientRect().top : pin.getBoundingClientRect().height),
+    apply: (v) => {
+      if (v == null) { root.style.removeProperty('--pin-h'); pin.classList.remove('sized'); return null; }
+      const box = $('#sheetPlan').getBoundingClientRect().height || innerHeight;
+      const h = clamp(v, 60, Math.max(60, box - 100)); root.style.setProperty('--pin-h', `${h}px`); pin.classList.add('sized'); return h;
+    },
+    step: 24,
+  });
+})();
 // lewa kolumna (szeroki ekran): kto jest online, kto mówi i na którym kanale ma otwarte okno
 function renderRailPeople() {
   const box = $('#railPeople');
