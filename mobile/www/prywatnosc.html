@@ -29,7 +29,7 @@ li { margin:6px 0; }
   <h2>Polityka prywatności serwera</h2>
   <div class="card">
     <p style="margin:0">Każdy serwer ma własną stronę <b>Prywatność</b>: kto jest administratorem danych, jakie dane zbiera, jak długo je przechowuje i jak poprosić o ich usunięcie. Link jest na ekranie logowania i w ustawieniach.</p>
-    <p style="margin:10px 0 0" id="defBox" hidden>Serwer domyślny: <a id="defLink" href="#">polityka prywatności</a></p>
+    <p style="margin:10px 0 0" id="defBox" hidden>Twój serwer: <a id="defLink" href="#">polityka prywatności</a></p>
   </div>
 
   <h2>Co robi sama aplikacja</h2>
@@ -42,9 +42,9 @@ li { margin:6px 0; }
   </ul>
 </main>
 <script>
-// link do polityki serwera domyślnego (np. serwer demonstracyjny) – otwiera się w przeglądarce
+// link do polityki wybranego serwera (albo serwera podpowiadanego przy budowaniu) – otwiera się w przeglądarce
 window.Capacitor?.Plugins?.IkAudio?.getServer?.().then((r) => {
-  const u = r?.defaultUrl;
+  const u = r?.url || r?.defaultUrl;
   if (!u) return;
   const a = document.getElementById('defLink');
   a.href = u.replace(/\/+$/, '') + '/prywatnosc';

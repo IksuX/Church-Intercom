@@ -1,4 +1,4 @@
-# Interkom 0.53.1
+# Interkom 0.54.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -24,11 +24,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.53.1.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.54.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.53.1.zip && cd interkom
+   unzip interkom-0.54.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -770,6 +770,12 @@ Aplikacja 1.6.0, iPhone i Android.
 - Wyłączysz to w ⚙️ → Dźwięk i mikrofon → „Przycisk „Mów” na ekranie blokady”.
 
 **Limity nadawania.** Przycisk słuchawek, pilot i pauza na ekranie blokady włączają mikrofon bez przytrzymywania, więc łatwo go zapomnieć wyłączyć. Panel → **Ogólne → Mówienie przyciskiem**: wyłączenie po czasie (domyślnie 60 s), po ciszy (8 s) i sygnał przypominający (co 10 s). Do tego sygnały przy włączeniu, wyłączeniu i wyłączeniu samoczynnym, a na karcie odtwarzacza iPhone'a „🔴 MÓWISZ – kanał”. W głośnym miejscu ciszy nie zawsze da się rozpoznać – wtedy działa limit czasu. Dodatkowo limit pilnuje **serwer** (gdyby telefon się zawiesił): tryb włącz/wyłącz – limit + 5 s, przytrzymany przycisk i aplikacje starsze niż 1.6.0 – trzykrotność limitu. Limity nie dotyczą kłódki ani przycisku na ekranie strony.
+
+## 0.54.0 (aplikacja 1.6.2)
+
+- **Zmiana konta Planning Center.** Planning Center pamięta swoje logowanie, więc „Zaloguj przez Planning Center” wpuszczało od razu na to samo konto i do tej samej organizacji. Pod przyciskiem jest teraz **„Inne konto lub organizacja w Planning Center”**. W aplikacji (1.6.2) usuwa ono zapamiętane logowanie Planning Center i od razu otwiera logowanie od nowa. Wylogowanie z Interkomu osoby zalogowanej przez Planning Center też je usuwa. W przeglądarce strona podpowiada, jak wylogować się z Planning Center (przeglądarka nie pozwala usunąć cudzych ciasteczek).
+- Komunikat „konto w innej organizacji” wskazuje, co zrobić.
+- Aplikacja: ekran wyboru serwera nie podpowiada już serwera domyślnego (malinkainterkom.duckdns.org). Podpowiedź można dodać przy budowaniu: `IK_SERVER_URL=… npm run sync`. Strona „Prywatność” w aplikacji linkuje do polityki wybranego serwera.
 
 ## 0.53.1 (aplikacja 1.6.1)
 

@@ -21,7 +21,7 @@ import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 import { MixerModule } from './mixer/index.js';
 import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.53.1';
+const VERSION = '0.54.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -1076,7 +1076,7 @@ app.get('/auth/pco/callback', async (req, res) => {
   try {
     const who = await pcoOauth.finish({ ...oauthCreds(), code: String(req.query.code || ''), state: String(req.query.state || '') });
     if (!who.personId) return fail('Nie udało się ustalić, kim jesteś.');
-    if (pco.state.orgId && who.orgId && who.orgId !== pco.state.orgId) return fail('To konto należy do innej organizacji w Planning Center.');
+    if (pco.state.orgId && who.orgId && who.orgId !== pco.state.orgId) return fail('To konto Planning Center jest w innej organizacji niż ten interkom. Kliknij „Inne konto lub organizacja w Planning Center” i zaloguj się właściwym kontem.');
     const person = pco.state.roster.find((x) => x.personId === who.personId);
     if (config.planningCenter.oauthLogin.rosterOnly && !person) return fail('Nie ma Cię w obsadzie bieżącego planu. Zaloguj się PIN-em ekipy.');
     const s = { id: 'u_' + crypto.randomBytes(6).toString('hex'), name: (person?.name || who.name).slice(0, 40), role: 'listener', iat: Date.now(), pid: who.personId, via: 'pco' };

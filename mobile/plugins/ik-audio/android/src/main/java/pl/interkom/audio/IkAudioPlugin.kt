@@ -132,7 +132,7 @@ class IkAudioPlugin : Plugin(), IkEngine.Listener {
     fun getServer(call: PluginCall) {
         val r = JSObject().put("platform", "android")
         IkServer.get(context)?.let { r.put("url", it) }
-        getConfig().getString("defaultServer")?.let { r.put("defaultUrl", it) }
+        getConfig().getString("defaultServer")?.takeIf { it.isNotEmpty() }?.let { r.put("defaultUrl", it) }
         call.resolve(r)
     }
 
@@ -212,6 +212,30 @@ class IkAudioPlugin : Plugin(), IkEngine.Listener {
             } catch (_: Throwable) {}
         }
         call.resolve()
+    }
+
+    /** Wylogowanie z Planning Center: usuwa ciasteczka planningcenteronline.com z widoku aplikacji. */
+    @PluginMethod
+    fun forgetPcoLogin(call: PluginCall) { call.resolve(JSObject().put("removed", clearPcoCookies())) }
+
+    fun clearPcoCookies(): Int {
+        val cm = android.webkit.CookieManager.getInstance()
+        var n = 0
+        for (host in listOf("planningcenteronline.com", "login.planningcenteronline.com", "api.planningcenteronline.com", "accounts.planningcenteronline.com", "services.planningcenteronline.com")) {
+            val url = "https://$host"
+            val all = cm.getCookie(url) ?: continue
+            for (c in all.split(";")) {
+                val name = c.substringBefore("=").trim()
+                if (name.isEmpty()) continue
+                // ciasteczko mogło być ustawione dla samej domeny albo dla całego planningcenteronline.com
+                for (dom in listOf("", "; Domain=$host", "; Domain=.planningcenteronline.com")) {
+                    cm.setCookie(url, "$name=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/$dom")
+                }
+                n++
+            }
+        }
+        cm.flush()
+        return n
     }
 
     override fun handleOnDestroy() { tts?.shutdown(); tts = null; ttsReady = false }

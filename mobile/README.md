@@ -1,4 +1,4 @@
-# Interkom – aplikacja na iPhone i Android (1.6.1)
+# Interkom – aplikacja na iPhone i Android (1.6.2)
 
 Aplikacja to „opakowanie” zwykłej strony interkomu (ten sam wygląd, logowanie, czat, powiadomienia),
 ale **dźwięk obsługuje natywnie** (LiveKit), dzięki czemu:
@@ -14,7 +14,8 @@ Strona nadal działa w przeglądarce jak dotąd – aplikacja jest dodatkiem. Wy
 Aplikacja startuje od ekranu **wyboru serwera**:
 - **W tej sieci** – serwery interkomu znalezione automatycznie w Wi-Fi (serwer ogłasza się przez mDNS/Bonjour;
   instalator 0.33.0+ instaluje do tego `avahi-daemon`). Serwer w internecie (VPS) się tu nie pojawia.
-- **Ostatnio używane** i **Serwer domyślny** (z `IK_SERVER_URL` przy budowaniu).
+- **Ostatnio używane** – serwery, z którymi telefon już się łączył (✕ usuwa z listy). **Serwer domyślny** pojawia się tylko,
+  gdy aplikację zbudowano z `IK_SERVER_URL` (domyślnie brak).
 - **Wpisz adres** – domena albo adres IP, np. `192.168.1.10`.
 
 Wybrany serwer jest zapamiętywany – kolejne uruchomienia otwierają go od razu. Zmiana: przycisk
@@ -38,7 +39,7 @@ iPhone przy pierwszym wyszukiwaniu zapyta o dostęp do **sieci lokalnej** – tr
 ```bash
 cd mobile
 npm install
-export IK_SERVER_URL=https://malinkainterkom.duckdns.org   # opcjonalnie – „Serwer domyślny (internet)” na liście
+export IK_SERVER_URL=https://interkom.parafia.pl   # opcjonalnie – „Serwer domyślny (internet)” na liście (domyślnie brak)
 npx cap add ios
 npx cap add android
 npm run sync
@@ -61,7 +62,7 @@ Zmiany w samej stronie (serwer) **nie wymagają** przebudowy aplikacji – aplik
 
 ### Wersja i numer kompilacji
 
-- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.6.1).
+- **Wersja** (`CFBundleShortVersionString` / `versionName`) = `version` z `mobile/package.json` (teraz 1.6.2).
 - **Numer kompilacji** (`CFBundleVersion` / `versionCode`) jest w pliku `mobile/build-number`. Przed **każdym**
   archiwum do TestFlight i każdym nowym APK: `npm run bump-build` (podnosi numer o 1 i od razu wpisuje go do projektów
   iOS i Android). App Store Connect odrzuca kompilację z numerem, który już był. Zmieniony `build-number` dołącz do commita.

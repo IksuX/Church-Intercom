@@ -77,7 +77,7 @@ $('#loginForm').addEventListener('submit', (e) => {
 (function handleHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get('session')) store.set('token', h.get('session'));
-  if (h.get('loginError')) $('#loginErr').textContent = h.get('loginError');
+  if (h.get('loginError')) { $('#loginErr').textContent = h.get('loginError'); S.pcoErr = true; }
   if (h.has('session') || h.has('loginError')) history.replaceState(null, '', location.pathname);
 })();
 // przyciski pobrania aplikacji (linki ustawia administrator: Ogólne → Aplikacja na telefon); w samej aplikacji ukryte
@@ -2145,6 +2145,16 @@ function renderSettings() {
   }
 }
 $('#btnTestTts').onclick = () => { unlockAudio(); say('To jest test syntezy mowy.'); beep(); };
+// Planning Center pamięta swoje logowanie (ciasteczko w przeglądarce / w aplikacji) – bez jego usunięcia
+// „Zaloguj przez Planning Center” od razu wpuszcza na to samo konto i do tej samej organizacji.
+const forgetPco = async () => { if (typeof NAT?.forgetPcoLogin !== 'function') return false; try { await NAT.forgetPcoLogin(); return true; } catch { return false; } };
+$('#pcoSwitch').onclick = async () => {
+  if (await forgetPco()) { location.href = '/auth/pco/start'; return; }
+  const h = $('#pcoSwitchHint'); h.hidden = false;
+  h.innerHTML = NAT
+    ? 'Ta wersja aplikacji nie umie wylogować z Planning Center – zaktualizuj aplikację.'
+    : 'Najpierw wyloguj się z Planning Center: otwórz <a href="https://planningcenteronline.com" target="_blank" rel="noopener">planningcenteronline.com</a>, kliknij swoje zdjęcie → <b>Log out</b>, a potem wróć tutaj i kliknij „Zaloguj przez Planning Center”. Możesz też użyć okna prywatnego.';
+};
 $('#btnLogout').onclick = async () => {
   // ten telefon przestaje dostawać powiadomienia tej osoby
   try {
@@ -2152,6 +2162,7 @@ $('#btnLogout').onclick = async () => {
     await fetch('/api/push/logout', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + S.session.token }, body: JSON.stringify({ endpoint: sub?.endpoint || '' }), signal: AbortSignal.timeout(3000) });
   } catch {}
   try { await NAT?.disconnect(); } catch {}
+  if (S.session?.me?.viaPco) await forgetPco(); // w aplikacji: wylogowanie także z Planning Center
   store.del('token'); S.room?.disconnect(); location.reload();
 };
 // aplikacja: powrót do ekranu wyboru serwera (lista serwerów w sieci, ostatnie, adres ręcznie)

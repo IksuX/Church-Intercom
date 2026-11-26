@@ -23,6 +23,7 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "discover", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "speak", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "beep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "forgetPcoLogin", returnType: CAPPluginReturnPromise),
     ]
 
     private var volumeObs: NSKeyValueObservation?
@@ -166,11 +167,24 @@ public class IkAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         return d
     }
 
+    /// Wylogowanie z Planning Center: usuwa ciasteczka i dane stron planningcenteronline.com z widoku aplikacji
+    /// (bez tego kolejne „Zaloguj przez Planning Center” wpuszcza od razu na to samo konto).
+    @objc func forgetPcoLogin(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let store = self.bridge?.webView?.configuration.websiteDataStore ?? WKWebsiteDataStore.default()
+            let types = WKWebsiteDataStore.allWebsiteDataTypes()
+            store.fetchDataRecords(ofTypes: types) { records in
+                let pco = records.filter { $0.displayName == "planningcenteronline.com" || $0.displayName.hasSuffix(".planningcenteronline.com") }
+                store.removeData(ofTypes: types, for: pco) { call.resolve(["removed": pco.count]) }
+            }
+        }
+    }
+
     // ---------------- wybór serwera ----------------
     @objc func getServer(_ call: CAPPluginCall) {
         var r: [String: Any] = ["platform": "ios"]
         if let u = IkServer.current { r["url"] = u.absoluteString }
-        if let d = getConfig().getString("defaultServer") { r["defaultUrl"] = d }
+        if let d = getConfig().getString("defaultServer"), !d.isEmpty { r["defaultUrl"] = d }
         call.resolve(r)
     }
 
