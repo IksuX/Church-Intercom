@@ -19,9 +19,10 @@ import { Avatars } from './avatars.js';
 import { Push } from './push.js';
 import { systemInfo, helperInfo, requestAction, updateInfo } from './system.js';
 import { MixerModule } from './mixer/index.js';
+import { InputList, exampleStore } from './inputlist.js';
 import { VOICE_PROMPT, VOICE_HOTWORDS, parseCommand } from './mixer/voice.js';
 
-const VERSION = '0.55.0';
+const VERSION = '0.56.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -46,6 +47,7 @@ let config = loadConfig(CONFIG_PATH);
 const avatars = new Avatars(DATA_DIR);
 const push = new Push(DATA_DIR);
 const mixer = new MixerModule({ dataDir: DATA_DIR }); // Reżyseria – mikser wideo ATEM (połączenie po stronie serwera)
+const inputList = new InputList({ dataDir: DATA_DIR }); // Inputlista – patch sali + obsada z Planning Center
 const pendingCalls = new Map(); // klucz osoby -> wezwanie czekające na powrót aplikacji z tła
 // Kanały: z config.json + (opcjonalnie) z zespołów Planning Center – lista może się zmieniać w trakcie pracy.
 let channels = config.channels;
@@ -210,7 +212,31 @@ function autoLive(u) {
 function perms(u) {
   const lc = !!config.planningCenter?.liveControl?.enabled;
   return { liveControl: canControlLive(u), manualPlan: !lc && (u.role === 'speaker' || u.role === 'admin'),
-    moderate: canModerate(u), stt: !sttUserOff(u), director: canDirect(u), mixer: !!config.mixer?.enabled };
+    moderate: canModerate(u), stt: !sttUserOff(u), director: canDirect(u), mixer: !!config.mixer?.enabled,
+    sound: canSound(u), inputList: canSeeInputList(u) };
+}
+// Rola „Dźwięk” (Inputlista – line check i poprawki na nabożeństwo): administrator, nadanie w panelu
+// (tak / nie / automatycznie) albo – automatycznie – osoba z obsady na wskazanym stanowisku lub w zespole.
+function autoSound(u) {
+  const ic = config.inputList;
+  if (!pco || !ic || !u.pid) return false;
+  const person = pco.state.roster.find((x) => String(x.personId) === String(u.pid));
+  if (!person) return false;
+  const low = (v) => String(v).toLocaleLowerCase('pl');
+  return person.positions.some((p) => ic.soundPositions.some((r) => low(p).includes(low(r))))
+    || person.teamNames.some((t) => ic.soundTeams.some((r) => low(r) === low(t)));
+}
+function canSound(u) {
+  if (!config.inputList?.enabled) return false;
+  if (u.role === 'admin') return true;
+  const g = u.sess ? grantFor(u.sess) : {};
+  if (g.sound === true || g.sound === false) return g.sound;
+  return autoSound(u);
+}
+// Podgląd inputlisty: rola Dźwięk, a gdy włączone „widoczna dla wszystkich” – każdy zalogowany
+function canSeeInputList(u) {
+  if (!config.inputList?.enabled || (u.sess && demoLimit(u.sess))) return false;
+  return !!config.inputList.visibleToAll || canSound(u);
 }
 // Rola „Reżyser” (moduł Reżyseria – mikser wideo): administrator, nadanie w panelu (tak / nie / automatycznie)
 // albo – automatycznie – osoba z obsady Planning Center na wskazanym stanowisku lub w zespole.
@@ -246,11 +272,28 @@ function sendMixerTo(u) {
 }
 function broadcastMixer() { for (const u of users.values()) if (u.sockets.size) sendMixerTo(u); }
 mixer.on('change', broadcastMixer);
+// Inputlista idzie przez WebSocket tylko do osób z prawem podglądu; kto je stracił, dostaje jednorazowo „null”.
+// Widok jest ten sam dla wszystkich – liczony raz na rozesłanie.
+const inputListView = () => inputList.view(pco?.state.plan || null, pco?.state.plan ? pco.state.roster || [] : []);
+function sendInputListTo(u, view) {
+  const ok = canSeeInputList(u);
+  if (!ok && !u._il) return view;
+  const v = ok ? (view ||= inputListView()) : null;
+  for (const ws of u.sockets) send(ws, { t: 'inputlist', view: v });
+  u._il = ok;
+  return view;
+}
+function broadcastInputList() {
+  let view;
+  for (const u of users.values()) if (u.sockets.size) view = sendInputListTo(u, view);
+}
+inputList.on('change', broadcastInputList);
 // Kto może przenosić i wyciszać innych: administrator oraz osoby sterujące planem (reżyser, prowadzący – Planning Center)
 function canModerate(u) { return u.role === 'admin' || canControlLive(u); }
 function sendPerms() {
   for (const u of users.values()) for (const ws of u.sockets) send(ws, { t: 'perm', ...perms(u) });
   broadcastMixer();
+  broadcastInputList();
 }
 // Zastosowanie zmian uprawnień w locie: rola w aplikacji + prawo nadawania w LiveKit
 const lkAdmin = new RoomServiceClient(process.env.LIVEKIT_INTERNAL_URL || 'http://127.0.0.1:7880', LK_KEY, LK_SECRET);
@@ -597,7 +640,8 @@ app.use((req, res, next) => {
 const remotePinBlocked = (req) => isRemote(req) && !config.remote?.pin;
 const REMOTE_PIN_MSG = 'Spoza sieci kościoła zaloguj się kontem Planning Center (logowanie PIN-em działa tylko w kościele).';
 const smallJson = express.json({ limit: '16kb' });
-app.use((req, res, next) => (req.path === '/api/admin/restore' ? next() : smallJson(req, res, next))); // kopia ustawień ma własny, większy limit
+const OWN_JSON_LIMIT = new Set(['/api/admin/restore', '/api/admin/inputlist']);
+app.use((req, res, next) => (OWN_JSON_LIMIT.has(req.path) ? next() : smallJson(req, res, next))); // kopia ustawień i patch inputlisty mają własny, większy limit
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, version: VERSION, online: presence().length }));
 
@@ -802,6 +846,62 @@ app.all('/api/mixer/deck/:action', (req, res) => {
 });
 
 // Panel administratora: stan połączenia i klucz Stream Decka (adres, M/E i włączenie – w konfiguracji, sekcja „mixer”)
+// ---------- Inputlista (panel) ----------
+const ilPlan = () => (pco?.state.plan ? pco.state.plan : null);
+const ilRoster = () => (pco?.state.plan ? pco.state.roster || [] : []);
+app.get('/api/admin/inputlist', requireAdmin, (_req, res) => res.json({
+  ...inputList.adminData(),
+  positions: pco?.state.positions || [],
+  teams: (pco?.state.teams || []).map((t) => t.name),
+}));
+app.put('/api/admin/inputlist', requireAdmin, express.json({ limit: '512kb' }), (req, res) => {
+  try {
+    const r = inputList.setPatch(req.body);
+    console.log(`[admin] inputlista: zapisano patch (${r.patch.length} kanałów, ${r.gear.length} pozycji sprzętu)`);
+    res.json(r);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+// Line check i poprawki na nabożeństwo (rola Dźwięk). Zawsze dla planu, który serwer uważa za bieżący –
+// nie dla tego, który akurat ma otwarty telefon. Rozesłanie nowego widoku robi zdarzenie „change” modułu.
+function inputListCommand(u, ws, m) {
+  if (!canSound(u)) { send(ws, { t: 'ilError', error: 'Nie masz roli Dźwięk.' }); return; }
+  const plan = pco?.state.plan || null;
+  const planId = plan?.id || undefined, title = plan ? [plan.title, plan.dates].filter(Boolean).join(' · ') : '';
+  const chId = typeof m.ch === 'string' ? m.ch : '';
+  try {
+    if (m.t === 'ilReset') { inputList.resetCheck(planId); console.log(`[inputlista] ${u.name}: wyzerowano line check`); return; }
+    if (m.t === 'ilOverride') { inputList.override(planId, chId, m.patch && typeof m.patch === 'object' ? m.patch : {}, title); return; }
+    const state = m.state === 'ok' || m.state === 'problem' ? m.state : null;
+    const before = inputList.data.plans[planId || 'local']?.check?.[chId];
+    const c = inputList.check(planId, chId, state, u.name, String(m.note || ''), title);
+    if (state === 'problem') reportInputProblem(u, chId, c, before);
+  } catch (e) { send(ws, { t: 'ilError', error: e.message }); }
+}
+// Zgłoszenie problemu idzie też na kanał ekipy (wybrany w panelu) – z czytaniem na głos i powiadomieniami jak zwykła wiadomość.
+// Ten sam problem z tą samą notatką nie jest wysyłany drugi raz.
+function reportInputProblem(u, chId, c, before) {
+  const chan = config.inputList?.reportChannel;
+  if (!chan || !channels.some((x) => x.id === chan)) return;
+  if (before?.state === 'problem' && before.note === c.note) return;
+  const row = inputListView().rows.find((r) => r.id === chId);
+  if (!row) return;
+  const label = [row.name, row.source].filter(Boolean).join(' – ');
+  const text = `⚠ Kanał ${row.ch}${label ? ` (${label})` : ''}: ${c.note || 'problem na line checku'}`;
+  post({ type: 'text', channel: chan, from: u.id, fromName: u.name, fromPid: u.pid || null, text });
+  notifyChannel(pk(u), chan, text, u.name, { urgent: false });
+  console.log(`[inputlista] ${u.name}: ${text}`);
+}
+// widok dla aplikacji – ten sam, który idzie przez WebSocket
+app.get('/api/inputlist', (req, res) => {
+  const s = sessionFrom(req);
+  if (!s) return res.status(401).json({ error: 'Zaloguj się ponownie.' });
+  if (!canSeeInputList(userOfSession(s))) return res.status(403).json({ error: 'Nie masz dostępu do inputlisty.' });
+  res.json(inputListView());
+});
+// przykład do wczytania w edytorze (bez zapisu – administrator sprawdza i zapisuje sam)
+app.get('/api/admin/inputlist/example', requireAdmin, (_req, res) => { const { gear, patch } = exampleStore(); res.json({ gear, patch }); });
+app.get('/api/admin/inputlist/preview', requireAdmin, (_req, res) => res.json(inputList.view(ilPlan(), ilRoster())));
+
 app.get('/api/admin/mixer', requireAdmin, (_req, res) => res.json(mixer.adminInfo()));
 app.post('/api/admin/mixer/deck-key', requireAdmin, (req, res) => {
   if (req.body?.clear) { mixer.clearDeckKey(); return res.json({ ok: true, key: '' }); }
@@ -1360,6 +1460,7 @@ function adminUserInfo(u) {
     speak: { value: g.speak ?? null, auto: autoR === 'speaker' || autoR === 'admin', effective: u.role === 'speaker' || u.role === 'admin' },
     live: { value: g.live ?? null, auto: autoLive(u), effective: canControlLive(u), enabled: !!config.planningCenter?.liveControl?.enabled },
     director: { value: g.director ?? null, auto: u.role === 'admin' || autoDirector(u), effective: canDirect(u), enabled: !!config.mixer?.enabled },
+    sound: { value: g.sound ?? null, auto: u.role === 'admin' || autoSound(u), effective: canSound(u), enabled: !!config.inputList?.enabled },
   };
 }
 // Osoby z Planning Center (także offline i spoza planu) z uprawnieniami nadanymi w panelu
@@ -1378,6 +1479,7 @@ app.get('/api/admin/pco/people', requireAdmin, async (req, res) => {
       fetchedAt: dir.at,
       liveEnabled: !!config.planningCenter?.liveControl?.enabled,
       mixerEnabled: !!config.mixer?.enabled,
+      inputListEnabled: !!config.inputList?.enabled,
       teams: (pco.state.teams || []).map((t) => ({ id: t.id, name: t.name })),
       people: [...dir.people, ...extra].map((p) => {
         const g = config.grants?.[p.pid] || {}, r = roster.get(p.pid);
@@ -1386,8 +1488,9 @@ app.get('/api/admin/pco/people', requireAdmin, async (req, res) => {
           teams: p.teams.map((t) => teamName.get(t) || t),
           leader: leaders.has(p.pid), inPlan: !!r, online: online.has(p.pid),
           autoSpeak: !!r?.canSpeak,
-          grant: { admin: g.admin === true, speak: g.speak ?? null, live: g.live ?? null, director: g.director ?? null },
+          grant: { admin: g.admin === true, speak: g.speak ?? null, live: g.live ?? null, director: g.director ?? null, sound: g.sound ?? null },
           autoDirector: autoDirector({ pid: p.pid, role: 'listener' }),
+          autoSound: autoSound({ pid: p.pid, role: 'listener' }),
         };
       }),
     });
@@ -1399,6 +1502,7 @@ app.get('/api/admin/users', requireAdmin, (_req, res) => {
     grants: Object.entries(config.grants || {}).map(([pid, g]) => ({ pid, ...g, online: [...users.values()].some((u) => u.pid === pid && u.sockets.size) })),
     liveEnabled: !!config.planningCenter?.liveControl?.enabled && !!pco,
     mixerEnabled: !!config.mixer?.enabled,
+    inputListEnabled: !!config.inputList?.enabled,
   });
 });
 app.post('/api/admin/grant', requireAdmin, (req, res) => {
@@ -1408,20 +1512,20 @@ app.post('/api/admin/grant', requireAdmin, (req, res) => {
   const pid = pidIn ? String(pidIn) : u?.sess?.pid || null;
   if (!u && !pid) return res.status(404).json({ error: 'Nie ma takiej osoby online.' });
   const patch = {};
-  for (const k of ['speak', 'live', 'director', 'admin']) if (k in (req.body || {})) patch[k] = norm(req.body[k]);
+  for (const k of ['speak', 'live', 'director', 'sound', 'admin']) if (k in (req.body || {})) patch[k] = norm(req.body[k]);
   if (patch.admin === false) patch.admin = null; // „nie” = brak nadania (PIN administratora działa nadal)
   const merge = (g) => { const x = { ...g }; for (const [k, v] of Object.entries(patch)) { if (v === null) delete x[k]; else x[k] = v; } return x; };
   if (pid) {
     const next = structuredClone(config);
     const g = merge(next.grants?.[pid] || {});
     next.grants ||= {};
-    if (g.speak === undefined && g.live === undefined && g.director === undefined && !g.admin) delete next.grants[pid];
+    if (g.speak === undefined && g.live === undefined && g.director === undefined && g.sound === undefined && !g.admin) delete next.grants[pid];
     else next.grants[pid] = { ...g, name: g.name || u?.name || String(req.body?.name || '').trim().slice(0, 60) || pid };
     config = validateConfig(next);
     saveJson(CONFIG_PATH, config);
   } else {
     const g = merge(sessionGrants.get(u.id) || {});
-    if (g.speak === undefined && g.live === undefined && g.director === undefined && !g.admin) sessionGrants.delete(u.id); else sessionGrants.set(u.id, g);
+    if (g.speak === undefined && g.live === undefined && g.director === undefined && g.sound === undefined && !g.admin) sessionGrants.delete(u.id); else sessionGrants.set(u.id, g);
   }
   applyGrants();
   console.log(`[admin] uprawnienia ${u?.name || pid}: ${JSON.stringify(patch)}`);
@@ -1805,6 +1909,7 @@ wss.on('connection', (ws, req) => {
 
   send(ws, { t: 'perm', ...perms(u) });
   sendMixerTo(u);
+  if (canSeeInputList(u)) { u._il = true; send(ws, { t: 'inputlist', view: inputListView() }); }
   for (const x of users.values()) if (x.wPeer === pk(u) && x.sockets.size) send(ws, { t: 'wtarget', user: x.id, on: true });
   const lim = demoLimit(s);
   if (lim) send(ws, { t: 'hello', users: demoPresence(presence(), u), history: [...demoSamples(), ...history.all().filter((m) => lim.has(m.channel))], you: publicUser(u), channels: channels.filter((c) => lim.has(c.id)), plan: pco ? pco.publicPlan() : null, streams: streams.list(), program: publicProgram() });
@@ -1902,6 +2007,7 @@ function handle(u, m, ws) {
       broadcast({ t: 'cleared', by: u.name });
       break;
     }
+    case 'ilCheck': case 'ilOverride': case 'ilReset': inputListCommand(u, ws, m); break;
     case 'planCurrent': { // ręczne ustawienie bieżącego punktu (gdy nikt nie prowadzi PC Live)
       if (!pco || !perms(u).manualPlan) return;
       if (pco.setCurrentManually(String(m.itemId))) broadcastPlan();

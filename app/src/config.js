@@ -93,8 +93,8 @@ export function validateConfig(input) {
   // ręczne uprawnienia osób z Planning Center: { "<personId>": { name, speak: true|false, live: true|false } }
   const tri = (v) => (v === true || v === false ? v : undefined);
   c.grants = Object.fromEntries(Object.entries(c.grants && typeof c.grants === 'object' ? c.grants : {})
-    .map(([pid, g]) => [str(pid, 32), { name: str(g?.name, 60), speak: tri(g?.speak), live: tri(g?.live), director: tri(g?.director), admin: g?.admin === true ? true : undefined }])
-    .filter(([pid, g]) => pid && (g.speak !== undefined || g.live !== undefined || g.director !== undefined || g.admin)));
+    .map(([pid, g]) => [str(pid, 32), { name: str(g?.name, 60), speak: tri(g?.speak), live: tri(g?.live), director: tri(g?.director), sound: tri(g?.sound), admin: g?.admin === true ? true : undefined }])
+    .filter(([pid, g]) => pid && (g.speak !== undefined || g.live !== undefined || g.director !== undefined || g.sound !== undefined || g.admin)));
   // transmisje live (Blackmagic Web Presenter)
   const sm = c.streams && typeof c.streams === 'object' ? c.streams : {};
   const devIds = new Set();
@@ -136,6 +136,16 @@ export function validateConfig(input) {
     directorTeams: strList(mx.directorTeams, 60),
   };
   if (c.mixer.enabled && !c.mixer.simulation && !c.mixer.host) fail('Mikser wideo: podaj adres IP miksera ATEM.');
+  // Inputlista – patch sali + obsada z Planning Center; edycja w panelu, line check ma rola „Dźwięk”
+  const il = c.inputList && typeof c.inputList === 'object' ? c.inputList : {};
+  c.inputList = {
+    enabled: !!il.enabled,
+    // rola Dźwięk automatycznie dla osób z obsady Planning Center na tych stanowiskach / w tych zespołach
+    soundPositions: Array.isArray(il.soundPositions) ? strList(il.soundPositions) : ['Dźwięk', 'Realizator', 'FOH'],
+    soundTeams: strList(il.soundTeams, 60),
+    visibleToAll: !!il.visibleToAll, // podgląd listy dla każdego zalogowanego (np. muzyków); inaczej tylko Dźwięk i administratorzy
+    reportChannel: str(il.reportChannel, 40), // kanał, na który idą zgłoszenia problemów z line checku
+  };
   // dźwięk transmisji (mix z konsolety) – nadawany z komputera w kościele, każdy słucha u siebie z własną głośnością
   const pg = c.program && typeof c.program === 'object' ? c.program : {};
   c.program = {

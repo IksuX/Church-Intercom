@@ -95,5 +95,16 @@
       "Reżyser"
     ],
     "directorTeams": []
+  },
+  "inputList": {
+    "enabled": false,
+    "soundPositions": [
+      "Dźwięk",
+      "Realizator",
+      "FOH"
+    ],
+    "soundTeams": [],
+    "visibleToAll": false,
+    "reportChannel": ""
   }
 }

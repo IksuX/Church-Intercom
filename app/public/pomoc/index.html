@@ -145,7 +145,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
 </head>
 <body>
 <header class="top">
-  <strong>📖 Instrukcja</strong><span class="ver lg">Interkom 0.55.0</span>
+  <strong>📖 Instrukcja</strong><span class="ver lg">Interkom 0.56.0</span>
   <span class="sp"></span>
   <a class="btn" href="/pomoc/Interkom-instrukcja.pdf" download>⬇ PDF</a>
   <a class="btn" href="/">← <span class="lg">Wróć do interkomu</span><span class="sm">Interkom</span></a>
@@ -163,7 +163,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
       <p class="sub">Łączność ekip nabożeństwa: kanały, czat, mówienie przez przycisk, plan z Planning Center, odliczanie czasu, transmisja live, osobisty mikser i aplikacja na telefon.</p>
     </div>
     <div class="hero"><img src="/pomoc/main.jpg" alt=""><img class="d" src="/pomoc/desktop.jpg" alt=""></div>
-    <p class="meta">Wersja aplikacji 0.55.0 · dla członków ekip i administratorów</p>
+    <p class="meta">Wersja aplikacji 0.56.0 · dla członków ekip i administratorów</p>
   </section>
   <section class="ptoc print-only"><h2>Spis treści</h2><ol id="ptocList"></ol></section>
 
@@ -419,6 +419,20 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li>Ustawienia zapamiętują się na danym urządzeniu. W aplikacji na telefon głosy i transmisja są regulowane także przy zablokowanym ekranie.</li>
   </ul>
 
+  <h2 id="inputlista">Inputlista</h2>
+  <p>Ikona listy u góry ekranu otwiera <b>inputlistę</b> – kanały konsolety na to nabożeństwo: kto gra na którym kanale (z obsady w Planning Center), na jakim mikrofonie lub DI, do którego wejścia, czy z 48V i na jakim statywie. Ikonę widzą osoby z rolą <b>Dźwięk</b>, a jeśli administrator tak ustawił – wszyscy.</p>
+  <ul>
+    <li>Filtry: <b>Używane</b> (domyślnie), <b>Do sprawdzenia</b>, <b>Problemy</b>, <b>Wszystkie</b>. Szare kanały nie są dziś używane.</li>
+    <li>Na dole: osoby z obsady, dla których nie ma kanału, oraz przyciski <b>Drukuj / PDF</b> i <b>Pobierz CSV</b> (w przeglądarce; w aplikacji na telefon ich nie ma).</li>
+  </ul>
+  <h3>Line check <span class="who spk">rola Dźwięk</span></h3>
+  <ul>
+    <li>Okrągły przycisk przy kanale: dotknięcie = <b>✓ sprawdzony</b> (widać kto i o której), ponowne dotknięcie cofa. Licznik u góry pokazuje, ile kanałów już sprawdzono.</li>
+    <li>Dotknij opisu kanału, wpisz krótko, co się dzieje (np. „trzeszczy”), i wybierz <b>⚠ Zgłoś problem</b>. Kanał robi się czerwony, ikona listy też, a zgłoszenie trafia na kanał ekipy jako wiadomość. Gdy problem zniknie, dotknij czerwonego przycisku – kanał będzie ✓.</li>
+    <li>W tym samym miejscu poprawisz kanał <b>tylko na to nabożeństwo</b>: używany lub nie, kto gra (np. gość), uwagi. <b>Przywróć z patchu</b> cofa poprawkę.</li>
+    <li><b>Wyzeruj line check</b> (na dole, dwa dotknięcia) czyści wszystkie ✓ i problemy – np. przed drugim nabożeństwem.</li>
+  </ul>
+
   <!-- ============ 9 ============ -->
   <h2 id="ustawienia">Ustawienia ⚙️</h2>
   <figure class="shots">
@@ -484,15 +498,22 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <!-- ============ 11 ============ -->
   <h2 class="newpage" id="admin">Dla administratora <span class="who adm">administrator</span></h2>
   <p>Panel otwierasz pod adresem <b>/admin</b> (np. <i>https://adres-interkomu/admin</i>) albo z ⚙️ → <b>Otwórz panel administracyjny</b>. Logujesz się PIN-em administratora. Osoba zalogowana przez Planning Center, której nadano rolę administratora „na stałe”, wchodzi do panelu bez PIN-u. Zmiany działają od razu u wszystkich, bez restartu.</p>
-  <p>Zakładki (na komputerze w menu po lewej, na telefonie przewijany pasek u góry): <b>Stan</b> · <b>Ogólne</b> (nazwa, wygląd, aplikacja na telefon) · <b>Dostęp i PIN-y</b> · <b>Kanały i przyciski</b> · <b>Dźwięk transmisji</b> · <b>Transkrypcja</b> · <b>Planning Center</b> (z zegarem ProPresentera) · <b>Transmisja live</b> (Web Presenter, YouTube, Facebook, mostek) · <b>Serwer</b> (obciążenie, restart, kopia ustawień).</p>
+  <p>Zakładki (na komputerze w menu po lewej, na telefonie przewijany pasek u góry): <b>Stan</b> · <b>Ogólne</b> (nazwa, wygląd, aplikacja na telefon) · <b>Dostęp i PIN-y</b> · <b>Kanały i przyciski</b> · <b>Dźwięk transmisji</b> · <b>Transkrypcja</b> · <b>Planning Center</b> (z zegarem ProPresentera) · <b>Transmisja live</b> (Web Presenter, YouTube, Facebook, mostek) · <b>Inputlista</b> · <b>Serwer</b> (obciążenie, restart, kopia ustawień).</p>
   <h3>Stan</h3>
   <figure><img class="wide" src="/pomoc/adm-status.jpg" alt="Zakładka Stan"></figure>
   <ul>
     <li>Kto jest online, czego słucha, czy działa transkrypcja i Planning Center.</li>
-    <li>Uprawnienia każdej osoby: <b>Administrator</b>, <b>Mówienie</b>, <b>Sterowanie planem</b> – Auto (według grafiku / PIN-u), Tak – zawsze, Nie – nigdy. Dla osób z Planning Center zapisuje się to na stałe.</li>
+    <li>Uprawnienia każdej osoby: <b>Administrator</b>, <b>Mówienie</b>, <b>Sterowanie planem</b>, <b>Dźwięk</b> (inputlista) – Auto (według grafiku / PIN-u), Tak – zawsze, Nie – nigdy. Dla osób z Planning Center zapisuje się to na stałe.</li>
     <li><b>Ksywki</b> dla wszystkich osób, także z grafiku.</li>
   </ul>
   <div class="tip"><b class="l">Klucze wpisujesz tylko raz</b>Ustawienia i klucze są zapisane na serwerze w <code>/var/lib/interkom</code>, poza folderem programu. Aktualizacja – także do świeżo rozpakowanego folderu – niczego nie kasuje, a instalator nie pyta ponownie o klucze Planning Center.</div>
+  <h3>Inputlista</h3>
+  <ul>
+    <li>Włącz Inputlistę, wpisz stanowiska i zespoły z Planning Center, które dają rolę <b>Dźwięk</b>, wybierz kanał na zgłoszenia problemów i zdecyduj, czy listę widzą wszyscy.</li>
+    <li><b>Sprzęt</b>: mikrofony, DI i inne źródła z liczbą sztuk.</li>
+    <li><b>Patch sali</b>: jeden wiersz = kanał konsolety. W <b>Pozycje PCO</b> wpisz stanowiska z Planning Center, które obsadzają kanał (np. „Vocal”, „Drums”). <b>Zawsze</b> – kanał na każdym nabożeństwie (pulpit, playback). <b>1 os.</b> – po jednej osobie na kanał, dla wokali: „Vocal 1” trafia na pierwszy taki kanał, „Vocal 2” na drugi. Bez tego wszyscy z pozycji są na kanale (perkusista na wszystkich mikrofonach perkusji). <b>St</b> – para stereo z kanałem poniżej.</li>
+    <li><b>Wypełnij przykładem</b> wczytuje typowy zespół uwielbienia – popraw nazwy pozycji i zapisz paskiem na dole. <b>Podgląd</b> pokazuje listę na bieżące nabożeństwo i osoby bez kanału.</li>
+  </ul>
   <h3>Serwer</h3>
   <figure><img class="wide" src="/pomoc/adm-server.jpg" alt="Zakładka Serwer"><figcaption>Obciążenie, pamięć, dysk, temperatura, usługi i ponowne uruchomienie</figcaption></figure>
   <ul>
@@ -627,7 +648,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <tr><td>🔁 Zmień serwer</td><td>aplikacja: wybór innego serwera (np. adres zdalny)</td></tr>
     <tr><td>pomarańczowy / czerwony zegar</td><td>ostatnia minuta / przekroczenie czasu punktu</td></tr>
   </table></div>
-  <p class="ver">Interkom 0.55.0 · Instrukcja jest dostępna w aplikacji: ⚙️ → 📖 Instrukcja obsługi, oraz pod adresem /pomoc.</p>
+  <p class="ver">Interkom 0.56.0 · Instrukcja jest dostępna w aplikacji: ⚙️ → 📖 Instrukcja obsługi, oraz pod adresem /pomoc.</p>
 </main>
 </div>
 

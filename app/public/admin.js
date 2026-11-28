@@ -74,6 +74,7 @@ function showTab(tab) {
   if (tab === 'status') { loadStatus(); loadNicks(); }
   if (tab === 'pco') { loadMeta(); loadPP(); }
   if (tab === 'mixer') loadMixer();
+  if (tab === 'inputlist') loadIl();
   if (tab === 'stt') { loadStt(); loadRecent(); }
   if (tab === 'server') { loadSystem(); loadUpdate(true); }
   if (tab === 'audio') loadProgram();
@@ -84,15 +85,18 @@ function showTab(tab) {
 
 // ---------- zapisywanie ----------
 function dirty() {
-  const d = JSON.stringify(cfg) !== JSON.stringify(saved);
+  const d = JSON.stringify(cfg) !== JSON.stringify(saved) || ilDirty();
   $('#aSave').hidden = !d;
   return d;
 }
-$('#aRevert').onclick = () => { cfg = structuredClone(saved); renderAll(); };
+$('#aRevert').onclick = () => { cfg = structuredClone(saved); if (IL.saved) IL.edit = structuredClone(IL.saved); renderIl(); renderAll(); };
 $('#aSaveBtn').onclick = async () => {
   try {
-    const j = await api('PUT', '/api/admin/config', { config: cfg });
-    saved = j.config; cfg = structuredClone(saved);
+    if (JSON.stringify(cfg) !== JSON.stringify(saved)) {
+      const j = await api('PUT', '/api/admin/config', { config: cfg });
+      saved = j.config; cfg = structuredClone(saved);
+    }
+    if (ilDirty()) { ilSet(await api('PUT', '/api/admin/inputlist', IL.edit)); renderIl(); loadIlPreview(); }
     renderAll();
     toast('Zapisano. Zmiany działają od razu u wszystkich.');
     setTimeout(loadMeta, 1500);
@@ -102,7 +106,7 @@ window.addEventListener('beforeunload', (e) => { if (cfg && dirty()) { e.prevent
 
 function renderAll() {
   $('#aOrg').textContent = cfg.orgName;
-  renderGeneral(); renderChannels(); renderQuick(); renderPco(); renderStreams(); renderPP(); renderProgram(); renderMixer();
+  renderGeneral(); renderChannels(); renderQuick(); renderPco(); renderStreams(); renderPP(); renderProgram(); renderMixer(); renderInputListCfg();
   dirty();
 }
 
@@ -139,20 +143,21 @@ async function loadStatus() {
         <td data-l="Mówienie">${u.role === 'admin' ? '<span class="hint">administrator</span>' : sel('speak', u.speak)}</td>
         <td data-l="Sterowanie planem">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('live', u.live, !g.liveEnabled)}</td>
         <td data-l="Reżyser">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('director', u.director, !g.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td>
+        <td data-l="Dźwięk">${u.role === 'admin' ? '<span class="hint">zawsze</span>' : sel('sound', u.sound, !g.inputListEnabled, 'Włącz Inputlistę w zakładce Inputlista')}</td>
         <td data-l="Dane"><button type="button" class="danger" data-forget data-name="${esc(u.name)}">Usuń dane</button></td></tr>`).join('')
-      || '<tr><td colspan="7" class="hint">Nikogo nie ma online.</td></tr>';
+      || '<tr><td colspan="8" class="hint">Nikogo nie ma online.</td></tr>';
     $$('#stUsers select').forEach((el) => (el.onchange = () => setGrant({ userId: el.closest('tr').dataset.uid }, el.dataset.kind, el.value)));
     $$('#stUsers [data-forget]').forEach((b) => (b.onclick = () => forgetPerson({ userId: b.closest('tr').dataset.uid }, b.dataset.name)));
     const lbl = (v) => (v === true ? 'Tak – zawsze' : v === false ? 'Nie – nigdy' : 'Auto');
     $('#stGrantsCard').hidden = !g.grants.length;
-    $('#stGrants').innerHTML = g.grants.map((x) => `<tr data-pid="${esc(x.pid)}"><td>${esc(x.name)}${x.online ? ' <span class="ok-t">● online</span>' : ''}</td><td data-l="Administrator">${x.admin ? 'Tak' : '—'}</td><td data-l="Mówienie">${lbl(x.speak)}</td><td data-l="Sterowanie planem">${lbl(x.live)}</td><td data-l="Reżyser">${lbl(x.director)}</td>
+    $('#stGrants').innerHTML = g.grants.map((x) => `<tr data-pid="${esc(x.pid)}"><td>${esc(x.name)}${x.online ? ' <span class="ok-t">● online</span>' : ''}</td><td data-l="Administrator">${x.admin ? 'Tak' : '—'}</td><td data-l="Mówienie">${lbl(x.speak)}</td><td data-l="Sterowanie planem">${lbl(x.live)}</td><td data-l="Reżyser">${lbl(x.director)}</td><td data-l="Dźwięk">${lbl(x.sound)}</td>
         <td><button type="button" data-reset>↺ Przywróć auto</button></td></tr>`).join('');
     $$('#stGrants [data-reset]').forEach((b) => (b.onclick = () => setGrant({ pid: b.closest('tr').dataset.pid }, null, null)));
   } catch (e) { toast(e.message, 'err'); }
 }
 async function setGrant(who, kind, value) {
   const v = value === 'true' ? true : value === 'false' ? false : null;
-  const body = kind ? { ...who, [kind]: v } : { ...who, speak: null, live: null, director: null, admin: null };
+  const body = kind ? { ...who, [kind]: v } : { ...who, speak: null, live: null, director: null, sound: null, admin: null };
   try { await api('POST', '/api/admin/grant', body); toast('Uprawnienia zmienione.'); } catch (e) { toast(e.message, 'err'); }
   document.activeElement?.blur?.();
   loadStatus();
@@ -980,6 +985,223 @@ $('#mxDeckNew').onclick = async () => {
 $('#mxDeckClear').onclick = async () => { try { await api('POST', '/api/admin/mixer/deck-key', { clear: true }); toast('Sterowanie ze Stream Decka wyłączone.'); loadMixer(); } catch (e) { toast(e.message, 'err'); } };
 setInterval(() => { if (!$('#aMain').hidden && !$('[data-panel="mixer"]').hidden) loadMixer(); }, 3000);
 
+// ---------- Inputlista ----------
+// Ustawienia roli i widoczności są w konfiguracji (cfg.inputList, wspólny pasek Zapisz),
+// sprzęt i patch – w osobnym pliku na serwerze (IL.edit), ale zapisują się tym samym paskiem.
+const IL = { saved: null, edit: null, positions: [], kinds: {}, prev: null };
+const ilDirty = () => !!IL.edit && JSON.stringify(IL.edit) !== JSON.stringify(IL.saved);
+const ilId = (p) => p + Math.random().toString(36).slice(2, 10);
+const ilList = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
+function ilSet(r) {
+  IL.saved = { gear: r.gear, patch: r.patch };
+  IL.edit = structuredClone(IL.saved);
+  if (r.kinds) IL.kinds = r.kinds;
+  if (r.positions) IL.positions = r.positions;
+}
+function renderInputListCfg() {
+  const c = (cfg.inputList ||= { enabled: false, soundPositions: ['Dźwięk', 'Realizator', 'FOH'], soundTeams: [], visibleToAll: false, reportChannel: '' });
+  const en = $('#ilEnabled'); en.checked = !!c.enabled; en.onchange = () => { c.enabled = en.checked; dirty(); };
+  const vis = $('#ilVisible'); vis.checked = !!c.visibleToAll; vis.onchange = () => { c.visibleToAll = vis.checked; dirty(); };
+  const pos = $('#ilPositions'); pos.value = (c.soundPositions || []).join(', '); pos.oninput = () => { c.soundPositions = ilList(pos.value); dirty(); };
+  const tm = $('#ilTeams'); tm.value = (c.soundTeams || []).join(', '); tm.oninput = () => { c.soundTeams = ilList(tm.value); dirty(); };
+  const rep = $('#ilReport');
+  const chans = cfg.channels.filter((x) => x.id);
+  rep.innerHTML = '<option value="">— nie wysyłaj (tylko znacznik na liście) —</option>'
+    + chans.map((x) => `<option value="${esc(x.id)}">${esc(x.name || x.id)}</option>`).join('')
+    + (c.reportChannel && !chans.some((x) => x.id === c.reportChannel) ? `<option value="${esc(c.reportChannel)}">${esc(c.reportChannel)} (kanał usunięty)</option>` : '');
+  rep.value = c.reportChannel || '';
+  rep.onchange = () => { c.reportChannel = rep.value; dirty(); };
+}
+async function loadIl() {
+  try {
+    const r = await api('GET', '/api/admin/inputlist');
+    IL.kinds = r.kinds; IL.positions = r.positions;
+    if (!ilDirty()) ilSet(r);
+    $('#ilPosList').innerHTML = IL.positions.map((p) => `<option value="${esc(p)}">`).join('');
+    renderIl();
+    loadIlPreview();
+  } catch (e) { toast(e.message, 'err'); }
+}
+function renderIl() { if (!IL.edit) return; renderIlGear(); renderIlPatch(); ilWarnings(); }
+
+function renderIlGear() {
+  const G = IL.edit.gear, P = IL.edit.patch;
+  $('#ilGearN').textContent = G.length ? `(${G.length})` : '';
+  const kinds = Object.entries(IL.kinds);
+  $('#ilGear').innerHTML = G.map((g, i) => `<tr data-i="${i}">
+      <td data-l="Nazwa"><input data-k="name" value="${esc(g.name)}" maxlength="60" placeholder="np. Shure SM58"></td>
+      <td data-l="Rodzaj"><select data-k="kind">${kinds.map(([k, l]) => `<option value="${k}" ${g.kind === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td>
+      <td data-l="Sztuk"><input data-k="count" type="number" min="0" max="999" value="${g.count}"></td>
+      <td data-l="W patchu"><span class="hint">${P.filter((c) => c.gearId === g.id).length}</span></td>
+      <td><button type="button" class="danger" data-a="del" aria-label="Usuń ${esc(g.name)}">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="hint">Brak sprzętu. Dodaj mikrofony i DI albo wypełnij przykładem.</td></tr>';
+}
+$('#ilGear').addEventListener('input', (e) => {
+  const el = e.target, g = IL.edit.gear[el.closest('tr')?.dataset.i];
+  if (!g || !el.dataset.k) return;
+  g[el.dataset.k] = el.dataset.k === 'count' ? Math.max(0, Math.round(Number(el.value) || 0)) : el.value;
+  if (el.dataset.k === 'name') renderIlPatch(); // nazwy w listach sprzętu przy kanałach
+  dirty(); ilWarnings();
+});
+$('#ilGear').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-a="del"]'); if (!b) return;
+  const i = Number(b.closest('tr').dataset.i), g = IL.edit.gear[i];
+  // kanały z tym sprzętem nie tracą opisu – nazwa przechodzi do pola „inny”
+  for (const c of IL.edit.patch) if (c.gearId === g.id) { c.gearId = null; c.gearText = g.name; }
+  IL.edit.gear.splice(i, 1);
+  renderIl(); dirty();
+});
+$('#ilGearAdd').onclick = () => {
+  IL.edit.gear.push({ id: ilId('g'), name: '', kind: 'mic', count: 1 });
+  renderIl(); dirty();
+  $(`#ilGear tr[data-i="${IL.edit.gear.length - 1}"] input[data-k="name"]`)?.focus();
+};
+
+// para stereo z kanałem poniżej / powyżej (w kolejności listy)
+const ilPairNext = (P, i) => !!P[i].stereoWith && P[i + 1]?.id === P[i].stereoWith;
+const ilPairPrev = (P, i) => !!P[i].stereoWith && P[i - 1]?.id === P[i].stereoWith;
+function renderIlPatch() {
+  const P = IL.edit.patch, G = IL.edit.gear;
+  $('#ilPatchN').textContent = P.length ? `(${P.length} kan.)` : '';
+  const gearOpts = (sel) => '<option value="">— inny (wpisz) —</option>' + G.map((g) => `<option value="${esc(g.id)}" ${sel === g.id ? 'selected' : ''}>${esc(g.name || '(bez nazwy)')}</option>`).join('');
+  const chk = (k, v, label) => `<input type="checkbox" data-k="${k}" ${v ? 'checked' : ''} aria-label="${label}">`;
+  $('#ilPatch').innerHTML = P.map((c, i) => `<tr data-i="${i}" class="${ilPairNext(P, i) ? 'il-pair' : ''}">
+      <td data-l="Kanał"><input data-k="ch" type="number" min="1" max="999" value="${c.ch}" aria-label="Numer kanału"></td>
+      <td data-l="Nazwa"><input data-k="name" value="${esc(c.name)}" maxlength="12" placeholder="np. Wok 1"></td>
+      <td data-l="Źródło" class="il-wide"><input data-k="source" value="${esc(c.source)}" maxlength="60" placeholder="np. Wokal prowadzący"></td>
+      <td data-l="Sprzęt" class="il-wide"><select data-k="gearId" aria-label="Sprzęt">${gearOpts(c.gearId)}</select>${c.gearId ? '' : `<input data-k="gearText" class="il-gtext" value="${esc(c.gearText)}" maxlength="60" placeholder="np. komputer – linia" aria-label="Inny sprzęt">`}</td>
+      <td data-l="Wejście"><input data-k="input" value="${esc(c.input)}" maxlength="20" placeholder="SB 1"></td>
+      <td data-l="48V" class="il-c">${chk('phantom', c.phantom, 'Zasilanie phantom 48 V')}</td>
+      <td data-l="Statyw" class="il-wide"><input data-k="stand" value="${esc(c.stand)}" maxlength="40"></td>
+      <td data-l="Pozycje PCO" class="il-wide"><input data-k="positions" value="${esc(c.positions.join(', '))}" list="ilPosList" placeholder="np. Vocal"></td>
+      <td data-l="Zawsze" class="il-c">${chk('always', c.always, 'Kanał używany zawsze')}</td>
+      <td data-l="1 os." class="il-c">${chk('slot', c.slot, 'Po jednej osobie na kanał')}</td>
+      <td data-l="St" class="il-c">${ilPairPrev(P, i) ? '<span class="hint" title="Para stereo z kanałem powyżej">↳</span>' : i < P.length - 1 ? chk('stereo', ilPairNext(P, i), 'Para stereo z kanałem poniżej') : ''}</td>
+      <td data-l="Uwagi" class="il-full"><input data-k="notes" value="${esc(c.notes)}" maxlength="200"></td>
+      <td class="il-act"><button type="button" data-a="up" aria-label="W górę">↑</button><button type="button" data-a="down" aria-label="W dół">↓</button><button type="button" class="danger" data-a="del" aria-label="Usuń kanał">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="13" class="hint">Patch jest pusty. Dodaj kanały albo wypełnij przykładem typowego zespołu uwielbienia.</td></tr>';
+}
+const ilUnpair = (P, c) => { const p = c.stereoWith && P.find((x) => x.id === c.stereoWith); if (p) p.stereoWith = null; c.stereoWith = null; };
+function ilChange(e) {
+  const el = e.target, k = el.dataset.k, P = IL.edit.patch;
+  const i = Number(el.closest('tr')?.dataset.i), c = P[i];
+  if (!c || !k) return;
+  if (el.type === 'checkbox') {
+    if (k === 'stereo') {
+      const n = P[i + 1];
+      ilUnpair(P, c); ilUnpair(P, n);
+      if (el.checked) { c.stereoWith = n.id; n.stereoWith = c.id; }
+      renderIlPatch();
+    } else c[k] = el.checked;
+  } else if (k === 'ch') c.ch = Math.round(Number(el.value)) || 0;
+  else if (k === 'positions') c.positions = ilList(el.value);
+  else if (k === 'gearId') { c.gearId = el.value || null; if (c.gearId) c.gearText = ''; renderIlPatch(); renderIlGear(); }
+  else c[k] = el.value;
+  dirty(); ilWarnings();
+}
+$('#ilPatch').addEventListener('input', (e) => { if (e.target.type !== 'checkbox' && e.target.tagName !== 'SELECT') ilChange(e); });
+$('#ilPatch').addEventListener('change', (e) => { if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') ilChange(e); });
+// przesuwanie: para stereo jedzie razem; gdy kanały szły po kolei (1, 2, 3…), numeracja idzie za kolejnością
+function ilUnit(P, i) { return ilPairNext(P, i) ? [i, i + 1] : ilPairPrev(P, i) ? [i - 1, i] : [i, i]; }
+const ilSequential = (P) => P.every((c, i) => c.ch === i + 1);
+function ilMove(i, dir) {
+  const P = IL.edit.patch, seq = ilSequential(P);
+  const [a, b] = ilUnit(P, i), n = b - a + 1;
+  if (dir < 0) {
+    if (a === 0) return;
+    const [c] = ilUnit(P, a - 1);
+    P.splice(c, 0, ...P.splice(a, n));
+  } else {
+    if (b === P.length - 1) return;
+    const [, d] = ilUnit(P, b + 1);
+    const moved = P.splice(a, n);
+    P.splice(d - n + 1, 0, ...moved);
+  }
+  if (seq) P.forEach((c, j) => (c.ch = j + 1));
+}
+$('#ilPatch').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const P = IL.edit.patch, i = Number(b.closest('tr').dataset.i);
+  if (b.dataset.a === 'del') {
+    const seq = ilSequential(P);
+    ilUnpair(P, P[i]); P.splice(i, 1);
+    if (seq) P.forEach((c, j) => (c.ch = j + 1));
+  } else ilMove(i, b.dataset.a === 'up' ? -1 : 1);
+  renderIl(); dirty();
+});
+$('#ilChAdd').onclick = () => {
+  const P = IL.edit.patch;
+  P.push({ id: ilId('c'), ch: P.reduce((m, c) => Math.max(m, c.ch || 0), 0) + 1, name: '', source: '', gearId: null, gearText: '', input: '', phantom: false, stand: '', stereoWith: null, positions: [], always: false, slot: false, notes: '' });
+  renderIl(); dirty();
+  $(`#ilPatch tr[data-i="${P.length - 1}"] input[data-k="name"]`)?.focus();
+};
+$('#ilRenumber').onclick = () => { IL.edit.patch.forEach((c, i) => (c.ch = i + 1)); renderIl(); dirty(); };
+$('#ilExample').onclick = async () => {
+  if (IL.edit.patch.length && !confirm('Zastąpić obecny sprzęt i patch przykładem? Zmiany zobaczysz od razu, a zapiszą się dopiero po „Zapisz”.')) return;
+  try {
+    const r = await api('GET', '/api/admin/inputlist/example');
+    IL.edit = { gear: r.gear, patch: r.patch };
+    renderIl(); dirty();
+    toast('Wczytano przykład. Sprawdź nazwy pozycji z Planning Center i zapisz.');
+  } catch (e) { toast(e.message, 'err'); }
+};
+
+// ostrzeżenia na bieżąco (serwer sprawdza to samo przy zapisie)
+function ilWarnings() {
+  const P = IL.edit.patch, out = [];
+  const byCh = new Map();
+  for (const c of P) byCh.set(c.ch, (byCh.get(c.ch) || 0) + 1);
+  for (const [ch, n] of byCh) if (n > 1) out.push(['error', `Kanał ${ch} jest wpisany ${n} razy.`]);
+  if (P.some((c) => !(c.ch >= 1 && c.ch <= 999))) out.push(['error', 'Numer kanału musi być od 1 do 999.']);
+  for (const g of IL.edit.gear) {
+    const n = P.filter((c) => c.gearId === g.id).length;
+    if (n > g.count) out.push(['warn', `${g.name || 'Sprzęt bez nazwy'}: użyty ${n} razy, a sztuk jest ${g.count}.`]);
+  }
+  if (IL.edit.gear.some((g) => !g.name.trim())) out.push(['warn', 'Sprzęt bez nazwy nie zostanie zapisany.']);
+  if (IL.positions.length) {
+    const known = IL.positions.map((p) => p.toLocaleLowerCase('pl'));
+    const unknown = [...new Set(P.flatMap((c) => c.positions))].filter((p) => !known.some((k) => k.includes(p.toLocaleLowerCase('pl'))));
+    if (unknown.length) out.push(['info', `Takich pozycji nie ma w Planning Center: ${unknown.join(', ')}.`]);
+  }
+  const w = $('#ilWarn');
+  w.hidden = !out.length;
+  w.innerHTML = out.map(([l, t]) => `<div class="${l}">${l === 'error' ? '⚠ ' : l === 'warn' ? '△ ' : 'ⓘ '}${esc(t)}</div>`).join('');
+}
+
+async function loadIlPreview() {
+  try {
+    const v = IL.prev = await api('GET', '/api/admin/inputlist/preview');
+    $('#ilPrevHint').textContent = (v.plan
+      ? `${v.plan.title || 'Plan'}${v.plan.dates ? ' · ' + v.plan.dates : ''}: używanych kanałów ${v.summary.used} z ${v.summary.channels}.`
+      : 'Brak planu z Planning Center – pokazuję cały patch bez obsady.')
+      + (ilDirty() ? ' Podgląd pokazuje zapisany patch – zapisz zmiany, żeby je zobaczyć.' : '');
+    $('#ilPrev').innerHTML = v.rows.map((r) => `<tr class="${r.active ? '' : 'off'}">
+        <td data-l="Kanał"><b>${r.ch}</b></td>
+        <td data-l="Nazwa">${esc(r.name)}<div class="hint">${esc(r.source)}</div></td>
+        <td data-l="Kto" class="il-who">${esc(r.people.join(', ')) || (r.always ? '<span class="hint">zawsze</span>' : '—')}</td>
+        <td data-l="Sprzęt">${esc(r.gear) || '—'}${r.phantom ? ' <span class="hint">48V</span>' : ''}</td>
+        <td data-l="Wejście">${esc(r.input) || '—'}</td>
+        <td data-l="Statyw">${esc(r.stand) || '—'}</td></tr>`).join('')
+      || '<tr><td colspan="6" class="hint">Patch jest pusty.</td></tr>';
+    const u = $('#ilUnassigned');
+    u.hidden = !v.unassigned.length;
+    u.innerHTML = v.unassigned.length ? '<b>Bez kanału:</b> ' + v.unassigned.map((x) => `${esc(x.name)} (${esc(x.positions.join(', ') || 'bez pozycji')}${x.reason === 'noFreeChannel' ? ' – zabrakło wolnego kanału' : ''})`).join(', ') : '';
+  } catch (e) { $('#ilPrevHint').textContent = e.message; }
+}
+$('#ilPrevRefresh').onclick = loadIlPreview;
+// wydruk i CSV z zapisanego patchu i bieżącej obsady (ten sam widok co podgląd)
+async function ilExport(kind) {
+  try {
+    const { printList, downloadCsv } = await import('/inputlist-export.js');
+    await loadIlPreview();
+    if (!IL.prev) return;
+    if (ilDirty()) toast('Wydruk pokazuje zapisany patch – niezapisane zmiany go nie obejmują.', 'err');
+    if (kind === 'print') printList(IL.prev, cfg.orgName); else downloadCsv(IL.prev);
+  } catch (e) { toast(e.message, 'err'); }
+}
+$('#ilPrintBtn').onclick = () => ilExport('print');
+$('#ilCsvBtn').onclick = () => ilExport('csv');
+
 // ---------- kopia ustawień ----------
 $('#bkDownload').addEventListener('click', async () => {
   try {
@@ -1134,7 +1356,7 @@ async function loadPeople(refresh) {
   $('#ppSum').textContent = refresh ? 'Pobieram z Planning Center…' : 'Wczytuję listę osób…';
   try {
     const j = await api('GET', '/api/admin/pco/people' + (refresh ? '?refresh=1' : ''));
-    PP.all = j.people; PP.teams = j.teams; PP.liveEnabled = j.liveEnabled; PP.mixerEnabled = j.mixerEnabled; PP.at = j.fetchedAt;
+    PP.all = j.people; PP.teams = j.teams; PP.liveEnabled = j.liveEnabled; PP.mixerEnabled = j.mixerEnabled; PP.inputListEnabled = j.inputListEnabled; PP.at = j.fetchedAt;
     const sel = $('#ppTeam'), cur = sel.value;
     sel.innerHTML = '<option value="">Wszystkie zespoły</option><option value="-">Bez zespołu</option>'
       + [...new Set(j.teams.map((t) => t.name))].sort((a, b) => a.localeCompare(b, 'pl')).map((n) => `<option>${esc(n)}</option>`).join('');
@@ -1149,8 +1371,9 @@ function ppFilter() {
     if (team === '-' && p.teams.length) return false;
     if (team && team !== '-' && !p.teams.includes(team)) return false;
     const g = p.grant;
-    if (show === 'grants' && !(g.admin || g.speak !== null || g.live !== null || g.director !== null)) return false;
+    if (show === 'grants' && !(g.admin || g.speak !== null || g.live !== null || g.director !== null || g.sound !== null)) return false;
     if (show === 'director' && !(g.admin || g.director === true || (g.director === null && p.autoDirector))) return false;
+    if (show === 'sound' && !(g.admin || g.sound === true || (g.sound === null && p.autoSound))) return false;
     if (show === 'admin' && !g.admin) return false;
     if (show === 'speak' && !(g.admin || g.speak === true || (g.speak === null && p.autoSpeak))) return false;
     if (show === 'live' && !(g.admin || g.live === true)) return false;
@@ -1175,8 +1398,9 @@ function renderPeople() {
       <td data-l="Mówienie">${p.grant.admin ? '<span class="hint">administrator</span>' : sel3('speak', p.grant.speak, `Auto (${p.autoSpeak ? 'tak' : 'nie'})`)}</td>
       <td data-l="Sterowanie planem">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('live', p.grant.live, 'Auto', !PP.liveEnabled)}</td>
       <td data-l="Reżyser">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('director', p.grant.director, `Auto (${p.autoDirector ? 'tak' : 'nie'})`, !PP.mixerEnabled, 'Włącz Reżyserię w zakładce Reżyseria')}</td>
+      <td data-l="Dźwięk">${p.grant.admin ? '<span class="hint">zawsze</span>' : sel3('sound', p.grant.sound, `Auto (${p.autoSound ? 'tak' : 'nie'})`, !PP.inputListEnabled, 'Włącz Inputlistę w zakładce Inputlista')}</td>
       <td data-l="Dane"><button type="button" class="danger" data-forget>Usuń dane</button></td></tr>`).join('')
-    || '<tr><td colspan="7" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
+    || '<tr><td colspan="8" class="hint">Nikt nie pasuje do filtrów.</td></tr>';
   $$('#ppRows [data-forget]').forEach((b) => (b.onclick = () => { const p = PP.all.find((x) => x.pid === b.closest('tr').dataset.pid); if (p) forgetPerson({ pid: p.pid, name: p.name }, p.name); }));
   $('#ppMoreRow').hidden = list.length <= PP.shown;
   $$('#ppRows select').forEach((el) => (el.onchange = async () => {

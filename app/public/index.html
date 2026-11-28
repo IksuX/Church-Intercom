@@ -32,6 +32,7 @@
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-inputs" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 5 5 4v4M3 18h3l-3 3h3" stroke-width="1.6"/><path d="M3 11.5c.4-.9 2.6-.9 2.6.5 0 1-2.6 1.5-2.6 3h2.8" stroke-width="1.6"/></symbol>
     <symbol id="i-camera" viewBox="0 0 24 24"><path d="m15 10 5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
     <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></symbol>
@@ -116,6 +117,7 @@
       <button id="miniFontDn" class="icon mini-only" type="button" title="Mniejsza czcionka">A−</button>
       <button id="miniFontUp" class="icon mini-only" type="button" title="Większa czcionka">A+</button>
       <button id="miniPip" class="icon mini-only" type="button" title="Okienko zawsze na wierzchu (nad innymi programami)" hidden><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></button>
+      <button id="btnInputlist" class="icon" type="button" aria-label="Inputlista" title="Inputlista – kanały na to nabożeństwo" hidden><svg class="ic" aria-hidden="true"><use href="#i-inputs"/></svg></button>
       <button id="btnDirector" class="icon dr-btn" type="button" aria-label="Reżyseria – mikser wideo" title="Reżyseria – mikser wideo" aria-pressed="false" hidden><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></button>
       <button id="btnTheme" class="icon" type="button" aria-label="Jasny motyw" title="Jasny / ciemny motyw"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></button>
       <button id="btnSettings" class="icon" aria-label="Ustawienia" title="Ustawienia"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
@@ -405,6 +407,7 @@
           <ol id="planList" class="planlist compact"></ol>
         </div>
       </div>
+      <div id="sheetInputlist" class="il-sheet" hidden></div>
       <div id="sheetPeople" hidden>
         <div id="peopleList"></div>
       </div>

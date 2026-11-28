@@ -1,4 +1,4 @@
-# Interkom 0.55.0
+# Interkom 0.56.0
 
 Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i mówienie przez przycisk (push-to-talk). Działa w przeglądarce na telefonie, tablecie i komputerze, bez instalowania aplikacji. Serwer stoi lokalnie, więc internet nie jest potrzebny w trakcie nabożeństwa.
 
@@ -13,6 +13,7 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 - **Czytanie wiadomości na głos (TTS)** przez syntezę mowy wbudowaną w telefon lub komputer. Włączasz je w ⚙️.
 - **Ekran nie gaśnie** w trakcie pracy. Aplikacja sama łączy się ponownie po utracie Wi-Fi.
 - **Reżyseria** (od 0.51): sterowanie mikserem wideo Blackmagic ATEM z interkomu – Program i Preview, ręczne przełączanie, autopilot i komendy głosowe („Przygotuj dwa”, „Cut wchodzisz”) – tylko dla roli Reżyser. Opis niżej.
+- **Inputlista** (od 0.56): stały patch sali połączony z obsadą z Planning Center – na każde nabożeństwo lista, kto gra na którym kanale. Line check odhaczany na żywo z telefonu, zgłoszenia problemów na kanał ekipy, wydruk / PDF i CSV. Opis niżej.
 - **Administrator** może wyczyścić czat przed kolejnym nabożeństwem. Historia każdego dnia zapisuje się w `data/app/log/`.
 
 ## Wymagania
@@ -24,11 +25,11 @@ Hybrydowy interkom dla ekip nabożeństwa: kanały, czat, szybkie przyciski i m�
 
 ## Instalacja
 
-1. Skopiuj folder na serwer, np.: `scp interkom-0.55.0.zip user@IP_SERWERA:~`
+1. Skopiuj folder na serwer, np.: `scp interkom-0.56.0.zip user@IP_SERWERA:~`
 2. Na serwerze:
    ```bash
    sudo apt install -y unzip
-   unzip interkom-0.55.0.zip && cd interkom
+   unzip interkom-0.56.0.zip && cd interkom
    sudo ./install.sh
    ```
 3. Instalator zainstaluje Dockera i zada dwa pytania. Na końcu wypisze adres i PIN-y.
@@ -770,6 +771,44 @@ Aplikacja 1.6.0, iPhone i Android.
 - Wyłączysz to w ⚙️ → Dźwięk i mikrofon → „Przycisk „Mów” na ekranie blokady”.
 
 **Limity nadawania.** Przycisk słuchawek, pilot i pauza na ekranie blokady włączają mikrofon bez przytrzymywania, więc łatwo go zapomnieć wyłączyć. Panel → **Ogólne → Mówienie przyciskiem**: wyłączenie po czasie (domyślnie 60 s), po ciszy (8 s) i sygnał przypominający (co 10 s). Do tego sygnały przy włączeniu, wyłączeniu i wyłączeniu samoczynnym, a na karcie odtwarzacza iPhone'a „🔴 MÓWISZ – kanał”. W głośnym miejscu ciszy nie zawsze da się rozpoznać – wtedy działa limit czasu. Dodatkowo limit pilnuje **serwer** (gdyby telefon się zawiesił): tryb włącz/wyłącz – limit + 5 s, przytrzymany przycisk i aplikacje starsze niż 1.6.0 – trzykrotność limitu. Limity nie dotyczą kłódki ani przycisku na ekranie strony.
+
+## Inputlista: patch sali, obsada z Planning Center i line check (od 0.56.0)
+
+Lista kanałów konsolety na konkretne nabożeństwo. Powstaje sama ze **stałego patchu sali** (ustawianego raz w panelu) i **obsady planu z Planning Center** – przy kanale pojawia się imię osoby, która tego dnia gra na danym instrumencie. Wszystko działa lokalnie, także bez internetu (korzysta z obsady pobranej wcześniej).
+
+**Ustawienie (panel → Inputlista):**
+- „Włącz Inputlistę”, stanowiska i zespoły z Planning Center, które dają rolę **Dźwięk** (domyślnie: Dźwięk, Realizator, FOH), „lista widoczna dla wszystkich zalogowanych” (domyślnie tylko Dźwięk i administratorzy) oraz kanał, na który idą zgłoszenia problemów,
+- **Sprzęt** – mikrofony, DI i inne źródła z liczbą sztuk; panel ostrzega, gdy w patchu użyjesz więcej, niż jest,
+- **Patch sali** – kanał, nazwa (do 12 znaków), źródło, sprzęt, wejście stageboxa, 48V, statyw, **pozycje z Planning Center** (po przecinku; „Vocal” obejmuje też „Vocal 1”, „Vocal 2”), uwagi oraz przełączniki:
+  - **Zawsze** – kanał używany na każdym nabożeństwie (pulpit, ambona, playback),
+  - **1 os.** – po jednej osobie na kanał: kilka kanałów z tymi samymi pozycjami (np. wokale) dostaje osoby po kolei pozycji („Vocal 1” na pierwszy, „Vocal 2” na drugi); bez tego wszyscy pasujący trafiają na kanał (perkusista na wszystkie mikrofony perkusji),
+  - **St** – para stereo z kanałem poniżej (przesuwa się razem),
+- „Wypełnij przykładem” wczytuje typowy zespół uwielbienia (19 kanałów) do sprawdzenia i zapisania,
+- **Podgląd** na bieżące nabożeństwo i lista osób z obsady, dla których nie ma kanału (albo zabrakło wolnego kanału).
+
+Rolę **Dźwięk** nadajesz tak jak inne uprawnienia: zakładka **Stan** albo **Osoby i uprawnienia**, kolumna **Dźwięk** (Auto / Tak – zawsze / Nie – nigdy).
+
+**W aplikacji** (ikona listy w nagłówku): kanały z osobami, sprzętem, wejściem, 48V i statywem; filtry Używane / Do sprawdzenia / Problemy / Wszystkie. Osoba z rolą Dźwięk:
+- odhacza kanał okrągłym przyciskiem (✓ – kto i o której); zgłoszony problem po dotknięciu uznaje za rozwiązany,
+- dotknięciem opisu kanału zgłasza problem z notatką – trafia on też na wybrany kanał jako zwykła wiadomość (czytanie na głos, powiadomienia), np. „⚠ Kanał 7 (A-Gtr – Gitara akustyczna): trzeszczy”,
+- poprawia kanał **tylko na to nabożeństwo** (używany / nieużywany, kto gra, uwagi) i może wyzerować line check.
+
+Zmiany widzą od razu wszyscy z dostępem. Line check i poprawki zapisują się osobno dla każdego planu (`data/inputlist.json`, plany starsze niż 60 dni są usuwane; plik jest w kopii ustawień).
+
+**Wydruk / PDF i CSV** – przyciski pod listą (w przeglądarce) i pod podglądem w panelu. Wydruk A4 poziomo z kratką do odhaczenia na papierze; PDF przez „Zapisz jako PDF” w oknie drukowania. CSV ze średnikiem otwiera się od razu w polskim Excelu. W aplikacji na iPhone i Android drukowania i pobierania plików nie ma – służy do tego przeglądarka na komputerze.
+
+## 0.56.0
+
+- **Inputlista** (opis w rozdziale wyżej):
+  - panel → Inputlista: sprzęt, patch sali, przykład zespołu uwielbienia, podgląd, wydruk i CSV,
+  - lista na bieżące nabożeństwo z obsady Planning Center (kanały „1 os.” dla wokali, „Zawsze”, pary stereo),
+  - w aplikacji: arkusz z kanałami, line check na żywo, zgłoszenia problemów na kanał ekipy, poprawki tylko na jedno nabożeństwo, wydruk / PDF i CSV.
+- **Nowa rola „Dźwięk”**:
+  - kolumna w zakładkach Stan i Osoby i uprawnienia (Auto / Tak / Nie), filtr „Ekipa dźwięku”,
+  - automatycznie według stanowisk i zespołów z Planning Center,
+  - sprawdzana na serwerze przy każdym poleceniu.
+- Testy: `app/test/inputlist.test.js` – składanie listy, walidacja, zapis, widoczność i rola Dźwięk na serwerze, zgłoszenia na kanał.
+- Aplikacja na telefon bez zmian (1.6.2). Inputlista działa w obecnej aplikacji, bez przebudowy.
 
 ## 0.55.0
 

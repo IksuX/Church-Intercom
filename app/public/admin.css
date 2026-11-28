@@ -215,3 +215,31 @@ body.admin { overflow-y: auto; }
 .pp-bulk select { width: auto; padding: 8px; }
 .pp-confirm { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .pp-table td:first-child { min-width: 180px; }
+
+/* Inputlista */
+.il-patch { min-width: 1180px; }
+.il-patch td { padding: 4px; }
+.il-patch input[type="checkbox"], .il-gear input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.il-patch td.il-c { text-align: center; }
+.il-patch input[data-k="ch"] { width: 58px; }
+.il-patch input[data-k="name"] { width: 96px; }
+.il-patch input[data-k="input"] { width: 70px; }
+.il-patch .il-act { display: flex; gap: 4px; white-space: nowrap; }
+.il-patch .il-act button { padding: 6px 9px; }
+.il-patch tr.il-pair td { border-bottom-style: dashed; }
+.il-patch .il-gtext { margin-top: 4px; }
+.il-warn { display: grid; gap: 4px; font-size: 13px; }
+.il-warn .error { color: var(--urgent-fg); }
+.il-warn .warn { color: var(--warn, #fbbf24); }
+.il-warn .info { color: var(--muted); }
+.il-prev tr.off td { color: var(--muted); opacity: .6; }
+.il-prev .il-who { font-weight: 600; }
+@media (max-width: 600px) {
+  .il-patch { min-width: 0; }
+  .a-table.il-patch tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .a-table.il-patch td:first-child { grid-column: auto; }
+  .a-table.il-patch td.il-wide { grid-column: span 2; }
+  .a-table.il-patch td.il-full { grid-column: 1 / -1; }
+  .il-patch input[data-k] { width: 100%; }
+  .il-patch td.il-c { text-align: left; }
+}

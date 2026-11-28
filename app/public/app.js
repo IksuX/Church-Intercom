@@ -1,6 +1,7 @@
 // Interkom – klient (PWA). Tekst + szybkie przyciski przez WebSocket, głos przez LiveKit (WebRTC).
 import { Room, RoomEvent, Track } from '/vendor/livekit-client.esm.mjs';
 import { createDirector } from '/mixer.js';
+import { createInputList } from '/inputlist.js';
 
 // okienko czatu „na wierzchu” (Document Picture-in-Picture) przenosi część strony do osobnego dokumentu – szukamy w obu
 let pipDoc = null;
@@ -27,6 +28,8 @@ const S = {
 const canTalk = () => S.me && (S.me.role === 'speaker' || S.me.role === 'admin');
 // Reżyseria (mikser wideo) – widok i polecenia tylko dla roli Reżyser; uprawnienia sprawdza serwer
 const director = createDirector({ token: () => S.session?.token });
+// Inputlista – arkusz z kanałami na bieżące nabożeństwo (dla roli Dźwięk albo dla wszystkich, gdy tak ustawiono)
+const inputList = createInputList({ onOpen: () => openSheet('inputlist'), isOpen: () => !$('#sheet').hidden && !$('#sheetInputlist').hidden, send: (m) => wsSend(m), org: () => $('#orgName').textContent || '' });
 // Rozmowy prywatne to pseudo-kanały „dm:<klucz osoby>”
 const isDm = (id) => typeof id === 'string' && id.startsWith('dm:');
 S.dms = new Map(); S.wtarget = new Set();
@@ -282,8 +285,10 @@ function onWs(m) {
     case 'modMoved': onModMoved(m.channel, m.by, m.wasTalking); break;
     case 'callStatus': toast({ channel: S.broadcast, fromName: m.ok ? 'Wezwanie' : 'Uwaga', text: m.ok ? `wysłane do: ${m.to}` : m.error, plan: true, urgent: !m.ok }); break;
     case 'callReply': toast({ channel: S.broadcast, fromName: m.answer === 'yes' ? '✓ ' + m.from.name : '✗ ' + m.from.name, text: m.answer === 'yes' ? 'idzie' : 'nie może teraz', plan: true, urgent: m.answer !== 'yes' }); vibrate(m.answer === 'yes' ? 60 : [200, 100, 200]); break;
-    case 'perm': S.perm = m; director.perm({ ...m, canTalk: canTalk() }); renderPlanBar(); if (!$('#sheetPlan').hidden) renderPlanSheet(); break;
+    case 'perm': S.perm = m; director.perm({ ...m, canTalk: canTalk() }); inputList.perm(m); renderPlanBar(); if (!$('#sheetPlan').hidden) renderPlanSheet(); break;
     case 'mixer': director.state(m.state); break;
+    case 'inputlist': inputList.state(m.view); break;
+    case 'ilError': inputList.error(m.error); break;
     case 'liveError': liveDone(); toast({ channel: S.broadcast, fromName: 'Plan', text: m.error, plan: true, urgent: true }); break;
     case 'msgUpdate': updateMsg(m.m); break;
     case 'msg': addMsg(m.m, true); break;
@@ -2067,9 +2072,11 @@ function openSheet(which) {
   if (pop) { const r = $('#btnPeople').getBoundingClientRect(); sh.style.setProperty('--pop-top', `${Math.round(r.bottom + 6)}px`); sh.style.setProperty('--pop-right', `${Math.max(8, Math.round(innerWidth - r.right))}px`); }
   $('#sheetSettings').hidden = which !== 'settings';
   $('#sheetPeople').hidden = which !== 'people';
+  $('#sheetInputlist').hidden = which !== 'inputlist';
   if (!splitOn()) $('#sheetPlan').hidden = which !== 'plan';
-  $('#sheetTitle').textContent = { people: 'Kto jest online', plan: 'Plan nabożeństwa', settings: 'Ustawienia' }[which];
+  $('#sheetTitle').textContent = { people: 'Kto jest online', plan: 'Plan nabożeństwa', settings: 'Ustawienia', inputlist: 'Inputlista' }[which];
   if (which === 'people') renderPeople();
+  else if (which === 'inputlist') inputList.render();
   else if (which === 'plan') renderPlanSheet();
   else { renderSettings(); if (!$('#pcoAdmin').hidden) wsSend({ t: 'pcoPlans' }); showSetSec(); }
 }

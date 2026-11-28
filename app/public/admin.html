@@ -28,6 +28,7 @@
     <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
     <symbol id="i-signal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></symbol>
+    <symbol id="i-inputs" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 5 5 4v4M3 18h3l-3 3h3" stroke-width="1.6"/><path d="M3 11.5c.4-.9 2.6-.9 2.6.5 0 1-2.6 1.5-2.6 3h2.8" stroke-width="1.6"/></symbol>
     <symbol id="i-camera" viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></symbol>
     <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 7h.01M7 17h.01"/></symbol>
   </svg>
@@ -65,6 +66,7 @@
       <button data-tab="pco"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Planning Center</button>
       <button data-tab="streams"><svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg>Transmisja live</button>
       <button data-tab="mixer"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg>Reżyseria</button>
+      <button data-tab="inputlist"><svg class="ic" aria-hidden="true"><use href="#i-inputs"/></svg>Inputlista</button>
       <button data-tab="server"><svg class="ic" aria-hidden="true"><use href="#i-server"/></svg>Serwer</button>
     </nav>
 
@@ -75,11 +77,11 @@
         <div class="a-card">
           <h2>Osoby online <span class="a-count" id="stOnlineN"></span></h2>
           <p class="hint">Uprawnienia: <b>Auto</b> = według grafiku Planning Center / PIN-u. Zmiana działa od razu. Dla osób z Planning Center zapisuje się na stałe, dla zalogowanych PIN-em – do wylogowania.</p>
-          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dane</th></tr></thead><tbody id="stUsers"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table"><thead><tr><th>Osoba</th><th>Słucha</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dźwięk</th><th>Dane</th></tr></thead><tbody id="stUsers"></tbody></table></div>
         </div>
         <div class="a-card" id="stGrantsCard" hidden>
           <h2>Zapisane uprawnienia (osoby z Planning Center)</h2>
-          <table class="a-table"><thead><tr><th>Osoba</th><th>Admin</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th></th></tr></thead><tbody id="stGrants"></tbody></table>
+          <table class="a-table"><thead><tr><th>Osoba</th><th>Admin</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dźwięk</th><th></th></tr></thead><tbody id="stGrants"></tbody></table>
         </div>
         <div class="a-card">
           <h2>Ksywki <span class="a-count" id="nkN"></span></h2>
@@ -207,6 +209,7 @@
               <option value="speak">Mogą mówić</option>
               <option value="live">Sterują planem</option>
               <option value="director">Reżyserzy</option>
+              <option value="sound">Ekipa dźwięku</option>
               <option value="leader">Liderzy zespołów</option>
               <option value="inPlan">W bieżącym planie</option>
               <option value="online">Teraz online</option>
@@ -216,12 +219,12 @@
           <p class="hint" id="ppSum">Wczytuję listę osób…</p>
           <div class="pp-bulk" id="ppBulk" hidden>
             <span>Dla wszystkich z listy (<b id="ppBulkN">0</b>):</span>
-            <select id="ppBulkKind" aria-label="Uprawnienie"><option value="speak">Mówienie</option><option value="live">Sterowanie planem</option><option value="director">Reżyser</option><option value="admin">Administrator</option></select>
+            <select id="ppBulkKind" aria-label="Uprawnienie"><option value="speak">Mówienie</option><option value="live">Sterowanie planem</option><option value="director">Reżyser</option><option value="sound">Dźwięk</option><option value="admin">Administrator</option></select>
             <select id="ppBulkVal" aria-label="Wartość"><option value="true">Tak – zawsze</option><option value="false">Nie – nigdy</option><option value="">Auto (według grafiku)</option></select>
             <button type="button" id="ppBulkGo">Zastosuj</button>
             <span class="pp-confirm" id="ppConfirm" hidden>Na pewno zmienić <b id="ppConfirmN"></b> osobom? <button type="button" id="ppConfirmYes" class="danger">Tak, zmień</button><button type="button" id="ppConfirmNo">Anuluj</button></span>
           </div>
-          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dane</th></tr></thead><tbody id="ppRows"></tbody></table></div>
+          <div class="a-scroll"><table class="a-table pp-table"><thead><tr><th>Osoba</th><th>Zespoły</th><th>Administrator</th><th>Mówienie</th><th>Sterowanie planem</th><th>Reżyser</th><th>Dźwięk</th><th>Dane</th></tr></thead><tbody id="ppRows"></tbody></table></div>
           <div class="row" id="ppMoreRow" hidden><button type="button" id="ppMore">Pokaż więcej</button></div>
         </div>
       </section>
@@ -576,6 +579,42 @@
           <p id="mxDeck" class="a-status"></p>
           <div class="row-btns"><button id="mxDeckNew" type="button">Wygeneruj nowy klucz</button><button id="mxDeckClear" type="button" class="danger">Wyłącz (usuń klucz)</button></div>
           <p class="hint">Adresy (GET albo POST): <code>/api/mixer/deck/&lt;polecenie&gt;?key=KLUCZ</code>, polecenia: <code>cut</code>, <code>fade</code>, <code>preview?input=2</code>, <code>program?input=3</code>, <code>start</code>, <code>stop</code>, <code>pause</code>, <code>toggle</code>, <code>next</code>, <code>preset?name=Nazwa</code>.</p>
+        </div>
+      </section>
+      <section data-panel="inputlist" hidden>
+        <div class="a-card">
+          <h2>Inputlista</h2>
+          <p class="hint">Stały patch sali (kanały konsolety) połączony z obsadą z Planning Center: na każde nabożeństwo powstaje lista, kto gra na którym kanale. Osoby z rolą <b>Dźwięk</b> widzą ją w aplikacji i odhaczają line check. Rolę nadasz w zakładce <b>Stan</b> albo <b>Osoby i uprawnienia</b>.</p>
+          <label class="switch"><input type="checkbox" id="ilEnabled"> Włącz Inputlistę</label>
+          <label class="switch"><input type="checkbox" id="ilVisible"> Lista widoczna dla wszystkich zalogowanych (np. muzyków) – inaczej tylko dla roli Dźwięk i administratorów</label>
+          <label class="a-field">Rola Dźwięk automatycznie dla stanowisk w Planning Center (po przecinku)<input id="ilPositions" placeholder="np. Dźwięk, Realizator, FOH" autocomplete="off"></label>
+          <label class="a-field">… i dla zespołów (po przecinku, pełne nazwy)<input id="ilTeams" placeholder="np. Technika" autocomplete="off"></label>
+          <label class="a-field">Zgłoszenia problemów z line checku wysyłaj na kanał<select id="ilReport" class="a-select"></select></label>
+        </div>
+        <div class="a-card">
+          <h2>Sprzęt <span class="a-count" id="ilGearN"></span></h2>
+          <p class="hint">Mikrofony, DI i inne źródła, które ma kościół. W patchu wybierasz je z listy, a panel ostrzega, gdy użyjesz więcej sztuk, niż jest.</p>
+          <div class="a-scroll"><table class="a-table il-gear"><thead><tr><th>Nazwa</th><th>Rodzaj</th><th>Sztuk</th><th>W patchu</th><th></th></tr></thead><tbody id="ilGear"></tbody></table></div>
+          <div class="row-btns"><button type="button" id="ilGearAdd">+ Dodaj sprzęt</button></div>
+        </div>
+        <div class="a-card">
+          <h2>Patch sali <span class="a-count" id="ilPatchN"></span></h2>
+          <p class="hint"><b>Pozycje PCO</b> – stanowiska z Planning Center, które obsadzają kanał (po przecinku; „Vocal” obejmuje też „Vocal 1”, „Vocal 2”). <b>Zawsze</b> – kanał używany na każdym nabożeństwie (pulpit, playback). <b>1 os.</b> – po jednej osobie na kanał: przy kilku kanałach z tymi samymi pozycjami (np. wokale) osoby rozchodzą się po kolei; bez tego wszyscy pasujący trafiają na kanał (perkusista na wszystkie mikrofony perkusji). <b>St</b> – para stereo z kanałem poniżej.</p>
+          <div id="ilWarn" class="il-warn" hidden></div>
+          <div class="a-scroll"><table class="a-table il-patch"><thead><tr><th>Kan.</th><th>Nazwa</th><th>Źródło</th><th>Sprzęt</th><th>Wejście</th><th>48V</th><th>Statyw</th><th>Pozycje PCO</th><th>Zawsze</th><th>1 os.</th><th>St</th><th>Uwagi</th><th></th></tr></thead><tbody id="ilPatch"></tbody></table></div>
+          <datalist id="ilPosList"></datalist>
+          <div class="row-btns">
+            <button type="button" id="ilChAdd">+ Dodaj kanał</button>
+            <button type="button" id="ilRenumber">Numeruj po kolei</button>
+            <button type="button" id="ilExample">Wypełnij przykładem</button>
+          </div>
+        </div>
+        <div class="a-card">
+          <h2>Podgląd na bieżące nabożeństwo</h2>
+          <p class="hint" id="ilPrevHint">Lista złożona z zapisanego patchu i obsady bieżącego planu z Planning Center.</p>
+          <div class="a-scroll"><table class="a-table il-prev"><thead><tr><th>Kan.</th><th>Nazwa</th><th>Kto</th><th>Sprzęt</th><th>Wejście</th><th>Statyw</th></tr></thead><tbody id="ilPrev"></tbody></table></div>
+          <p class="hint" id="ilUnassigned" hidden></p>
+          <div class="row-btns"><button type="button" id="ilPrevRefresh"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg> Odśwież podgląd</button><button type="button" id="ilPrintBtn">Drukuj / PDF</button><button type="button" id="ilCsvBtn">Pobierz CSV</button></div>
         </div>
       </section>
       <section data-panel="server" hidden>
